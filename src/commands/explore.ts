@@ -143,7 +143,40 @@ export const exploreCommand: BotCommand = {
       return
     }
 
-    // 67% chance: nothing
+    // 14% chance: find a common item (rolls 34-47)
+    if (roll <= 47) {
+      const { rollLootByRarity } = await import('../game/loot')
+      const item = rollLootByRarity('common')
+      await supabase.from('inventory').insert({
+        character_id: char.id,
+        item_name: item.name,
+        item_type: item.type,
+        rarity: item.rarity,
+        stat_bonus: item.stat_bonus,
+        description: item.description,
+      })
+      client.say(
+        channel,
+        `🎒 @${username} finds a ${item.name} left behind by a previous adventurer!`
+      )
+      return
+    }
+
+    // 10% chance: find a potion (rolls 48-57)
+    if (roll <= 57) {
+      await supabase.from('inventory').insert({
+        character_id: char.id,
+        item_name: 'Health Potion',
+        item_type: 'potion',
+        rarity: 'common',
+        stat_bonus: 10,
+        description: 'Restores 10 HP.',
+      })
+      client.say(channel, `🧪 @${username} finds a dusty Health Potion tucked in a crevice!`)
+      return
+    }
+
+    // 43% chance: nothing
     const emptyMessages = [
       `@${username} searches the area but finds nothing but dust and cobwebs.`,
       `@${username} explores the shadows — nothing stirs.`,

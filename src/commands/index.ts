@@ -22,6 +22,15 @@ import { spawnCommand } from './spawn'
 import { givegoldCommand } from './givegold'
 import { killCommand } from './kill'
 import { reviveCommand } from './revive'
+import { dropCommand } from './drop'
+import { sellCommand } from './sell'
+import { duelCommand } from './duel'
+import { acceptCommand } from './accept'
+import { declineCommand } from './decline'
+import { strikeCommand } from './strike'
+import { pvpboardCommand } from './pvpboard'
+import { dailyCommand } from './daily'
+import { weeklyCommand } from './weekly'
 
 export const allCommands: BotCommand[] = [
   soCommand,
@@ -47,4 +56,13 @@ export const allCommands: BotCommand[] = [
   givegoldCommand,
   killCommand,
   reviveCommand,
+  dropCommand,
+  sellCommand,
+  duelCommand,
+  acceptCommand,
+  declineCommand,
+  strikeCommand,
+  pvpboardCommand,
+  dailyCommand,
+  weeklyCommand,
 ]

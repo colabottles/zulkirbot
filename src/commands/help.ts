@@ -23,7 +23,16 @@ export const helpCommand: BotCommand = {
       `!potion — use a potion | ` +
       `!shop — browse & buy items | ` +
       `!leaderboard — top adventurers | ` +
-      `!graveyard — fallen heroes`
+      `!graveyard — fallen heroes` +
+      `!drop [item] — drop an item | ` +
+      `!sell [item] — sell an item for gold | ` +
+      `!duel @user — challenge someone to a duel | ` +
+      `!accept — accept a duel challenge | ` +
+      `!decline — decline a duel challenge | ` +
+      `!strike — attack in a duel | ` +
+      `!pvpboard — duel leaderboard | ` +
+      `!daily — claim your daily gold reward | ` +
+      `!weekly — claim your weekly XP reward | `
     )
   }
 }
