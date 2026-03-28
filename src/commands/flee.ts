@@ -1,0 +1,43 @@
+import { BotCommand } from '../types'
+import { activeFights, handleDeath } from '../game/engine'
+import { d20, d6 } from '../game/dice'
+import tmi from 'tmi.js'
+
+export const fleeCommand: BotCommand = {
+  name: 'flee',
+  aliases: ['run', 'escape'],
+  cooldownSeconds: 3,
+  handler: async (channel, username, _args, client) => {
+    const fight = activeFights.get(username)
+
+    if (!fight) {
+      client.say(channel, `@${username} — you're not in a fight! Nothing to flee from. 🐔`)
+      return
+    }
+
+    // Monster gets a parting shot
+    const monsterRoll = d20()
+    const monsterHit = monsterRoll + fight.monster.attack > 12
+    let monsterDamage = 0
+
+    if (monsterHit) {
+      monsterDamage = d6()
+      fight.character_current_hp -= monsterDamage
+    }
+
+    // Monster kills them on the way out
+    if (fight.character_current_hp <= 0) {
+      await handleDeath(channel, username, fight, client)
+      client.say(channel, `🐔 @${username} tried to flee but was cut down by the ${fight.monster.name}! Cowardice has its price.`)
+      return
+    }
+
+    // They make it out
+    activeFights.delete(username)
+    const damageMsg = monsterHit
+      ? `The ${fight.monster.name} hit you for ${monsterDamage} damage on your way out!`
+      : `The ${fight.monster.name} missed as you ran!`
+
+    client.say(channel, `🐔 @${username} flees from the ${fight.monster.name}! ${damageMsg} (HP: ${fight.character_current_hp}) Coward! 🐔`)
+  }
+}
