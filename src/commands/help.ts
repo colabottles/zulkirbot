@@ -36,7 +36,13 @@ export const helpCommand: BotCommand = {
       `!titles [@user] — view earned titles | ` +
       `!title [name] — set your active title | ` +
       `!tavern — visit the tavern for drinks and meals | ` +
-      `!gamble [amount] [number] [red/black] — spin the roulette wheel | `
+      `!gamble [amount] [number] [red/black] — spin the roulette wheel | ` +
+      `!party create — form a party | ` +
+      `!party join — join an open party | ` +
+      `!party leave — leave your party | ` +
+      `!party status — view party info | ` +
+      `!party raid — start a raid (leader only, party must be full) | ` +
+      `!party attack — attack during a raid | `
     )
   }
 }

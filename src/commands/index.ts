@@ -35,6 +35,7 @@ import { titlesCommand } from './titles'
 import { titleCommand } from './title'
 import { tavernCommand } from './tavern'
 import { gambleCommand } from './gamble'
+import { partyCommand } from './party'
 
 export const allCommands: BotCommand[] = [
   soCommand,
@@ -73,4 +74,5 @@ export const allCommands: BotCommand[] = [
   titleCommand,
   tavernCommand,
   gambleCommand,
+  partyCommand,
 ]
