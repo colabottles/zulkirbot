@@ -9,7 +9,7 @@ import { trimGraveyard } from '../lib/graveyard'
 export const exploreCommand: BotCommand = {
   name: 'explore',
   aliases: ['search', 'scout'],
-  cooldownSeconds: 30,
+  cooldownSeconds: 3,
   handler: async (channel, username, _args, client) => {
     if (activeFights.has(username)) {
       client.say(channel, `@${username} — you're in a fight! Finish it first before exploring.`)

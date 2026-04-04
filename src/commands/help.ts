@@ -3,7 +3,7 @@ import { BotCommand } from '../types'
 export const helpCommand: BotCommand = {
   name: 'help',
   aliases: ['commands', 'h'],
-  cooldownSeconds: 10,
+  cooldownSeconds: 5,
   handler: async (channel, username, _args, client) => {
     client.say(
       channel,
@@ -32,7 +32,11 @@ export const helpCommand: BotCommand = {
       `!strike — attack in a duel | ` +
       `!pvpboard — duel leaderboard | ` +
       `!daily — claim your daily gold reward | ` +
-      `!weekly — claim your weekly XP reward | `
+      `!weekly — claim your weekly XP reward | ` +
+      `!titles [@user] — view earned titles | ` +
+      `!title [name] — set your active title | ` +
+      `!tavern — visit the tavern for drinks and meals | ` +
+      `!gamble [amount] [number] [red/black] — spin the roulette wheel | `
     )
   }
 }

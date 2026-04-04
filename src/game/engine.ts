@@ -5,7 +5,9 @@ import { supabase } from '../lib/supabase'
 import { getMonsterForLevel } from './monsters'
 import { trimGraveyard } from '../lib/graveyard'
 import { getCharacterStats } from '../lib/stats'
+import { trackKill } from '../lib/kills'
 import { BOSSES } from './bosses'
+import { getBuff, clearBuff } from '../lib/tavernBuffs'
 import tmi from 'tmi.js'
 
 export const activeFights = new Map<string, ActiveFight>()
@@ -90,6 +92,14 @@ export async function continueFight(
     .single()
 
   const stats = char ? await getCharacterStats(char) : { attackBonus: 0, defenseBonus: 0, hpBonus: 0, damageBonus: 0 }
+  const buff = getBuff(username)
+
+  if (buff) {
+    if (buff.effect === 'attack') stats.attackBonus += buff.bonus
+    if (buff.effect === 'defense') stats.defenseBonus += buff.bonus
+    if (buff.effect === 'damage') stats.damageBonus += buff.bonus
+    clearBuff(username)
+  }
 
   // Player attacks
   const playerRoll = d20()
@@ -157,6 +167,9 @@ async function handleVictory(
 ): Promise<void> {
   activeFights.delete(username)
 
+  // Track kill and check for new titles
+  const isBoss = BOSSES.some(b => b.name === fight.monster.name)
+
   const { data: char } = await supabase
     .from('characters')
     .select('*')
@@ -193,6 +206,11 @@ async function handleVictory(
     lootMsg = ` You find a ${item.rarity.toUpperCase()} ${item.name}!`
   }
 
+  const newTitles = await trackKill(char.id, username, fight.monster.name, isBoss)
+  const titleMsg = newTitles.length > 0
+    ? ` 🏅 New title${newTitles.length > 1 ? 's' : ''} unlocked: ${newTitles.join(', ')}!`
+    : ''
+
   await supabase.from('characters').update({
     xp: newXpTotal,
     level: newLevel,
@@ -208,7 +226,7 @@ async function handleVictory(
   client.say(
     channel,
     `🏆 @${username} defeated the ${fight.monster.name}! ` +
-    `+${fight.monster.xp_reward} XP | +${fight.monster.gold_reward}g${lootMsg}${levelMsg}`
+    `+${fight.monster.xp_reward} XP | +${fight.monster.gold_reward}g${lootMsg}${levelMsg}${titleMsg}`
   )
 }
 

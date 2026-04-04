@@ -31,6 +31,10 @@ import { strikeCommand } from './strike'
 import { pvpboardCommand } from './pvpboard'
 import { dailyCommand } from './daily'
 import { weeklyCommand } from './weekly'
+import { titlesCommand } from './titles'
+import { titleCommand } from './title'
+import { tavernCommand } from './tavern'
+import { gambleCommand } from './gamble'
 
 export const allCommands: BotCommand[] = [
   soCommand,
@@ -65,4 +69,8 @@ export const allCommands: BotCommand[] = [
   pvpboardCommand,
   dailyCommand,
   weeklyCommand,
+  titlesCommand,
+  titleCommand,
+  tavernCommand,
+  gambleCommand,
 ]

@@ -9,7 +9,7 @@ const REST_INTERRUPT_CHANCE = 20
 export const restCommand: BotCommand = {
   name: 'rest',
   aliases: ['sleep', 'camp'],
-  cooldownSeconds: 5,
+  cooldownSeconds: 3,
   handler: async (channel, username, _args, client) => {
     if (activeFights.has(username)) {
       client.say(channel, `@${username} — you can't rest while in a fight!`)

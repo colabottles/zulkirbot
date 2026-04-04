@@ -5,7 +5,7 @@ import { formatClass } from '../lib/format'
 export const shopCommand: BotCommand = {
   name: 'shop',
   aliases: ['store', 'buy'],
-  cooldownSeconds: 10,
+  cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     const { data: char } = await supabase
       .from('characters')
