@@ -36,6 +36,11 @@ import { titleCommand } from './title'
 import { tavernCommand } from './tavern'
 import { gambleCommand } from './gamble'
 import { partyCommand } from './party'
+import { startGiveawayCommand } from './startgiveaway'
+import { stopGiveawayCommand } from './stopgiveaway'
+import { setcodeCommand } from './setcode'
+import { ddoCommand } from './ddo'
+import { drawCommand } from './draw'
 
 export const allCommands: BotCommand[] = [
   soCommand,
@@ -75,4 +80,9 @@ export const allCommands: BotCommand[] = [
   tavernCommand,
   gambleCommand,
   partyCommand,
+  startGiveawayCommand,
+  stopGiveawayCommand,
+  setcodeCommand,
+  ddoCommand,
+  drawCommand,
 ]

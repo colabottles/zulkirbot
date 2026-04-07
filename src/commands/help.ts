@@ -42,7 +42,8 @@ export const helpCommand: BotCommand = {
       `!party leave — leave your party | ` +
       `!party status — view party info | ` +
       `!party raid — start a raid (leader only, party must be full) | ` +
-      `!party attack — attack during a raid | `
+      `!party attack — attack during a raid | ` +
+      `!ddo — enter the active giveaway | `
     )
   }
 }
