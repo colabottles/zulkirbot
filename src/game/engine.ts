@@ -65,7 +65,7 @@ export async function startFight(
       channel,
       `⚔️ @${username} encounters a ${monster.name}! ` +
       `(HP: ${monster.hp} | ATK: ${monster.attack} | DEF: ${monster.defense}) ` +
-      `Type !fight to attack!`
+      `Type !attack to attack!`
     )
   } else {
     client.say(
