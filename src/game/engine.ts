@@ -3,6 +3,7 @@ import { d20, d6, d8 } from './dice'
 import { shouldDropLoot, rollLoot } from './loot'
 import { supabase } from '../lib/supabase'
 import { getMonsterForLevel } from './monsters'
+import { CLASS_HP } from '../lib/classes'
 import { trimGraveyard } from '../lib/graveyard'
 import { getCharacterStats } from '../lib/stats'
 import { trackKill } from '../lib/kills'
@@ -148,15 +149,6 @@ export async function continueFight(
     `[Your HP: ${fight.character_current_hp} | ${fight.monster.name} HP: ${fight.monster_current_hp}] ` +
     `Type !attack to continue or !flee to run away! 🐔`
   )
-}
-
-const CLASS_HP: Record<string, number> = {
-  alchemist: 5, artificer: 4, barbarian: 7, bard: 4, cleric: 5,
-  druid: 5, favored_soul: 5, fighter: 6, monk: 5, paladin: 6,
-  ranger: 6, rogue: 4, sorcerer: 3, warlock: 4, wizard: 3,
-  sacred_fist: 6, dark_apostate: 5, stormsinger: 4, blightcaster: 5,
-  acolyte_of_the_skin: 4, dark_hunter: 6, dragon_lord: 6,
-  wild_mage: 3, dragon_disciple: 5, arcane_trickster: 4,
 }
 
 async function handleVictory(

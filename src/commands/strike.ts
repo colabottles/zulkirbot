@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { getActiveDuel, removeDuel } from '../lib/duels'
 import { getCharacterStats } from '../lib/stats'
 import { d20, d8 } from '../game/dice'
+import { CLASS_HP } from '../lib/classes'
 import { formatClass } from '../lib/format'
 
 const XP_REWARD = 50
@@ -82,41 +83,46 @@ export const strikeCommand: BotCommand = {
         .single()
 
       if (winnerChar) {
+        const { calculateLevel } = await import('../game/engine')
+        const newXp = winnerChar.xp + XP_REWARD
+        const { newLevel, newXpTotal } = calculateLevel(newXp)
+        const leveledUp = newLevel > winnerChar.level
+
+        const hpPerLevel = CLASS_HP[winnerChar.class] ?? 5
+        const levelsGained = newLevel - winnerChar.level
+        const newMaxHp = winnerChar.max_hp + (hpPerLevel * levelsGained)
+
         await supabase
           .from('characters')
-          .update({ xp: winnerChar.xp + XP_REWARD })
+          .update({
+            xp: newXpTotal,
+            level: newLevel,
+            max_hp: leveledUp ? newMaxHp : winnerChar.max_hp,
+            hp: leveledUp ? Math.min(winnerChar.hp + (hpPerLevel * levelsGained), newMaxHp) : winnerChar.hp,
+          })
           .eq('twitch_username', username)
+
+        const levelMsg = leveledUp ? ` 🎉 LEVEL UP! You are now Level ${newLevel}!` : ''
+
+        client.say(
+          channel,
+          `⚔️ ${hitMsg} ` +
+          `🏆 @${username} wins the duel! +${XP_REWARD} XP!${levelMsg} ` +
+          `@${opponent} is defeated and left with 1 HP. Use !rest to recover.`
+        )
       }
 
-      // Set loser to 1 HP
-      await supabase
-        .from('characters')
-        .update({ hp: 1 })
-        .eq('twitch_username', opponent)
-
-      // Update duel stats
-      await upsertDuelStat(username, attackerChar.display_name, true)
-      await upsertDuelStat(opponent, defenderChar.display_name, false)
+      // Switch turns
+      duel.currentTurn = opponent
+      duel.last_action = Date.now()
 
       client.say(
         channel,
         `⚔️ ${hitMsg} ` +
-        `🏆 @${username} wins the duel! +${XP_REWARD} XP! ` +
-        `@${opponent} is defeated and left with 1 HP. Use !rest to recover.`
+        `[@${username} HP: ${attackerHp} | @${opponent} HP: ${defenderHp}] ` +
+        `@${opponent} — type !strike to fight back!`
       )
-      return
     }
-
-    // Switch turns
-    duel.currentTurn = opponent
-    duel.last_action = Date.now()
-
-    client.say(
-      channel,
-      `⚔️ ${hitMsg} ` +
-      `[@${username} HP: ${attackerHp} | @${opponent} HP: ${defenderHp}] ` +
-      `@${opponent} — type !strike to fight back!`
-    )
   }
 }
 

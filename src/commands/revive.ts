@@ -1,5 +1,6 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
+import { CLASS_HP } from '../lib/classes'
 
 export const reviveCommand: BotCommand = {
   name: 'revive',
@@ -40,15 +41,6 @@ export const reviveCommand: BotCommand = {
     if (!fallen) {
       client.say(channel, `@${username} — ${target} has no fallen character to revive.`)
       return
-    }
-
-    const CLASS_HP: Record<string, number> = {
-      alchemist: 5, artificer: 4, barbarian: 7, bard: 4, cleric: 5,
-      druid: 5, favored_soul: 5, fighter: 6, monk: 5, paladin: 6,
-      ranger: 6, rogue: 4, sorcerer: 3, warlock: 4, wizard: 3,
-      sacred_fist: 6, dark_apostate: 5, stormsinger: 4, blightcaster: 5,
-      acolyte_of_the_skin: 4, dark_hunter: 6, dragon_lord: 6,
-      wild_mage: 3, dragon_disciple: 5, arcane_trickster: 4,
     }
 
     const maxHp = (CLASS_HP[fallen.class] ?? 5) * fallen.level

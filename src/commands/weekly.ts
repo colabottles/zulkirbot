@@ -2,6 +2,8 @@ import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
 import { d100 } from '../game/dice'
 import { rollLootByRarity } from '../game/loot'
+import { calculateLevel } from '../game/engine'
+import { CLASS_HP } from '../lib/classes'
 
 const WEEKLY_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -73,6 +75,29 @@ export const weeklyCommand: BotCommand = {
 
       itemMsg = ` You also find a ${item.rarity.toUpperCase()} ${item.name} in your pack!`
     }
+
+    // After calculating newXp
+    const { newLevel, newXpTotal } = calculateLevel(newXp)
+    const leveledUp = newLevel > char.level
+
+    const hpPerLevel = CLASS_HP[char.class] ?? 5
+    const levelsGained = newLevel - char.level
+    const newMaxHp = char.max_hp + (hpPerLevel * levelsGained)
+
+    await supabase
+      .from('characters')
+      .update({
+        xp: newXpTotal,
+        level: newLevel,
+        max_hp: newMaxHp,
+        hp: Math.min(char.hp + (hpPerLevel * levelsGained), newMaxHp),
+        weekly_claimed_at: new Date().toISOString(),
+      })
+      .eq('twitch_username', username)
+
+    const levelMsg = leveledUp
+      ? ` 🎉 LEVEL UP! You are now Level ${newLevel}!`
+      : ''
 
     client.say(
       channel,
