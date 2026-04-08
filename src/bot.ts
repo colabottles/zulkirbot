@@ -14,7 +14,10 @@ const client = new tmi.Client({
     username: process.env.TWITCH_USERNAME!,
     password: `oauth:${process.env.TWITCH_ACCESS_TOKEN!}`,
   },
-  channels: [process.env.TWITCH_CHANNEL!],
+  channels: [
+    process.env.TWITCH_CHANNEL!,
+    process.env.TWITCH_CHANNEL_2!,
+  ].filter(Boolean),
 })
 
 client.connect().then(async () => {
