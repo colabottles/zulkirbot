@@ -1,5 +1,6 @@
 import { BotCommand } from '../types'
 import { getGiveawayState, drawWinner } from '../lib/giveaway'
+import { sendWhisper } from '../lib/whisper'
 
 export const drawCommand: BotCommand = {
   name: 'draw',
@@ -17,7 +18,7 @@ export const drawCommand: BotCommand = {
     }
 
     if (!state.prizeCode) {
-      client.say(channel, `@${username} — no prize code set! Use !setcode [code] first.`)
+      client.say(channel, `@${username} — no prize code set! Use !setcode [codename] first.`)
       return
     }
 
@@ -34,16 +35,17 @@ export const drawCommand: BotCommand = {
       `Congratulations! Check your Twitch whispers for your prize code!`
     )
 
-    try {
-      await client.whisper(
-        winner,
-        `🎉 Congratulations! You won the ${state.prizeName} giveaway on ${process.env.TWITCH_CHANNEL}'s stream! ` +
-        `Here is your code: ${state.prizeCode} — Enjoy!`
-      )
-    } catch (err) {
+    const whisperSent = await sendWhisper(
+      winner,
+      `🎉 Congratulations! You won the ${state.prizeName} giveaway on ${process.env.TWITCH_CHANNEL}'s stream! ` +
+      `Here is your code: ${state.prizeCode} — Enjoy!`
+    )
+
+    if (!whisperSent) {
       client.say(
         channel,
-        `@${winner} — I couldn't whisper you! Please make sure your whispers are open and contact @${process.env.TWITCH_CHANNEL} directly for your code.`
+        `@${winner} — I couldn't send you a whisper! Please make sure your whispers are open ` +
+        `and contact @${process.env.TWITCH_CHANNEL} directly for your code.`
       )
     }
   }
