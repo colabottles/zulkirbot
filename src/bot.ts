@@ -26,12 +26,12 @@ client.connect().then(async () => {
   await rotateShop()
   setInterval(rotateShop, 60 * 60 * 1000)
 
-  // Refresh token every 30 days
+  // Refresh token every 12 hours
   setInterval(async () => {
     if (isRefreshing) return
     isRefreshing = true
     console.log('[Auth] Scheduled token refresh...')
     await refreshToken()
     isRefreshing = false
-  }, 30 * 24 * 60 * 60 * 1000)
-}).catch(console.error)
+  }, 12 * 60 * 60 * 1000)
+})
