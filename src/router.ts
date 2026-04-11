@@ -1,14 +1,23 @@
 import tmi from 'tmi.js'
 import { BotCommand } from './types'
+import { isGamePaused } from './lib/giveaway'
 
 const cooldowns = new Map<string, Map<string, number>>()
+
+const GIVEAWAY_COMMANDS = new Set([
+  'start', 'stop', 'setcode', 'ddo', 'draw'
+])
+
+const EXEMPT_COMMANDS = new Set([
+  'so', 'uptime', 'help', 'status',
+  'start', 'stop', 'setcode', 'ddo', 'draw'
+])
 
 export function registerCommands(
   client: tmi.Client,
   commands: BotCommand[]
 ) {
   const commandMap = new Map<string, BotCommand>()
-
   for (const cmd of commands) {
     commandMap.set(cmd.name, cmd)
     for (const alias of cmd.aliases ?? []) {
@@ -27,12 +36,17 @@ export function registerCommands(
     const cmd = commandMap.get(cmdName)
     if (!cmd) return
 
+    // Block game commands during a giveaway
+    if (isGamePaused() && !EXEMPT_COMMANDS.has(cmd.name)) {
+      client.say(channel, `@${username} — the game is paused while a giveaway is in progress! 🎉`)
+      return
+    }
+
     if (cmd.cooldownSeconds) {
       const now = Date.now()
       if (!cooldowns.has(cmd.name)) cooldowns.set(cmd.name, new Map())
       const userCooldowns = cooldowns.get(cmd.name)!
       const lastUsed = userCooldowns.get(username) ?? 0
-
       if (now - lastUsed < cmd.cooldownSeconds * 1000) {
         const remaining = Math.ceil(
           (cmd.cooldownSeconds * 1000 - (now - lastUsed)) / 1000

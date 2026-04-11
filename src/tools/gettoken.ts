@@ -43,6 +43,7 @@ const server = http.createServer(async (req, res) => {
   })
 
   const token = await tokenRes.json()
+  console.log('Full token response:', JSON.stringify(token, null, 2))
 
   console.log('\n✅ Token generated successfully!')
   console.log(`TWITCH_ACCESS_TOKEN=${token.access_token}`)

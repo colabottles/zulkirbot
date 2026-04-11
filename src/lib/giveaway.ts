@@ -7,6 +7,7 @@ export interface GiveawayState {
   timerEndTime: number | null
   channel: string
   warned: boolean
+  gamePaused: boolean
 }
 
 const state: GiveawayState = {
@@ -18,6 +19,7 @@ const state: GiveawayState = {
   timerEndTime: null,
   channel: '',
   warned: false,
+  gamePaused: false,
 }
 
 let warningTimeout: ReturnType<typeof setTimeout> | null = null
@@ -44,6 +46,16 @@ export function setGiveawayActive(
 
 export function setPrizeCode(code: string): void {
   state.prizeCode = code
+  state.gamePaused = true
+}
+
+export function resumeGame(): void {
+  state.gamePaused = false
+  state.prizeCode = ''
+}
+
+export function isGamePaused(): boolean {
+  return state.gamePaused
 }
 
 export function addEntry(username: string): boolean {
@@ -59,12 +71,10 @@ export function startTimer(
   if (state.timerStarted) return
   state.timerStarted = true
   state.timerEndTime = Date.now() + 5 * 60 * 1000
-
   warningTimeout = setTimeout(() => {
     state.warned = true
     onWarning()
   }, 4 * 60 * 1000)
-
   endTimeout = setTimeout(() => {
     state.active = false
     onEnd()
@@ -85,6 +95,7 @@ export function resetGiveaway(): void {
   state.timerEndTime = null
   state.channel = ''
   state.warned = false
+  state.gamePaused = false
   clearTimeouts()
 }
 

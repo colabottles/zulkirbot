@@ -35,11 +35,17 @@ export const drawCommand: BotCommand = {
       `Congratulations! Check your Twitch whispers for your prize code!`
     )
 
+    console.log(`[Draw] Winner: ${winner}`)
+    console.log(`[Draw] Prize code: ${state.prizeCode}`)
+    console.log(`[Draw] Attempting whisper to ${winner}...`)
+
     const whisperSent = await sendWhisper(
       winner,
       `🎉 Congratulations! You won the ${state.prizeName} giveaway on ${process.env.TWITCH_CHANNEL}'s stream! ` +
       `Here is your code: ${state.prizeCode} — Enjoy!`
     )
+
+    console.log(`[Draw] Whisper sent: ${whisperSent}`)
 
     if (!whisperSent) {
       client.say(
@@ -48,5 +54,10 @@ export const drawCommand: BotCommand = {
         `and contact @${process.env.TWITCH_CHANNEL} directly for your code.`
       )
     }
+
+    client.say(
+      channel,
+      `@${process.env.TWITCH_CHANNEL} — don't forget to run !stop giveaway to resume the game! 🎮`
+    )
   }
 }

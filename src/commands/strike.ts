@@ -4,7 +4,6 @@ import { getActiveDuel, removeDuel } from '../lib/duels'
 import { getCharacterStats } from '../lib/stats'
 import { d20, d8 } from '../game/dice'
 import { CLASS_HP } from '../lib/classes'
-import { formatClass } from '../lib/format'
 
 const XP_REWARD = 50
 
@@ -56,7 +55,6 @@ export const strikeCommand: BotCommand = {
 
     if (hit) {
       damage = d8() + attackerStats.damageBonus
-
       if (duel.challenger === username) {
         duel.targetHp -= damage
       } else {
@@ -71,9 +69,15 @@ export const strikeCommand: BotCommand = {
       ? `@${username} hits @${opponent} for ${damage} damage!`
       : `@${username} misses @${opponent}!`
 
-    // Check if duel is over
+    // Duel over
     if (defenderHp <= 0) {
       removeDuel(duel.challenger, duel.target)
+
+      // Set loser HP to 0 in DB
+      await supabase
+        .from('characters')
+        .update({ hp: 0 })
+        .eq('twitch_username', opponent)
 
       // Award XP to winner
       const { data: winnerChar } = await supabase
@@ -87,7 +91,6 @@ export const strikeCommand: BotCommand = {
         const newXp = winnerChar.xp + XP_REWARD
         const { newLevel, newXpTotal } = calculateLevel(newXp)
         const leveledUp = newLevel > winnerChar.level
-
         const hpPerLevel = CLASS_HP[winnerChar.class] ?? 5
         const levelsGained = newLevel - winnerChar.level
         const newMaxHp = winnerChar.max_hp + (hpPerLevel * levelsGained)
@@ -98,9 +101,15 @@ export const strikeCommand: BotCommand = {
             xp: newXpTotal,
             level: newLevel,
             max_hp: leveledUp ? newMaxHp : winnerChar.max_hp,
-            hp: leveledUp ? Math.min(winnerChar.hp + (hpPerLevel * levelsGained), newMaxHp) : winnerChar.hp,
+            hp: leveledUp
+              ? Math.min(winnerChar.hp + (hpPerLevel * levelsGained), newMaxHp)
+              : winnerChar.hp,
           })
           .eq('twitch_username', username)
+
+        // Update duel stats for both players
+        await upsertDuelStat(username, winnerChar.display_name, true)
+        await upsertDuelStat(opponent, defenderChar.display_name, false)
 
         const levelMsg = leveledUp ? ` 🎉 LEVEL UP! You are now Level ${newLevel}!` : ''
 
@@ -108,21 +117,23 @@ export const strikeCommand: BotCommand = {
           channel,
           `⚔️ ${hitMsg} ` +
           `🏆 @${username} wins the duel! +${XP_REWARD} XP!${levelMsg} ` +
-          `@${opponent} is defeated and left with 1 HP. Use !rest to recover.`
+          `@${opponent} is defeated and left at 0 HP. Use !rest to recover.`
         )
       }
 
-      // Switch turns
-      duel.currentTurn = opponent
-      duel.last_action = Date.now()
-
-      client.say(
-        channel,
-        `⚔️ ${hitMsg} ` +
-        `[@${username} HP: ${attackerHp} | @${opponent} HP: ${defenderHp}] ` +
-        `@${opponent} — type !strike to fight back!`
-      )
+      return
     }
+
+    // Duel continues — switch turns
+    duel.currentTurn = opponent
+    duel.last_action = Date.now()
+
+    client.say(
+      channel,
+      `⚔️ ${hitMsg} ` +
+      `[@${username} HP: ${attackerHp} | @${opponent} HP: ${defenderHp}] ` +
+      `@${opponent} — type !strike to fight back!`
+    )
   }
 }
 

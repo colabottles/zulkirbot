@@ -37,15 +37,15 @@ export const ddoCommand: BotCommand = {
           // 1 minute warning
           clientRef?.say(
             channel,
-            `⏰ 1 minute remaining to enter the ${state.prizeName} giveaway! Type !ddo to enter!`
+            `⏰ 1 minute remaining to enter the ${state.prizeName}! Type !ddo to enter!`
           )
         },
         () => {
           // Timer ends
           clientRef?.say(
             channel,
-            `🔒 Entries for the ${state.prizeName} giveaway are now closed! ` +
-            `${state.entries.length} entries received. Broadcaster will draw a winner shortly with !draw`
+            `🔒 Entries for the ${state.prizeName} are now closed! ` +
+            `${state.entries.length === 1 ? '1 entry' : `${state.entries.length} entries`} received. Broadcaster will draw a winner shortly with !draw`
           )
         }
       )
@@ -53,7 +53,7 @@ export const ddoCommand: BotCommand = {
       client.say(
         channel,
         `🎉 @${username} is the first entry! The 5 minute timer has started! ` +
-        `Type !ddo to enter the ${state.prizeName} giveaway!`
+        `Type !ddo to enter the ${state.prizeName}!`
       )
       return
     }

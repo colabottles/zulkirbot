@@ -73,12 +73,15 @@ export async function sendWhisper(
       getTwitchUserId(recipientUsername),
     ])
 
+    console.log(`[Whisper] Bot ID: ${botId}, Recipient ID: ${recipientId}`)
+
     if (!botId || !recipientId) {
       console.error('Whisper error: could not resolve user IDs')
       return false
     }
 
     const token = process.env.TWITCH_ACCESS_TOKEN!
+    console.log(`[Whisper] Using token: ${token.slice(0, 8)}...`)
 
     const response = await fetch(
       `https://api.twitch.tv/helix/whispers?from_user_id=${botId}&to_user_id=${recipientId}`,
@@ -92,6 +95,8 @@ export async function sendWhisper(
         body: JSON.stringify({ message }),
       }
     )
+
+    console.log(`[Whisper] Response status: ${response.status}`)
 
     if (response.status === 401) {
       console.log('[Auth] Token expired, refreshing...')
@@ -110,6 +115,11 @@ export async function sendWhisper(
           body: JSON.stringify({ message }),
         }
       )
+      console.log(`[Whisper] Retry response status: ${retry.status}`)
+      if (retry.status !== 204) {
+        const retryError = await retry.json()
+        console.error('[Whisper] Retry error:', retryError)
+      }
       return retry.status === 204
     }
 

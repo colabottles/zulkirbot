@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { TAVERN_DRINKS, TAVERN_MEALS } from '../game/tavern'
 import { applyBuff } from '../lib/tavernBuffs'
 import { activeFights } from '../game/engine'
+import { markTavernVisit } from '../lib/tavernSession'
 
 export const tavernCommand: BotCommand = {
   name: 'tavern',
@@ -21,11 +22,12 @@ export const tavernCommand: BotCommand = {
 
     // Show menu
     if (!args.length) {
-      const drinks = TAVERN_DRINKS.map(d => `${d.name} (${d.price}g)`).join(' | ')
-      const meals = TAVERN_MEALS.map(m => `${m.name} (${m.price}g)`).join(' | ')
-      client.say(channel, `🍺 Tavern Drinks: ${drinks}`)
-      client.say(channel, `🍖 Tavern Meals: ${meals}`)
-      client.say(channel, `Use !tavern drink [name] or !tavern meal [name] to order. !gamble [amount] to try your luck!`)
+      client.say(
+        channel,
+        `🍺 Welcome to the tavern, @${username}! Use !drinks to see the drink menu, ` +
+        `!meals to see the food menu. Use !tavern drink [name] or !tavern meal [name] to order. ` +
+        `!gamble [amount] to try your luck! !barkeep and !rumour available after your first purchase.`
+      )
       return
     }
 
@@ -57,6 +59,8 @@ export const tavernCommand: BotCommand = {
         .from('characters')
         .update({ gold: char.gold - drink.price })
         .eq('twitch_username', username)
+
+      markTavernVisit(username)
 
       if (drink.effect === 'weird') {
         client.say(
@@ -124,6 +128,8 @@ export const tavernCommand: BotCommand = {
           hp: newHp,
         })
         .eq('twitch_username', username)
+
+      markTavernVisit(username)
 
       client.say(
         channel,

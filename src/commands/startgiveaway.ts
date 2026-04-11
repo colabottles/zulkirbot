@@ -36,7 +36,7 @@ export const startGiveawayCommand: BotCommand = {
 
     client.say(
       channel,
-      `🎉 GIVEAWAY STARTED! Prize: ${prizeName} | ` +
+      `🎉 GIVEAWAY STARTED! Prize: ${prizeName.replace(/\s*giveaway\s*/gi, '').trim()} | ` +
       `Type !ddo to enter! The timer starts with the first entry. ` +
       `Make sure your Twitch whispers are open to receive your prize!`
     )
