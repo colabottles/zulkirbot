@@ -66,7 +66,7 @@ npm install
 **3. Create your `.env` file:**
 
 ```env
-TWITCH_USERNAME=zulkirbot
+TWITCH_USERNAME=your_bot_name
 TWITCH_CHANNEL=your_channel
 TWITCH_CHANNEL_2=your_second_channel
 TWITCH_ACCESS_TOKEN=your_oauth_token
@@ -81,7 +81,7 @@ npm run dev
 ```
 
 You should see:
-ZulkirBot connected to #your_channel
+"YourBot" connected to #your_channel
 [Shop] Rotated at ...
 
 ---
@@ -99,7 +99,7 @@ ZulkirBot connected to #your_channel
 ## Project Structure
 
 ```plaintext
-zulkirbot/
+yourbot/
 ├── src/
 │   ├── bot.ts               # Entry point
 │   ├── router.ts            # Command router
@@ -116,14 +116,14 @@ zulkirbot/
 
 ## Bot Accounts
 
-ZulkirBot runs two Twitch accounts:
+YourBot runs two Twitch accounts:
 
 | Account | Role |
 | --- | --- |
-| **ZulkirBot** | Posts bot messages in chat |
-| **ZulkirJax** | Streamer account — do not use for bot credentials |
+| **YourBot** | Posts bot messages in chat |
+| **YourAccount** | Streamer account — do not use for bot credentials |
 
-> ⚠️ Make sure ZulkirJax is logged out of your browser before starting the bot to avoid duplicate messages in chat.
+> ⚠️ Make sure your stream account is logged out of your browser before starting the bot to avoid duplicate messages in chat.
 
 ---
 
