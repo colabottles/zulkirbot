@@ -47,6 +47,7 @@ import { barkeepCommand } from './barkeep'
 import { drinksCommand } from './drinks'
 import { mealsCommand } from './meals'
 import { brawlCommand } from './brawl'
+import { prestigeCommand } from './prestige'
 
 export const allCommands: BotCommand[] = [
   soCommand,
@@ -97,4 +98,5 @@ export const allCommands: BotCommand[] = [
   drinksCommand,
   mealsCommand,
   brawlCommand,
+  prestigeCommand,
 ]

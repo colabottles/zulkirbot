@@ -1,6 +1,7 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
 import { formatClass } from '../lib/format'
+import { formatPrestige } from './prestige'
 
 export const statusCommand: BotCommand = {
   name: 'status',
@@ -20,9 +21,11 @@ export const statusCommand: BotCommand = {
       return
     }
 
+    const prestigeBadge = char.prestige_rank > 0 ? ` ${formatPrestige(char.prestige_rank)}` : ''
+
     client.say(
       channel,
-      `⚔️ ${char.display_name} | ${formatClass(char.class)} Lv.${char.level} | ` +
+      `⚔️ ${char.display_name}${prestigeBadge} | ${formatClass(char.class)} Lv.${char.level} | ` +
       `HP: ${char.hp}/${char.max_hp} | XP: ${char.xp} | 🪙 Gold: ${char.gold}g`
     )
   }

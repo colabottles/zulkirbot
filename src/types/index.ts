@@ -8,6 +8,8 @@ export interface Character {
   hp: number
   max_hp: number
   gold: number
+  prestige_rank: number
+  prestige_hp_bonus: number
   equipped_weapon: string | null
   equipped_shield: string | null
   equipped_armor: string | null
