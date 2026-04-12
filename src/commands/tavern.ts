@@ -4,6 +4,7 @@ import { TAVERN_DRINKS, TAVERN_MEALS } from '../game/tavern'
 import { applyBuff } from '../lib/tavernBuffs'
 import { activeFights } from '../game/engine'
 import { markTavernVisit } from '../lib/tavernSession'
+import { maybeStartBrawl } from '../lib/tavernSession'
 
 export const tavernCommand: BotCommand = {
   name: 'tavern',
@@ -61,6 +62,7 @@ export const tavernCommand: BotCommand = {
         .eq('twitch_username', username)
 
       markTavernVisit(username)
+      maybeStartBrawl(channel, username, client)
 
       if (drink.effect === 'weird') {
         client.say(
@@ -130,6 +132,7 @@ export const tavernCommand: BotCommand = {
         .eq('twitch_username', username)
 
       markTavernVisit(username)
+      maybeStartBrawl(channel, username, client)
 
       client.say(
         channel,
