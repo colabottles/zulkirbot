@@ -19,6 +19,7 @@ const BARKEEP_NAMES = [
   'ARTofPAW',
   'UngermaxTV',
   'KingKozma',
+  'Zulkir Jax',
 ]
 
 const BARKEEP_LINES: string[] = [
