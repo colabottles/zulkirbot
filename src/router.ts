@@ -1,15 +1,17 @@
 import tmi from 'tmi.js'
 import { BotCommand } from './types'
 import { isGamePaused } from './lib/giveaway'
+import { isManuallyPaused } from './lib/gamePause'
+
+const EXEMPT_COMMANDS = new Set([
+  'so', 'uptime', 'help', 'status',
+  'start', 'stop', 'setcode', 'ddo', 'draw',
+  'pause', 'resume'
+])
 
 const cooldowns = new Map<string, Map<string, number>>()
 
 const GIVEAWAY_COMMANDS = new Set([
-  'start', 'stop', 'setcode', 'ddo', 'draw'
-])
-
-const EXEMPT_COMMANDS = new Set([
-  'so', 'uptime', 'help', 'status',
   'start', 'stop', 'setcode', 'ddo', 'draw'
 ])
 
@@ -37,8 +39,13 @@ export function registerCommands(
     if (!cmd) return
 
     // Block game commands during a giveaway
-    if (isGamePaused() && !EXEMPT_COMMANDS.has(cmd.name)) {
-      client.say(channel, `@${username} — the game is paused while a giveaway is in progress! 🎉`)
+    // Block game commands during a giveaway or manual pause
+    if ((isGamePaused() || isManuallyPaused()) && !EXEMPT_COMMANDS.has(cmd.name)) {
+      if (isManuallyPaused()) {
+        client.say(channel, `@${username} — the game is paused right now for this stream.`)
+      } else {
+        client.say(channel, `@${username} — the game is paused while a giveaway is in progress! 🎉`)
+      }
       return
     }
 
