@@ -24,6 +24,6 @@ export const setcodeCommand: BotCommand = {
     }
 
     setPrizeCode(code)
-    client.say(channel, `@${username} — prize code "${codeName}" loaded. Ready to start the giveaway!`)
+    client.say(channel, `@${username} — prize code "${codeName}" loaded. Ready to start the giveaway! 📢 To be eligible, make sure you've followed and sent a whisper to @ZulkirBot first!`)
   }
 }

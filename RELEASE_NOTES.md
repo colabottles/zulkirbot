@@ -4,7 +4,7 @@
 
 ## v1.4.0 — April 13, 2026
 
-### Bug Fixes
+### Bug Fixes v1.4.0
 
 #### Permadeath + Flee race condition
 
@@ -131,7 +131,7 @@ Barkeep now randomly selects from a roster of DDO streamer names: Tavern Tails, 
 
 ## v1.0.1 — April 11, 2026
 
-### Bug Fixes
+### Bug Fixes v1.0.1
 
 - Fixed ZulkirJax duplicating bot messages in chat — caused by ZulkirJax being logged in while bot was running
 - Fixed `!start giveaway` not persisting state to `!ddo` command
