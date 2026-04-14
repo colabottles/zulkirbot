@@ -41,19 +41,16 @@ export const weeklyCommand: BotCommand = {
 
     const xp = Math.floor(Math.random() * 2000) + 1
     const newXp = char.xp + xp
-
-    await supabase
-      .from('characters')
-      .update({
-        xp: newXp,
-        weekly_claimed_at: new Date().toISOString(),
-      })
-      .eq('twitch_username', username)
+    const { newLevel, newXpTotal } = calculateLevel(newXp)
+    const leveledUp = newLevel > char.level
+    const hpPerLevel = CLASS_HP[char.class] ?? 5
+    const levelsGained = newLevel - char.level
+    const newMaxHp = char.max_hp + (hpPerLevel * levelsGained)
+    const newHp = Math.min(char.hp + (hpPerLevel * levelsGained), newMaxHp)
 
     // 7% chance at uncommon or rarer item
     const itemRoll = d100()
     let itemMsg = ''
-
     if (itemRoll <= 7) {
       const rarityRoll = d100()
       const rarity = rarityRoll <= 3
@@ -61,9 +58,7 @@ export const weeklyCommand: BotCommand = {
         : rarityRoll <= 15
           ? 'rare'
           : 'uncommon'
-
       const item = rollLootByRarity(rarity)
-
       await supabase.from('inventory').insert({
         character_id: char.id,
         item_name: item.name,
@@ -72,17 +67,8 @@ export const weeklyCommand: BotCommand = {
         stat_bonus: item.stat_bonus,
         description: item.description,
       })
-
       itemMsg = ` You also find a ${item.rarity.toUpperCase()} ${item.name} in your pack!`
     }
-
-    // After calculating newXp
-    const { newLevel, newXpTotal } = calculateLevel(newXp)
-    const leveledUp = newLevel > char.level
-
-    const hpPerLevel = CLASS_HP[char.class] ?? 5
-    const levelsGained = newLevel - char.level
-    const newMaxHp = char.max_hp + (hpPerLevel * levelsGained)
 
     await supabase
       .from('characters')
@@ -90,7 +76,7 @@ export const weeklyCommand: BotCommand = {
         xp: newXpTotal,
         level: newLevel,
         max_hp: newMaxHp,
-        hp: Math.min(char.hp + (hpPerLevel * levelsGained), newMaxHp),
+        hp: newHp,
         weekly_claimed_at: new Date().toISOString(),
       })
       .eq('twitch_username', username)
@@ -101,7 +87,7 @@ export const weeklyCommand: BotCommand = {
 
     client.say(
       channel,
-      `🎁 @${username} claims their weekly reward — +${xp} XP!${itemMsg}`
+      `🎁 @${username} claims their weekly reward — +${xp} XP!${itemMsg}${levelMsg}`
     )
   }
 }

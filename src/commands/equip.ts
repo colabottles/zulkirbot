@@ -28,6 +28,7 @@ export const equipCommand: BotCommand = {
       .from('inventory')
       .select('*')
       .eq('character_id', char.id)
+      .eq('equipped', false)
       .ilike('item_name', `%${itemName}%`)
 
     if (!items || items.length === 0) {
@@ -107,10 +108,26 @@ export const equipCommand: BotCommand = {
       ? ` ⚠️ A dark energy courses through you... this item is CURSED!`
       : ''
 
+    // Check for duplicate equipped item names
+    const { data: equippedItems } = await supabase
+      .from('inventory')
+      .select('item_name')
+      .eq('character_id', char.id)
+      .eq('equipped', true)
+
+    const itemNameLower = item.item_name.toLowerCase()
+    const duplicateCount = equippedItems
+      ? equippedItems.filter(i => i.item_name.toLowerCase() === itemNameLower).length
+      : 0
+
+    const duplicateMsg = duplicateCount > 1
+      ? ` ⚠️ You already have a ${item.item_name} equipped — the duplicate provides no bonus!`
+      : ''
+
     client.say(
       channel,
       `✅ @${username} equipped ${item.item_name} in their ${slot} slot. ` +
-      `(${bonusSign}${item.stat_bonus} ${statLabel})${curseMsg}`
+      `(${bonusSign}${item.stat_bonus} ${statLabel})${curseMsg}${duplicateMsg}`
     )
   }
 }

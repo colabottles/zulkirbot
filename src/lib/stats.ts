@@ -51,6 +51,7 @@ export async function getCharacterStats(char: any): Promise<CharacterStats> {
   }
 
   const slots = Object.keys(SLOT_COLUMNS) as EquipmentSlot[]
+  const seenItemNames = new Set<string>()
 
   for (const slot of slots) {
     const itemId = char[SLOT_COLUMNS[slot]]
@@ -58,11 +59,15 @@ export async function getCharacterStats(char: any): Promise<CharacterStats> {
 
     const { data: item } = await supabase
       .from('inventory')
-      .select('stat_bonus, is_cursed, curse_revealed')
+      .select('item_name, stat_bonus, is_cursed, curse_revealed')
       .eq('id', itemId)
       .single()
 
     if (!item) continue
+
+    // Skip duplicate item names — only first instance counts
+    if (seenItemNames.has(item.item_name.toLowerCase())) continue
+    seenItemNames.add(item.item_name.toLowerCase())
 
     const statKey = SLOT_STAT[slot]
     const bonus = item.is_cursed ? -Math.abs(item.stat_bonus) : item.stat_bonus

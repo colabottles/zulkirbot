@@ -1,5 +1,5 @@
 import tmi from 'tmi.js'
-import { getBrawlState, startJoinWindow, resetBrawl } from './tavernBrawl'
+import { getBrawlState, startJoinWindow, resetBrawl, addParticipant } from './tavernBrawl'
 
 const tavernVisitors = new Set<string>()
 
@@ -9,6 +9,10 @@ export function markTavernVisit(username: string): void {
 
 export function hasTavernVisit(username: string): boolean {
   return tavernVisitors.has(username)
+}
+
+export function clearTavernVisitors(): void {
+  tavernVisitors.clear()
 }
 
 const BRAWL_CHANCE = 0.15
@@ -25,7 +29,6 @@ export function maybeStartBrawl(
   startJoinWindow(
     channel,
     () => {
-      // Brawl starts
       client.say(
         channel,
         `🍺👊 TAVERN BRAWL BEGINS! ${brawl.participants.length} fighters enter the fray! ` +
@@ -34,6 +37,7 @@ export function maybeStartBrawl(
       runBrawl(channel, client)
     },
     () => {
+      clearTavernVisitors()
       client.say(
         channel,
         `🍺 The brawl fizzled out — not enough fighters showed up. Cowards.`
@@ -41,9 +45,7 @@ export function maybeStartBrawl(
     }
   )
 
-  // Add triggering player automatically
-  const brawlState = getBrawlState()
-  brawlState.participants.push(username)
+  addParticipant(username)
 
   client.say(
     channel,
@@ -55,19 +57,15 @@ export function maybeStartBrawl(
 export async function runBrawl(channel: string, client: tmi.Client): Promise<void> {
   const brawl = getBrawlState()
 
-  // Simulate rounds until one player remains
   while (brawl.participants.length > 1) {
-    // Each participant attacks a random opponent
     const roundResults: string[] = []
     const toEliminate: string[] = []
 
-    // Simple damage model — each player rolls against a random opponent
     const hpMap = new Map<string, number>()
     for (const p of brawl.participants) {
       hpMap.set(p, 10)
     }
 
-    // Run 3 rounds of combat
     for (let round = 0; round < 3; round++) {
       for (const attacker of [...brawl.participants]) {
         const opponents = brawl.participants.filter(p => p !== attacker)
@@ -78,12 +76,10 @@ export async function runBrawl(channel: string, client: tmi.Client): Promise<voi
       }
     }
 
-    // Eliminate anyone at 0 or below
     for (const [player, hp] of hpMap.entries()) {
       if (hp <= 0) toEliminate.push(player)
     }
 
-    // Make sure at least one person gets eliminated per loop to avoid infinite loop
     if (toEliminate.length === 0) {
       const lowestHp = [...hpMap.entries()].sort((a, b) => a[1] - b[1])[0]
       toEliminate.push(lowestHp[0])
@@ -98,33 +94,32 @@ export async function runBrawl(channel: string, client: tmi.Client): Promise<voi
       client.say(channel, `👊 ${roundResults.join(' ')} ${brawl.participants.length} still standing!`)
     }
 
-    // Small delay between rounds
     await new Promise(resolve => setTimeout(resolve, 3000))
   }
 
-  // Declare winner
   const winner = brawl.participants[0]
   const numFighters = brawl.eliminated.length + 1
   const goldReward = numFighters * 15
   const xpReward = numFighters * 10
 
   if (winner) {
-    const { data: char } = await (await import('../lib/supabase')).supabase
+    const { supabase } = await import('../lib/supabase')
+
+    const { data: char } = await supabase
       .from('characters')
       .select('*')
       .eq('twitch_username', winner)
       .single()
 
     if (char) {
-      await (await import('../lib/supabase')).supabase
+      await supabase
         .from('characters')
         .update({ gold: char.gold + goldReward, xp: char.xp + xpReward })
         .eq('twitch_username', winner)
     }
 
-    // Set losers to 0 HP
     for (const loser of brawl.eliminated) {
-      await (await import('../lib/supabase')).supabase
+      await supabase
         .from('characters')
         .update({ hp: 0 })
         .eq('twitch_username', loser)
@@ -139,6 +134,7 @@ export async function runBrawl(channel: string, client: tmi.Client): Promise<voi
   }
 
   resetBrawl()
+  clearTavernVisitors()
 }
 
 function eliminateFromBrawl(username: string): void {

@@ -4,7 +4,6 @@ import { activeFights } from '../game/engine'
 import { isInDuel } from '../lib/duels'
 import {
   getPartyByUsername,
-  getPartyById,
   getPartySize,
   getActiveRaid,
   passLeadership,
@@ -17,7 +16,8 @@ import { getCharacterStats } from '../lib/stats'
 import { d20, d8, d100 } from '../game/dice'
 import { rollLoot } from '../game/loot'
 import { trackKill } from '../lib/kills'
-import { formatClass } from '../lib/format'
+import { calculateLevel } from '../game/engine'
+import { CLASS_HP } from '../lib/classes'
 
 export const partyCommand: BotCommand = {
   name: 'party',
@@ -363,11 +363,23 @@ export const partyCommand: BotCommand = {
             .single()
 
           if (memberChar) {
+            const newXp = memberChar.xp + xpShare
+            const { newLevel, newXpTotal } = calculateLevel(newXp)
+            const leveledUp = newLevel > memberChar.level
+            const hpPerLevel = CLASS_HP[memberChar.class] ?? 5
+            const levelsGained = newLevel - memberChar.level
+            const newMaxHp = memberChar.max_hp + (hpPerLevel * levelsGained)
+
             await supabase
               .from('characters')
               .update({
-                xp: memberChar.xp + xpShare,
+                xp: newXpTotal,
+                level: newLevel,
                 gold: memberChar.gold + goldShare,
+                max_hp: leveledUp ? newMaxHp : memberChar.max_hp,
+                hp: leveledUp
+                  ? Math.min(memberChar.hp + (hpPerLevel * levelsGained), newMaxHp)
+                  : memberChar.hp,
               })
               .eq('twitch_username', m.twitch_username)
           }
