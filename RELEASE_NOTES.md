@@ -2,6 +2,43 @@
 
 ---
 
+## v1.4.0 — April 13, 2026
+
+### Bug Fixes
+
+#### Permadeath + Flee race condition
+
+Fixed an issue where a player who died in combat could still trigger the `!flee` command. The flee handler now checks the database to confirm the character exists before proceeding, and cleans up any stale fight state.
+
+#### Tavern Brawl fizzle reset
+
+Fixed an issue where `!brawl` could not be started again after a brawl fizzled out due to insufficient participants. `tavernVisitors` is now cleared on brawl cancel and brawl end, and the triggering player is now added via `addParticipant` instead of a direct array push.
+
+#### Weekly reward double-write
+
+Fixed a race condition in `!weekly` where two separate database writes were made, leaving the character in an inconsistent state if the bot restarted between them. Now uses a single atomic update. Also fixed the level-up message not appearing in the weekly reward chat response.
+
+#### Party raid XP missing level recalc
+
+Fixed an issue where defeating a raid boss granted XP to party members but never recalculated or updated their level, causing level/XP desync. Party members now correctly level up after a successful raid.
+
+#### Duplicate item stat negation
+
+Two equipped items with the same name no longer stack stat bonuses. Only the first equipped instance counts toward stats. Players are warned in chat when equipping a duplicate item that the second copy provides no bonus.
+
+### Improvements
+
+#### Equip command
+
+Players can no longer equip an item that is already equipped, preventing the same item from occupying two slots.
+
+#### Code Quality
+
+Removed unused `tmi` import from `flee.ts`
+Removed unused `formatClass` import from `party.ts`
+Removed unused `getPartyById` import from `party.ts`
+Replaced dynamic `await import()` calls in `party.ts` with static top-level imports for `calculateLevel` and `CLASS_HP`
+
 ## v1.3.0 — April 12, 2026
 
 ### Prestige System

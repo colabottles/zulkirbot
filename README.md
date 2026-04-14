@@ -19,6 +19,7 @@ Full command reference and game guides at **[zulkirbot-docs.netlify.app](https:/
 - **PvP dueling** — challenge other players to turn-based duels
 - **Party raids** — form a party and take on raid bosses together
 - **Item shop** — rotating stock every hour, buy and sell gear
+- **Item uniqueness** — equipping two items of the same name provides no additional stat bonus; only the first equipped copy counts
 - **Bank vault** — store up to 50 items safe from permadeath
 - **The Tavern** — drinks, meals, gambling, rumours, barkeep wisdom, and brawls
 - **Prestige system** — reach Level 40 and ascend through Epic I to Epic V
