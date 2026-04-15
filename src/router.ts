@@ -1,7 +1,9 @@
 import tmi from 'tmi.js'
+import { supabase } from './lib/supabase'
 import { BotCommand } from './types'
 import { isGamePaused } from './lib/giveaway'
 import { isManuallyPaused } from './lib/gamePause'
+import { handleCampaignCommand, handleJoinCampCommand } from './commands/campaign'
 
 const EXEMPT_COMMANDS = new Set([
   'so', 'uptime', 'help', 'status',
@@ -34,6 +36,17 @@ export function registerCommands(
     const [rawCmd, ...args] = message.trim().split(/\s+/)
     const cmdName = rawCmd.slice(1).toLowerCase()
     const username = tags.username ?? 'unknown'
+
+    // --- Campaign commands (handled outside normal command map) ---
+    if (cmdName === 'campaign') {
+      await handleCampaignCommand(client, supabase, channel, username)
+      return
+    }
+    if (cmdName === 'joincamp') {
+      await handleJoinCampCommand(client, channel, username)
+      return
+    }
+    // --- End campaign commands ---
 
     const cmd = commandMap.get(cmdName)
     if (!cmd) return

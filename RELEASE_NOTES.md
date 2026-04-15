@@ -2,6 +2,33 @@
 
 ---
 
+## v1.4.2 — April 14, 2026
+
+### !campaign — New multi-stage campaign system. One campaign per channel per day
+
+- Solo or party mode. Party mode opens a 60-second join window via `!joincamp`.
+- Five stages of escalating difficulty: *Skirmish → Ambush → Patrol → Elite Guard → Minor Boss.*
+- Rest shrine fires before each stage after the first, restoring 20 HP to all living players.
+- HP carries over between stages. No full heal between fights.
+- Permadeath applies per player. Dead players are out; surviving party members continue.
+- If all players die, the campaign ends in defeat and the daily cooldown is consumed.
+- Boss drawn randomly from a pool of 18 named villains rooted in D&D/Forgotten Realms lore.
+- Stage 3 enemy uses a named special ability. Stage 4 elite uses a power move drawn from a rotating pool.
+- Boss fires a named special attack at round 2 hitting all living party members.
+- Full clear awards scaling XP and gold, a unique title (drawn from a pool of 10), and one minor artifact drop to a random survivor (drawn from a pool of 12).
+- Dead players earn XP and gold only for stages they survived.
+
+### Database
+
+**New tables:** campaigns, campaign_participants, campaign_stage_log, campaign_rewards
+**New seed tables:** campaign_boss_pool (18 entries), campaign_artifact_pool (12 entries), campaign_title_pool (10 entries)
+**New view:** campaign_today — used to enforce the channel-wide daily cooldown
+
+### Files
+
+- `src/commands/campaign.ts` — full campaign handler
+- `router.ts` — `!campaign` and `!joincamp` wired outside normal command map
+
 ## v1.4.0 — April 13, 2026
 
 ### Bug Fixes v1.4.0
