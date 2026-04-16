@@ -4,6 +4,8 @@ import { BotCommand } from './types'
 import { isGamePaused } from './lib/giveaway'
 import { isManuallyPaused } from './lib/gamePause'
 import { handleCampaignCommand, handleJoinCampCommand } from './commands/campaign'
+import { handleNamedCampaignCommand, handleNamedJoinCamp, checkConsequences } from './commands/mystara_campaign'
+import { handleClericCommand, isYvannisPresent } from './commands/cleric'
 
 const EXEMPT_COMMANDS = new Set([
   'so', 'uptime', 'help', 'status',
@@ -12,10 +14,6 @@ const EXEMPT_COMMANDS = new Set([
 ])
 
 const cooldowns = new Map<string, Map<string, number>>()
-
-const GIVEAWAY_COMMANDS = new Set([
-  'start', 'stop', 'setcode', 'ddo', 'draw'
-])
 
 export function registerCommands(
   client: tmi.Client,
@@ -37,21 +35,47 @@ export function registerCommands(
     const cmdName = rawCmd.slice(1).toLowerCase()
     const username = tags.username ?? 'unknown'
 
+    if (cmdName === 'cleric') {
+      await handleClericCommand(client, supabase, channel, username, args)
+      return
+    }
+
+    // Consequence check fires on every command before routing
+    await checkConsequences(client, supabase, channel, username)
+
     // --- Campaign commands (handled outside normal command map) ---
+
+    if (cmdName === 'campaigns') {
+      await client.say(channel,
+        `📜 Available campaigns: !campaign mystara (The Crystal of Rafiel — Mystara/Hollow World). ` +
+        `More coming soon. Requires 1 standard campaign clear to unlock.`
+      )
+      return
+    }
+
     if (cmdName === 'campaign') {
-      await handleCampaignCommand(client, supabase, channel, username)
+      const slug = args[0]?.toLowerCase()
+      if (slug && slug !== 'solo' && slug !== 'party') {
+        await handleNamedCampaignCommand(client, supabase, channel, username, slug)
+      } else {
+        await handleCampaignCommand(client, supabase, channel, username)
+      }
       return
     }
+
     if (cmdName === 'joincamp') {
-      await handleJoinCampCommand(client, channel, username)
+      const handledByNamed = await handleNamedJoinCamp(client, channel, username)
+      if (!handledByNamed) {
+        await handleJoinCampCommand(client, channel, username)
+      }
       return
     }
-    // --- End campaign commands ---
+
+    // --- Normal command routing ---
 
     const cmd = commandMap.get(cmdName)
     if (!cmd) return
 
-    // Block game commands during a giveaway
     // Block game commands during a giveaway or manual pause
     if ((isGamePaused() || isManuallyPaused()) && !EXEMPT_COMMANDS.has(cmd.name)) {
       if (isManuallyPaused()) {

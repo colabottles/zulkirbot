@@ -8,10 +8,7 @@
 
 import { Client } from 'tmi.js'
 import { SupabaseClient } from '@supabase/supabase-js'
-
-// ------------------------------------------------------------
-// Types
-// ------------------------------------------------------------
+import { summonYvannis, rollYvannisStage } from './cleric'
 
 interface Participant {
   username: string
@@ -32,6 +29,7 @@ interface Campaign {
   boss_special: string
   started_at: string | null
   completed_at: string | null
+  yvannis_stage: number | null
 }
 
 interface BossPoolEntry {
@@ -47,10 +45,6 @@ interface StageEnemy {
   special?: string           // stage 4 only
   specialDamage?: number
 }
-
-// ------------------------------------------------------------
-// Constants
-// ------------------------------------------------------------
 
 const JOIN_WINDOW_MS = 60_000   // 60s party join window
 const SHRINE_HEAL_HP = 20       // flat HP restored at rest shrine
@@ -104,10 +98,6 @@ const SHRINE_FLAVOR = [
   '🕯️  The shrine\'s flame flickers as you approach, steadying as if in recognition.',
 ]
 
-// ------------------------------------------------------------
-// Utility
-// ------------------------------------------------------------
-
 const roll = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min
 
@@ -118,10 +108,6 @@ const say = (client: Client, channel: string, msg: string) =>
 
 const pickRandom = <T>(arr: T[]): T =>
   arr[Math.floor(Math.random() * arr.length)]
-
-// ------------------------------------------------------------
-// Supabase helpers
-// ------------------------------------------------------------
 
 async function getTodaysCampaign(supabase: SupabaseClient, channel: string) {
   const { data } = await supabase
@@ -175,6 +161,7 @@ async function createCampaign(
       boss_name: boss.boss_name,
       boss_special: boss.special_move,
       started_at: new Date().toISOString(),
+      yvannis_stage: rollYvannisStage(),   // <-- add this line
     })
     .select()
     .single()
@@ -285,12 +272,11 @@ async function writeRewards(
         })
         .eq('twitch_username', p.username)
     }
+    if (fullClear && p.is_alive) {
+      await supabase.rpc('increment_standard_clears', { p_username: p.username })
+    }
   }
 }
-
-// ------------------------------------------------------------
-// Combat engine
-// ------------------------------------------------------------
 
 interface CombatResult {
   survivors: Participant[]
@@ -415,10 +401,6 @@ async function runCombat(
   return { survivors, defeated, enemyName: enemyNames }
 }
 
-// ------------------------------------------------------------
-// Rest shrine
-// ------------------------------------------------------------
-
 async function restShrine(
   client: Client,
   supabase: SupabaseClient,
@@ -442,9 +424,7 @@ async function restShrine(
   }
 }
 
-// ------------------------------------------------------------
 // Boss fight (Stage 5)
-// ------------------------------------------------------------
 
 async function runBossFight(
   client: Client,
@@ -466,10 +446,6 @@ async function runBossFight(
   )
 }
 
-// ------------------------------------------------------------
-// Main campaign runner
-// ------------------------------------------------------------
-
 async function runCampaign(
   client: Client,
   supabase: SupabaseClient,
@@ -490,6 +466,17 @@ async function runCampaign(
       await delay(3000)
       await restShrine(client, supabase, channel, campaign, participants)
       await delay(2000)
+
+      // Summon Yvannis if this is his stage
+      // campaign.yvannis_stage is 1-indexed, stageNum is 1-indexed
+      if (stageNum === campaign.yvannis_stage) {
+        await summonYvannis(
+          client, supabase, channel,
+          campaign.id, stageNum,
+          participants
+        )
+        await delay(1500)
+      }
     }
 
     await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
@@ -582,10 +569,7 @@ async function runCampaign(
   )
 }
 
-// ------------------------------------------------------------
 // !campaign entry point
-// ------------------------------------------------------------
-
 // Track pending party join windows: channel → Set of usernames
 const pendingJoins = new Map<string, Set<string>>()
 const campaignLock = new Map<string, boolean>()
@@ -681,11 +665,7 @@ export async function handleCampaignCommand(
   }
 }
 
-// ------------------------------------------------------------
 // !joincamp entry point
-// Called from your main message handler when in joining window
-// ------------------------------------------------------------
-
 export async function handleJoinCampCommand(
   client: Client,
   channel: string,
@@ -708,11 +688,6 @@ export async function handleJoinCampCommand(
     `🛡️  ${username} joins the party! (${joiners.size} adventurers so far)`
   )
 }
-
-// ------------------------------------------------------------
-// Mode choice listener
-// Waits up to 30s for initiator to type !solo or !joincamp
-// ------------------------------------------------------------
 
 function waitForModeChoice(
   client: Client,

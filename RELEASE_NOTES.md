@@ -2,6 +2,55 @@
 
 ---
 
+## v1.4.3 — April 15, 2026
+
+### Brother Yvannis & Mystara Named Campaign
+
+#### Added
+
+- **Brother Yvannis** — Cleric NPC who appears once per campaign at a random stage (1–4) alongside the rest shrine.
+  - Offers five services: Cure Disease, Cure Blindness, Cure Paralysis, Heal, and Wish.
+  - Costs are percentage-based on the player's current gold (10%–40%).
+  - Checks player condition before charging — will not perform a service that does nothing.
+  - Each player may interact with him once per appearance.
+  - 90-second interaction window. Yvannis departs when the window closes.
+  - Appearance stage is rolled randomly (1–4) at campaign creation and stored in the `campaigns` table.
+
+- **`!campaign mystara`** — First named campaign: *The Crystal of Rafiel* (Mystara/Hollow World setting).
+  - Requires one standard campaign clear to unlock. Higher difficulty than the standard gauntlet (+25% base enemy HP and damage, further modified by channel consequence flags).
+  - Five unique stages with named enemies, special abilities, and per-stage flavor text drawn from Mystara lore.
+  - Ending vote fires after the boss is defeated. Participants vote on one of four outcomes. Tiebreaker opens to all of chat. Random fallback if still tied.
+  - Four outcomes with distinct mechanical consequences: Stabilize, Destroy, Take Control, Let It Spread.
+  - Consequences persist across future campaigns and are stored per-player and per-channel in Supabase.
+  - Unique title pool (8 titles, some locked to specific outcomes) and artifact: Crystal of Rafiel.
+
+- **Named campaign system** — Infrastructure supporting all future named campaigns.
+  - Tables: `named_campaigns`, `named_campaign_stages`, `named_campaign_outcomes`, `named_campaign_titles`, `named_campaign_artifacts`.
+  - Unlock gating via `player_campaign_clears` — tracks standard and named clears per player per slug.
+  - Difficulty modifier stored per campaign, applied to all enemy stats at runtime.
+  - Channel-wide difficulty flag (`spread_difficulty_active`) stacks with per-campaign modifiers.
+
+- **Consequence system** — Persistent cross-campaign effects stored in Supabase.
+  - `player_consequence_flags` — per-player flags for `corruption_stabilized`, `crystal_control`, `shadow_marked`, `disease`, `blindness`, `paralysis`.
+  - `channel_consequence_flags` — channel-wide difficulty bumps.
+  - `madness_outcomes` table — six seeded madness events for the Take Control consequence.
+  - Consequence checks fire at session start on any command via `checkConsequences()` in `router.ts`.
+  - Assassin death and madness trigger are checked against per-player campaign counters incremented by RPCs.
+
+### Database
+
+- New column: `campaigns.yvannis_stage` (INT, 1–4) — stage at which Yvannis appears
+- Extended `player_consequence_flags.flag_type` constraint to include `disease`, `blindness`, `paralysis`
+- New RPCs: `increment_campaign_counters`, `increment_named_clears`, `increment_standard_clears`
+- Updated view: `active_player_consequences` — includes `trigger_ready` computed boolean
+
+### Files
+
+- `src/commands/cleric.ts` — Brother Yvannis NPC handler
+- `src/commands/mystara_campaign.ts` — Named campaign handler (Mystara)
+- `src/router.ts` — `!cleric`, `!campaigns`, named campaign routing, consequence check
+- `src/commands/campaign.ts` — Added `yvannis_stage` to campaign insert and stage loop
+
 ## v1.4.2 — April 14, 2026
 
 ### !campaign — New multi-stage campaign system. One campaign per channel per day
@@ -18,13 +67,13 @@
 - Full clear awards scaling XP and gold, a unique title (drawn from a pool of 10), and one minor artifact drop to a random survivor (drawn from a pool of 12).
 - Dead players earn XP and gold only for stages they survived.
 
-### Database
+### Database v.1.4.2
 
 **New tables:** campaigns, campaign_participants, campaign_stage_log, campaign_rewards
 **New seed tables:** campaign_boss_pool (18 entries), campaign_artifact_pool (12 entries), campaign_title_pool (10 entries)
 **New view:** campaign_today — used to enforce the channel-wide daily cooldown
 
-### Files
+### Files v1.4.2
 
 - `src/commands/campaign.ts` — full campaign handler
 - `router.ts` — `!campaign` and `!joincamp` wired outside normal command map
