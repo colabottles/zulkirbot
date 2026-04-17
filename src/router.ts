@@ -4,7 +4,7 @@ import { BotCommand } from './types'
 import { isGamePaused } from './lib/giveaway'
 import { isManuallyPaused } from './lib/gamePause'
 import { handleCampaignCommand, handleJoinCampCommand } from './commands/campaign'
-import { handleNamedCampaignCommand, handleNamedJoinCamp, checkConsequences } from './commands/mystara_campaign'
+import { handleNamedCampaignCommand, handleNamedJoinCamp, checkConsequences } from './commands/named_campaign'
 import { handleClericCommand, isYvannisPresent } from './commands/cleric'
 
 const EXEMPT_COMMANDS = new Set([

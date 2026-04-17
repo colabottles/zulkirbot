@@ -2,11 +2,75 @@
 
 ---
 
+## v1.4.4 — April 16, 2026
+
+### Al-Qadim Named Campaign & Codebase Cleanup
+
+### Added v1.4.4
+
+- **`!campaign alqadim`** — Second named campaign: *The Seal of the Incomparable*
+  (Al-Qadim / Zakhara setting).
+  - Requires 10 standard campaign clears to unlock.
+  - Higher difficulty than the standard gauntlet (+25% base enemy HP and damage).
+  - Five unique stages with named enemies, special abilities, and per-stage flavor text
+    drawn from Al-Qadim lore, revised to avoid orientalist tropes.
+  - Two rival factions — the Emerald Concordat and the Ashen Throne — converge at the
+    Stage 5 confrontation alongside the boss.
+  - Three-way ending vote: Use the Seal, Destroy the Seal, or Return it to the
+    Elemental Planes. All three outcomes trigger distinct consequence flags.
+  - Unique title pool (8 titles, 3 locked to specific outcomes) and artifact:
+    The Seal of the Incomparable.
+
+- **Al-Qadim consequence system** — Three new persistent cross-campaign effects:
+  - `seal_bound` — Gold drain (30% of current gold) fires after 3–5 campaigns.
+  - `convergence_marked` — 20% chance per campaign stage that a rogue elemental spawns
+    before the normal enemy. Elemental spawn uses its own lightweight combat loop.
+  - `genie_debt` — Genie noble demands payment after 2–3 campaigns: 25% of gold, or
+    20% of max HP if the player cannot afford it.
+
+- **Elemental spawn system** — New `runElementalSpawn()` function and
+  `ELEMENTAL_SPAWN_POOL` in `named_campaigns.ts`. Four elemental types: Fire, Earth,
+  Air, Water. Fires mid-campaign before the stage enemy when `convergence_marked` is
+  active on any living participant. Only one spawn per stage even with multiple marked
+  players.
+
+### Changed
+
+- **`mystara_campaign.ts` renamed to `named_campaigns.ts`** — The file now serves as
+  the single handler for all named campaigns. All future campaigns are seeded via
+  migration SQL only; no new TypeScript files are needed per campaign.
+- **`router.ts`** — Import updated to reflect the rename.
+- **`checkConsequences()`** — Extended with `seal_bound` and `genie_debt` session-start
+  triggers alongside existing Mystara consequence checks.
+- **`writeConsequences()`** — Extended with `seal_bound`, `convergence_marked`, and
+  `genie_debt` cases in the switch block.
+- **`runNamedCampaign()`** — Convergence spawn check added to the stage loop before
+  each `runNamedStage()` call.
+- **Unlock requirement for all named campaigns updated to 10 standard clears.**
+
+### Database v1.4.4
+
+- Extended `player_consequence_flags.flag_type` constraint: added `seal_bound`,
+  `convergence_marked`, `genie_debt`
+- New columns on `player_consequence_flags`: `seal_campaign_counter`, `seal_trigger_at`,
+  `seal_triggered`, `debt_campaign_counter`, `debt_trigger_at`, `debt_triggered`
+- Seeded `named_campaigns`, `named_campaign_stages`, `named_campaign_outcomes`,
+  `named_campaign_titles`, `named_campaign_artifacts` for slug `alqadim`
+- Updated `active_player_consequences` view — extended `trigger_ready` to cover
+  `seal_bound` and `genie_debt`
+- Updated `increment_campaign_counters` RPC — now increments `seal_campaign_counter`
+  and `debt_campaign_counter` alongside existing Mystara counters
+
+### Files v1.4.4
+
+- `src/commands/named_campaigns.ts` (renamed from `mystara_campaign.ts`)
+- `src/router.ts` — import path updated
+
 ## v1.4.3 — April 15, 2026
 
 ### Brother Yvannis & Mystara Named Campaign
 
-#### Added
+#### Added v.1.4.3
 
 - **Brother Yvannis** — Cleric NPC who appears once per campaign at a random stage (1–4) alongside the rest shrine.
   - Offers five services: Cure Disease, Cure Blindness, Cure Paralysis, Heal, and Wish.
@@ -37,14 +101,14 @@
   - Consequence checks fire at session start on any command via `checkConsequences()` in `router.ts`.
   - Assassin death and madness trigger are checked against per-player campaign counters incremented by RPCs.
 
-### Database
+### Database v.1.4.3
 
 - New column: `campaigns.yvannis_stage` (INT, 1–4) — stage at which Yvannis appears
 - Extended `player_consequence_flags.flag_type` constraint to include `disease`, `blindness`, `paralysis`
 - New RPCs: `increment_campaign_counters`, `increment_named_clears`, `increment_standard_clears`
 - Updated view: `active_player_consequences` — includes `trigger_ready` computed boolean
 
-### Files
+### Files v1.4.3
 
 - `src/commands/cleric.ts` — Brother Yvannis NPC handler
 - `src/commands/mystara_campaign.ts` — Named campaign handler (Mystara)

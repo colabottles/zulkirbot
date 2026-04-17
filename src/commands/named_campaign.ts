@@ -1,5 +1,5 @@
 // ============================================================
-// ZulkirBot: Named Campaign Handler — Mystara/Hollow World
+// ZulkirBot: Named Campaign Handler
 // ============================================================
 // Handles named campaign lifecycle:
 //   unlock check → initiation → solo/party prompt →
@@ -10,6 +10,10 @@
 import { Client } from 'tmi.js'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { summonYvannis, rollYvannisStage } from './cleric'
+
+// ------------------------------------------------------------
+// Types
+// ------------------------------------------------------------
 
 interface NamedCampaignStage {
   stage: number
@@ -54,15 +58,37 @@ interface Participant {
   stage_reached: number
 }
 
-const JOIN_WINDOW_MS = 60_000   // 60s party join window
-const MODE_CHOICE_MS = 30_000   // 30s to pick solo/party
-const VOTE_WINDOW_MS = 180_000  // 3 min vote window
-const TIEBREAK_WINDOW_MS = 180_000  // 3 min tiebreak window
+interface ElementalSpawn {
+  name: string
+  hp: number
+  damage_min: number
+  damage_max: number
+}
+
+// ------------------------------------------------------------
+// Constants
+// ------------------------------------------------------------
+
+const JOIN_WINDOW_MS = 60_000
+const MODE_CHOICE_MS = 30_000
+const VOTE_WINDOW_MS = 180_000
+const TIEBREAK_WINDOW_MS = 180_000
 const SHRINE_HEAL_HP = 20
-const NAMED_STAGE_XP = [75, 150, 200, 275, 400]   // harder = more XP
+const NAMED_STAGE_XP = [75, 150, 200, 275, 400]
 const NAMED_STAGE_GOLD = [30, 60, 80, 110, 160]
 const CLEAR_BONUS_XP = 350
 const CLEAR_BONUS_GOLD = 150
+
+export const ELEMENTAL_SPAWN_POOL: ElementalSpawn[] = [
+  { name: 'Rogue Fire Elemental', hp: 60, damage_min: 10, damage_max: 18 },
+  { name: 'Rogue Earth Elemental', hp: 80, damage_min: 8, damage_max: 15 },
+  { name: 'Rogue Air Elemental', hp: 50, damage_min: 12, damage_max: 20 },
+  { name: 'Rogue Water Elemental', hp: 70, damage_min: 9, damage_max: 16 },
+]
+
+// ------------------------------------------------------------
+// Utility
+// ------------------------------------------------------------
 
 const roll = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min
@@ -74,6 +100,10 @@ const say = (client: Client, channel: string, msg: string) =>
 
 const pickRandom = <T>(arr: T[]): T =>
   arr[Math.floor(Math.random() * arr.length)]
+
+// ------------------------------------------------------------
+// Unlock check
+// ------------------------------------------------------------
 
 async function checkUnlock(
   supabase: SupabaseClient,
@@ -90,14 +120,15 @@ async function checkUnlock(
   return data.standard_clears >= requiredClears
 }
 
-async function ensureClearRecord(
-  supabase: SupabaseClient,
-  username: string
-) {
+async function ensureClearRecord(supabase: SupabaseClient, username: string) {
   await supabase
     .from('player_campaign_clears')
     .upsert({ username }, { onConflict: 'username', ignoreDuplicates: true })
 }
+
+// ------------------------------------------------------------
+// Channel difficulty modifier
+// ------------------------------------------------------------
 
 async function getChannelDifficultyMod(
   supabase: SupabaseClient,
@@ -118,6 +149,10 @@ async function getChannelDifficultyMod(
   }
 }
 
+// ------------------------------------------------------------
+// Consequence checks — fires at session start on any command
+// ------------------------------------------------------------
+
 export async function checkConsequences(
   client: Client,
   supabase: SupabaseClient,
@@ -134,10 +169,9 @@ export async function checkConsequences(
 
   for (const flag of flags) {
 
-    // --- Stabilize: -20% hit penalty (passive, no trigger needed) ---
-    // Applied in combat engine when flag is active. No message needed here.
+    // Stabilize: passive hit penalty, no trigger message needed
 
-    // --- Shadow Marked: assassin trigger ---
+    // Shadow Marked: assassin
     if (flag.flag_type === 'shadow_marked' && flag.trigger_ready) {
       await say(client, channel,
         `🗡️  @${username} — A figure dressed in Shadow Elf grey steps from the dark. ` +
@@ -145,31 +179,119 @@ export async function checkConsequences(
         `${username} has been killed by an assassin of the Shadow Elf god. ` +
         `Their story ends here.`
       )
-
-      // Permadeath — reset character
       await supabase
         .from('characters')
         .update({ hp: 0, is_dead: true })
         .eq('twitch_username', username)
-
-      // Mark flag resolved
       await supabase
         .from('player_consequence_flags')
         .update({ is_active: false, resolved_at: new Date().toISOString() })
         .eq('id', flag.id)
-
-      return  // No further processing for this player this session
+      return
     }
 
-    // --- Crystal Control: madness trigger ---
+    // Crystal Control: madness
     if (flag.flag_type === 'crystal_control' && flag.trigger_ready && !flag.madness_triggered) {
-      const madnessChance = Math.random()
-      if (madnessChance <= 0.40) {
+      if (Math.random() <= 0.40) {
         await triggerMadness(client, supabase, channel, username, flag.id)
+      }
+    }
+
+    // Seal Bound: gold drain
+    if (flag.flag_type === 'seal_bound' && flag.trigger_ready && !flag.seal_triggered) {
+      const { data: char } = await supabase
+        .from('characters')
+        .select('gold')
+        .eq('twitch_username', username)
+        .single()
+
+      if (char && char.gold > 0) {
+        const drain = Math.floor(char.gold * 0.30)
+        await supabase
+          .from('characters')
+          .update({ gold: char.gold - drain })
+          .eq('twitch_username', username)
+        await say(client, channel,
+          `🔥 @${username} — The Seal tightens its hold. ` +
+          `The binding scripts burn beneath your skin and ${drain}g slips from your purse ` +
+          `into nothing. The Seal takes what it is owed.`
+        )
+        await supabase
+          .from('player_consequence_flags')
+          .update({ seal_triggered: true })
+          .eq('id', flag.id)
+      }
+    }
+
+    // Genie Debt: noble demand
+    if (flag.flag_type === 'genie_debt' && flag.trigger_ready && !flag.debt_triggered) {
+      const { data: char } = await supabase
+        .from('characters')
+        .select('gold, hp, max_hp')
+        .eq('twitch_username', username)
+        .single()
+
+      if (char) {
+        const goldCost = Math.floor(char.gold * 0.25)
+        const hpCost = Math.floor(char.max_hp * 0.20)
+
+        if (char.gold >= goldCost && goldCost > 0) {
+          await supabase
+            .from('characters')
+            .update({ gold: char.gold - goldCost })
+            .eq('twitch_username', username)
+          await say(client, channel,
+            `🌪️  @${username} — A figure of smoke and amber light steps from the shadows. ` +
+            `"The genie courts remember the debt." ` +
+            `${goldCost}g lifts from your purse and dissolves into the air. ` +
+            `The figure bows once and is gone.`
+          )
+        } else {
+          const newHp = Math.max(1, char.hp - hpCost)
+          await supabase
+            .from('characters')
+            .update({ hp: newHp, max_hp: char.max_hp - hpCost })
+            .eq('twitch_username', username)
+          await say(client, channel,
+            `🌪️  @${username} — A figure of smoke and amber light steps from the shadows. ` +
+            `"The genie courts remember the debt. Gold you do not have." ` +
+            `It reaches through you instead. Your max HP is reduced by ${hpCost}. ` +
+            `Pay the debt in a future Al-Qadim campaign to restore what was taken.`
+          )
+        }
+
+        await supabase
+          .from('player_consequence_flags')
+          .update({ debt_triggered: true })
+          .eq('id', flag.id)
       }
     }
   }
 }
+
+// ------------------------------------------------------------
+// Convergence spawn check (Al-Qadim consequence)
+// ------------------------------------------------------------
+
+export async function checkConvergenceSpawn(
+  supabase: SupabaseClient,
+  username: string
+): Promise<boolean> {
+  const { data: flag } = await supabase
+    .from('player_consequence_flags')
+    .select('id')
+    .eq('username', username)
+    .eq('flag_type', 'convergence_marked')
+    .eq('is_active', true)
+    .single()
+
+  if (!flag) return false
+  return Math.random() < 0.20
+}
+
+// ------------------------------------------------------------
+// Madness trigger
+// ------------------------------------------------------------
 
 async function triggerMadness(
   client: Client,
@@ -189,12 +311,10 @@ async function triggerMadness(
   if (!outcome) return
 
   const description = outcome.description.replace('{username}', `@${username}`)
-
   await say(client, channel,
-    `🌀 THE CRYSTAL STIRS — @${username}''s mind fractures! ${description}`
+    `🌀 THE CRYSTAL STIRS — @${username}'s mind fractures! ${description}`
   )
 
-  // Apply mechanical effect
   switch (outcome.effect_type) {
     case 'destroy_item': {
       const { data: items } = await supabase
@@ -202,24 +322,21 @@ async function triggerMadness(
         .select('id, item_name')
         .eq('twitch_username', username)
         .limit(20)
-
       if (items && items.length > 0) {
         const target = pickRandom(items)
         await supabase.from('inventory').delete().eq('id', target.id)
         await say(client, channel,
-          `💔 ${target.item_name} crumbles to dust in @${username}''s hands.`
+          `💔 ${target.item_name} crumbles to dust in @${username}'s hands.`
         )
       }
       break
     }
-
     case 'drop_gold': {
       const { data: char } = await supabase
         .from('characters')
         .select('gold')
         .eq('twitch_username', username)
         .single()
-
       if (char && char.gold > 0) {
         await supabase
           .from('characters')
@@ -231,27 +348,25 @@ async function triggerMadness(
       }
       break
     }
-
     case 'flee': {
-      // Mark dead if in an active campaign — handled in campaign stage loop
       await say(client, channel,
         `🏃 @${username} flees into the dark. They do not return.`
       )
       break
     }
-
-    // attack_party, spawn_enemy, hostile_turn are handled mid-combat in the stage loop
-    // They fire here as a warning; the combat engine checks the flag and applies the effect
     default:
       break
   }
 
-  // Mark madness as triggered on flag
   await supabase
     .from('player_consequence_flags')
     .update({ madness_triggered: true })
     .eq('id', flagId)
 }
+
+// ------------------------------------------------------------
+// Stage combat engine
+// ------------------------------------------------------------
 
 async function runNamedStage(
   client: Client,
@@ -264,20 +379,16 @@ async function runNamedStage(
 ): Promise<{ survivors: Participant[]; defeated: Participant[] }> {
   const alive = participants.filter(p => p.is_alive)
 
-  // Apply difficulty modifier to enemy stats
   const enemyMaxHp = Math.ceil(stage.enemy_hp * diffMod.hpMod)
   const dmgMin = Math.ceil(stage.enemy_damage_min * diffMod.dmgMod)
   const dmgMax = Math.ceil(stage.enemy_damage_max * diffMod.dmgMod)
 
   await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-  await say(client, channel,
-    `📜 Stage ${stage.stage}/5 — ${stage.stage_name}`
-  )
+  await say(client, channel, `📜 Stage ${stage.stage}/5 — ${stage.stage_name}`)
   await delay(1500)
   await say(client, channel, stage.flavor_intro)
   await delay(2500)
 
-  // Track enemy HP (one pool per enemy_count)
   const enemyHPs = Array(stage.enemy_count).fill(enemyMaxHp)
   let specialFired = false
   let round = 1
@@ -307,7 +418,7 @@ async function runNamedStage(
 
       if (hitPenaltyActive) {
         await say(client, channel,
-          `🌫️  @${player.username}''s attack wavers — the corruption interferes! Miss!`
+          `🌫️  @${player.username}'s attack wavers — the corruption interferes! Miss!`
         )
         await delay(1200)
         continue
@@ -315,7 +426,6 @@ async function runNamedStage(
 
       const dmg = roll(12, 28)
       enemyHPs[targetIdx] = Math.max(0, enemyHPs[targetIdx] - dmg)
-
       await say(client, channel,
         `🗡️  ${player.username} hits ${stage.enemy_name} for ${dmg} damage! ` +
         `(${Math.max(0, enemyHPs[targetIdx])} HP remaining)`
@@ -332,19 +442,15 @@ async function runNamedStage(
     for (let i = 0; i < stage.enemy_count; i++) {
       if (enemyHPs[i] <= 0) continue
 
-      // Special ability fires at round 2
       if (!specialFired && round === 2 && stage.special_name) {
         if (stage.special_type === 'all') {
           const specialDmg = Math.ceil((stage.special_damage ?? 20) * diffMod.dmgMod)
           await say(client, channel,
-            `⚡ ${stage.enemy_name} uses ${stage.special_name}! ` +
-            `All party members take ${specialDmg} damage!`
+            `⚡ ${stage.enemy_name} uses ${stage.special_name}! All party members take ${specialDmg} damage!`
           )
           for (const p of alive.filter(p => p.is_alive)) {
             p.hp = Math.max(0, p.hp - specialDmg)
-            await say(client, channel,
-              `🩸 ${p.username} — ${p.hp} HP remaining.`
-            )
+            await say(client, channel, `🩸 ${p.username} — ${p.hp} HP remaining.`)
             if (p.hp <= 0) {
               p.is_alive = false
               await handleDeath(supabase, campaignId, p, stage.stage)
@@ -357,12 +463,11 @@ async function runNamedStage(
           await delay(2000)
 
         } else if (stage.special_type === 'debuff') {
-          // Null Field — skip one random player's next attack (tracked via flag)
           const target = pickRandom(alive.filter(p => p.is_alive))
           if (target) {
             await say(client, channel,
               `⚡ ${stage.enemy_name} uses ${stage.special_name}! ` +
-              `${target.username}''s next attack is suppressed!`
+              `${target.username}'s next attack is suppressed!`
             )
           }
           specialFired = true
@@ -390,13 +495,11 @@ async function runNamedStage(
         }
 
       } else {
-        // Normal attack
         const target = pickRandom(alive.filter(p => p.is_alive))
         if (!target) break
 
         const dmg = roll(dmgMin, dmgMax)
         target.hp = Math.max(0, target.hp - dmg)
-
         await say(client, channel,
           `🩸 ${stage.enemy_name} strikes ${target.username} for ${dmg} damage! ` +
           `(${target.hp} HP remaining)`
@@ -419,7 +522,6 @@ async function runNamedStage(
       for (let i = 0; i < enemyHPs.length; i++) enemyHPs[i] = 0
       await say(client, channel, `⚡ The enemy is overwhelmed and routed!`)
     }
-
     await delay(1500)
   }
 
@@ -428,6 +530,10 @@ async function runNamedStage(
     defeated: alive.filter(p => !p.is_alive),
   }
 }
+
+// ------------------------------------------------------------
+// Death handler
+// ------------------------------------------------------------
 
 async function handleDeath(
   supabase: SupabaseClient,
@@ -441,6 +547,10 @@ async function handleDeath(
     .eq('campaign_id', campaignId)
     .eq('username', player.username)
 }
+
+// ------------------------------------------------------------
+// Rest shrine
+// ------------------------------------------------------------
 
 async function restShrine(
   client: Client,
@@ -463,13 +573,83 @@ async function restShrine(
       .update({ hp: p.hp })
       .eq('campaign_id', campaignId)
       .eq('username', p.username)
-
     await say(client, channel,
       `💚 ${p.username} recovers ${healed} HP at the shrine. (${p.hp}/${p.max_hp} HP)`
     )
     await delay(800)
   }
 }
+
+// ------------------------------------------------------------
+// Elemental spawn combat (convergence_marked consequence)
+// ------------------------------------------------------------
+
+async function runElementalSpawn(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  campaignId: string,
+  markedUsername: string,
+  participants: Participant[]
+) {
+  const spawnEnemy = pickRandom(ELEMENTAL_SPAWN_POOL)
+
+  await say(client, channel,
+    `🌪️  The elemental planes bleed through! ` +
+    `A ${spawnEnemy.name} manifests — drawn by ${markedUsername}'s mark from Zakhara!`
+  )
+  await delay(1500)
+
+  const spawnHp = [spawnEnemy.hp]
+  let spawnRound = 1
+
+  while (spawnHp[0] > 0 && participants.some(p => p.is_alive)) {
+    for (const player of participants.filter(p => p.is_alive)) {
+      const dmg = roll(10, 22)
+      spawnHp[0] = Math.max(0, spawnHp[0] - dmg)
+      await say(client, channel,
+        `🗡️  ${player.username} strikes the ${spawnEnemy.name} for ${dmg} damage! ` +
+        `(${spawnHp[0]} HP remaining)`
+      )
+      await delay(1000)
+      if (spawnHp[0] <= 0) break
+    }
+
+    if (spawnHp[0] > 0) {
+      const target = pickRandom(participants.filter(p => p.is_alive))
+      if (target) {
+        const dmg = roll(spawnEnemy.damage_min, spawnEnemy.damage_max)
+        target.hp = Math.max(0, target.hp - dmg)
+        await say(client, channel,
+          `🩸 The ${spawnEnemy.name} strikes ${target.username} for ${dmg} damage! ` +
+          `(${target.hp} HP remaining)`
+        )
+        if (target.hp <= 0) {
+          target.is_alive = false
+          await handleDeath(supabase, campaignId, target, 0)
+          await say(client, channel,
+            `💀 ${target.username} has fallen to the elemental spawn! Permadeath.`
+          )
+        }
+        await delay(1000)
+      }
+    }
+
+    spawnRound++
+    if (spawnRound > 5) spawnHp[0] = 0
+  }
+
+  if (spawnHp[0] <= 0) {
+    await say(client, channel,
+      `💥 The ${spawnEnemy.name} dissipates back into the elemental planes.`
+    )
+  }
+  await delay(1500)
+}
+
+// ------------------------------------------------------------
+// Ending vote
+// ------------------------------------------------------------
 
 async function runEndingVote(
   client: Client,
@@ -478,40 +658,32 @@ async function runEndingVote(
   outcomes: NamedCampaignOutcome[]
 ): Promise<NamedCampaignOutcome> {
   const participantNames = new Set(participants.map(p => p.username.toLowerCase()))
-  const votes = new Map<string, string>()  // username → outcome_key
+  const votes = new Map<string, string>()
 
-  // Build vote menu
   const voteMenu = outcomes
     .map((o, i) => `${i + 1}) ${o.outcome_label}`)
     .join(' | ')
 
   await say(client, channel,
-    `🗳️  THE CHAMBER AWAITS YOUR DECISION. Participants vote now! ` +
+    `🗳️  THE DECISION AWAITS. Participants vote now! ` +
     `Type the number of your choice. 3 minutes. | ${voteMenu}`
   )
 
-  // Collect participant votes
   await collectVotes(client, channel, participantNames, outcomes, votes, VOTE_WINDOW_MS)
 
-  // Tally
   let result = tallyVotes(votes, outcomes)
 
   if (result === null) {
-    // Tie — open to all of chat
     await say(client, channel,
       `⚖️  The vote is tied! The decision opens to ALL of chat for 3 more minutes! ` +
       `Type the number of your choice. | ${voteMenu}`
     )
-
     const allChat = new Map<string, string>()
     await collectVotes(client, channel, null, outcomes, allChat, TIEBREAK_WINDOW_MS)
-
-    // Merge: participant votes take priority, chat fills gaps
     const combined = new Map([...allChat, ...votes])
     result = tallyVotes(combined, outcomes)
 
     if (result === null) {
-      // Still tied — random pick
       result = pickRandom(outcomes)
       await say(client, channel,
         `⚖️  Still tied. Fate decides. The answer is: ${result.outcome_label}`
@@ -525,7 +697,7 @@ async function runEndingVote(
 function collectVotes(
   client: Client,
   channel: string,
-  allowedUsers: Set<string> | null,  // null = all chat
+  allowedUsers: Set<string> | null,
   outcomes: NamedCampaignOutcome[],
   votes: Map<string, string>,
   windowMs: number
@@ -544,21 +716,17 @@ function collectVotes(
       const username = tags['display-name']?.toString().toLowerCase() ?? ''
       if (allowedUsers && !allowedUsers.has(username)) return
 
-      const trimmed = message.trim()
-      const num = parseInt(trimmed, 10)
+      const num = parseInt(message.trim(), 10)
       if (isNaN(num) || num < 1 || num > outcomes.length) return
 
-      const outcome = outcomes[num - 1]
-      votes.set(username, outcome.outcome_key)
+      votes.set(username, outcomes[num - 1].outcome_key)
     }
 
     client.on('message', handler)
 
-    // Clear timeout if all allowed users have voted
     if (allowedUsers) {
       const interval = setInterval(() => {
-        const allVoted = [...allowedUsers].every(u => votes.has(u))
-        if (allVoted) {
+        if ([...allowedUsers].every(u => votes.has(u))) {
           clearTimeout(timeout)
           clearInterval(interval)
           client.removeListener('message', handler)
@@ -583,9 +751,12 @@ function tallyVotes(
   const max = Math.max(...counts.values())
   const winners = outcomes.filter(o => (counts.get(o.outcome_key) ?? 0) === max)
 
-  if (winners.length === 1) return winners[0]
-  return null  // tie
+  return winners.length === 1 ? winners[0] : null
 }
+
+// ------------------------------------------------------------
+// Consequence writer
+// ------------------------------------------------------------
 
 async function writeConsequences(
   supabase: SupabaseClient,
@@ -598,7 +769,6 @@ async function writeConsequences(
 
   for (const p of participants) {
     if (!p.is_alive && outcome.consequence_key !== 'shadow_marked') continue
-    // shadow_marked applies to everyone regardless of survival
 
     const base: Record<string, unknown> = {
       username: p.username,
@@ -612,26 +782,29 @@ async function writeConsequences(
       case 'corruption_stabilized':
         base.hit_penalty = 0.20
         break
-
       case 'crystal_control':
         base.madness_trigger_at = roll(2, 4)
         base.madness_campaign_counter = 0
         break
-
       case 'shadow_marked':
         base.assassin_trigger_at = roll(5, 7)
         base.assassin_campaign_counter = 0
+        break
+      case 'seal_bound':
+        base.seal_trigger_at = roll(3, 5)
+        base.seal_campaign_counter = 0
+        break
+      case 'convergence_marked':
+        break
+      case 'genie_debt':
+        base.debt_trigger_at = roll(2, 3)
+        base.debt_campaign_counter = 0
         break
     }
 
     await supabase
       .from('player_consequence_flags')
       .upsert(base, { onConflict: 'username,flag_type,is_active', ignoreDuplicates: false })
-  }
-
-  // Channel-wide flag for Let It Spread
-  if (outcome.consequence_key === 'shadow_marked') {
-    // Note: shadow_marked is player-level. The difficulty bump is separate.
   }
 }
 
@@ -652,6 +825,10 @@ async function writeSpreadDifficulty(
     }, { onConflict: 'channel,flag_type,is_active', ignoreDuplicates: false })
 }
 
+// ------------------------------------------------------------
+// Reward writer
+// ------------------------------------------------------------
+
 async function writeNamedRewards(
   supabase: SupabaseClient,
   campaignId: string,
@@ -660,7 +837,6 @@ async function writeNamedRewards(
   campaignSlug: string,
   fullClear: boolean
 ) {
-  // Draw title and artifact
   const { data: titleRows } = await supabase
     .from('named_campaign_titles')
     .select('title')
@@ -683,17 +859,14 @@ async function writeNamedRewards(
     let xp = NAMED_STAGE_XP.slice(0, p.stage_reached).reduce((a, b) => a + b, 0)
     let gold = NAMED_STAGE_GOLD.slice(0, p.stage_reached).reduce((a, b) => a + b, 0)
 
-    // Apply outcome reward modifier
     xp = Math.floor(xp * outcome.reward_modifier)
     gold = Math.floor(gold * outcome.reward_modifier)
 
-    // Full clear bonus for survivors
     if (fullClear && p.is_alive) {
       xp += Math.floor(CLEAR_BONUS_XP * outcome.reward_modifier) + outcome.bonus_xp
       gold += Math.floor(CLEAR_BONUS_GOLD * outcome.reward_modifier)
     }
 
-    // Write to campaign_rewards
     await supabase.from('campaign_rewards').insert({
       campaign_id: campaignId,
       username: p.username,
@@ -703,7 +876,6 @@ async function writeNamedRewards(
       artifact_earned: p.username === artWinner?.username ? artifactName : null,
     })
 
-    // Write to characters table
     const { data: char } = await supabase
       .from('characters')
       .select('xp, gold')
@@ -717,21 +889,15 @@ async function writeNamedRewards(
         .eq('twitch_username', p.username)
     }
 
-    // Increment campaign clear counters for consequence tracking
     await supabase.rpc('increment_campaign_counters', { p_username: p.username })
   }
 
-  // Increment standard clear count for full survivors
   if (fullClear) {
     for (const p of survivors) {
       await supabase
         .from('player_campaign_clears')
-        .upsert({
-          username: p.username,
-          named_unlocked: true,
-        }, { onConflict: 'username' })
+        .upsert({ username: p.username, named_unlocked: true }, { onConflict: 'username' })
 
-      // Increment named clears for this slug
       await supabase.rpc('increment_named_clears', {
         p_username: p.username,
         p_slug: campaignSlug,
@@ -741,6 +907,10 @@ async function writeNamedRewards(
 
   return { titleEarned, artifactName, artWinner }
 }
+
+// ------------------------------------------------------------
+// Main campaign runner
+// ------------------------------------------------------------
 
 async function runNamedCampaign(
   client: Client,
@@ -754,7 +924,6 @@ async function runNamedCampaign(
 ) {
   const diffMod = await getChannelDifficultyMod(supabase, channel)
 
-  // Update campaign status to active
   await supabase
     .from('campaigns')
     .update({ status: 'active', started_at: new Date().toISOString() })
@@ -764,18 +933,14 @@ async function runNamedCampaign(
     const alive = participants.filter(p => p.is_alive)
     if (alive.length === 0) break
 
-    // Rest shrine before stages 2–5
+    // Rest shrine + Yvannis before stages 2–5
     if (stage.stage > 1) {
       await delay(3000)
       await restShrine(client, supabase, channel, campaignId, stage, participants)
       await delay(2000)
 
       if (stage.stage === campaignData.yvannis_stage) {
-        await summonYvannis(
-          client, supabase, channel,
-          campaignId, stage.stage,
-          participants
-        )
+        await summonYvannis(client, supabase, channel, campaignId, stage.stage, participants)
         await delay(1500)
       }
     }
@@ -786,6 +951,19 @@ async function runNamedCampaign(
       .update({ stage: stage.stage })
       .eq('id', campaignId)
 
+    // Convergence spawn check (Al-Qadim consequence)
+    let convergenceSpawned = false
+    for (const p of participants.filter(p => p.is_alive)) {
+      if (!convergenceSpawned && await checkConvergenceSpawn(supabase, p.username)) {
+        convergenceSpawned = true
+        await runElementalSpawn(
+          client, supabase, channel, campaignId, p.username, participants
+        )
+        break
+      }
+    }
+
+    // Run the stage
     const result = await runNamedStage(
       client, supabase, channel, campaignId, stage, participants, diffMod
     )
@@ -802,8 +980,7 @@ async function runNamedCampaign(
 
     if (result.survivors.length === 0) {
       await say(client, channel,
-        `💀 All adventurers have fallen in ${campaignData.name}. ` +
-        `The corruption spreads unchecked. The daily cooldown is spent.`
+        `💀 All adventurers have fallen in ${campaignData.name}. The daily cooldown is spent.`
       )
       await supabase
         .from('campaigns')
@@ -819,16 +996,12 @@ async function runNamedCampaign(
     await delay(2000)
   }
 
-  // All 5 stages cleared — run ending vote
+  // All 5 stages cleared — ending vote
   const survivors = participants.filter(p => p.is_alive)
 
+  await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel,
-    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
-  )
-  await say(client, channel,
-    `🏛️  The Chamber of the Spheres stands before you. ` +
-    `The Crystal of Rafiel pulses with fractured light. ` +
-    `The Echo of Atzanteotl is silent. What do you do?`
+    `🏛️  The final chamber stands before you. The moment of decision has arrived.`
   )
   await delay(3000)
 
@@ -844,21 +1017,32 @@ async function runNamedCampaign(
 
   // Write consequences
   await writeConsequences(supabase, campaignId, participants, chosenOutcome, campaignData.slug)
+
   if (chosenOutcome.outcome_key === 'spread') {
     await writeSpreadDifficulty(supabase, channel, campaignId)
     await say(client, channel,
-      `⚠️  The corruption spreads. Future campaigns will be harder. ` +
-      `All participants have been marked by a Shadow Elf god.`
+      `⚠️  The corruption spreads. Future campaigns will be harder. All participants have been marked.`
     )
   } else if (chosenOutcome.outcome_key === 'stabilize') {
     await say(client, channel,
       `⚠️  The Crystal is stabilized — but something lingers. ` +
-      `All participants suffer a -20% to hit chance until cleansed by a cleric. Use !cleric to seek aid.`
+      `All participants suffer a -20% to hit chance until cleansed. Use !cleric to seek aid.`
     )
   } else if (chosenOutcome.outcome_key === 'take_control') {
     await say(client, channel,
-      `✨ The Crystal yields to your will. A title is yours. ` +
-      `But something watches. Something waits.`
+      `✨ Power yields to your will. A title is yours. But something watches. Something waits.`
+    )
+  } else if (chosenOutcome.outcome_key === 'use_seal') {
+    await say(client, channel,
+      `🔥 The Seal is yours. The power is real. So is the cost.`
+    )
+  } else if (chosenOutcome.outcome_key === 'destroy_seal') {
+    await say(client, channel,
+      `💥 The Seal is destroyed. Something old exhales. The elemental planes remember.`
+    )
+  } else if (chosenOutcome.outcome_key === 'return_seal') {
+    await say(client, channel,
+      `🌪️  The Seal is returned. The genie courts remember your name.`
     )
   }
 
@@ -872,28 +1056,24 @@ async function runNamedCampaign(
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('id', campaignId)
 
-  // Announce rewards
   await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel,
     `🏆 ${campaignData.name} COMPLETE! ` +
-    `${survivors.map(p => p.username).join(' & ')} emerge from the Hollow World.`
+    `${survivors.map(p => p.username).join(' & ')} emerge victorious.`
   )
   if (titleEarned) {
-    await say(client, channel,
-      `🎖️  Title earned: [${titleEarned}] — awarded to all survivors!`
-    )
+    await say(client, channel, `🎖️  Title earned: [${titleEarned}] — awarded to all survivors!`)
   }
   if (artifactName && artWinner) {
-    await say(client, channel,
-      `🏺 Artifact: ${artifactName} — claimed by ${artWinner.username}!`
-    )
+    await say(client, channel, `🏺 Artifact: ${artifactName} — claimed by ${artWinner.username}!`)
   }
-  await say(client, channel,
-    `✨ Full clear bonus applied. Check !status for updated XP and gold.`
-  )
+  await say(client, channel, `✨ Full clear bonus applied. Check !status for updated XP and gold.`)
 }
 
-// !campaign <slug> entry point
+// ------------------------------------------------------------
+// Entry points
+// ------------------------------------------------------------
+
 const namedCampaignLock = new Map<string, boolean>()
 const namedPendingJoins = new Map<string, Set<string>>()
 
@@ -904,15 +1084,11 @@ export async function handleNamedCampaignCommand(
   username: string,
   slug: string
 ) {
-  // Check lock
   if (namedCampaignLock.get(channel)) {
-    await say(client, channel,
-      `@${username} A campaign is already being set up. Hang tight!`
-    )
+    await say(client, channel, `@${username} A campaign is already being set up. Hang tight!`)
     return
   }
 
-  // Check daily cooldown (shared with standard campaigns)
   const { data: existing } = await supabase
     .from('campaign_today')
     .select('*')
@@ -927,7 +1103,6 @@ export async function handleNamedCampaignCommand(
     return
   }
 
-  // Load named campaign data
   const { data: campaignData } = await supabase
     .from('named_campaigns')
     .select('*')
@@ -942,14 +1117,13 @@ export async function handleNamedCampaignCommand(
     return
   }
 
-  // Check unlock
   await ensureClearRecord(supabase, username)
   const unlocked = await checkUnlock(supabase, username, campaignData.unlock_required)
 
   if (!unlocked) {
     await say(client, channel,
       `@${username} You haven't earned access to named campaigns yet. ` +
-      `Complete ${campaignData.unlock_required} standard campaign(s) first with !campaign.`
+      `Complete ${campaignData.unlock_required} standard campaigns first with !campaign.`
     )
     return
   }
@@ -957,7 +1131,6 @@ export async function handleNamedCampaignCommand(
   namedCampaignLock.set(channel, true)
 
   try {
-    // Load stages and outcomes
     const { data: stagesData } = await supabase
       .from('named_campaign_stages')
       .select('*')
@@ -978,12 +1151,9 @@ export async function handleNamedCampaignCommand(
     )
 
     const mode = await waitForModeChoice(client, channel, username, MODE_CHOICE_MS)
-
-    // Draw boss from named campaign stage 5 data
     const bossStage = stages.find(s => s.stage === 5)
     const bossName = bossStage?.enemy_name ?? 'Unknown'
 
-    // Create campaign record (reuses base campaigns table)
     const { data: campaign, error } = await supabase
       .from('campaigns')
       .insert({
@@ -995,14 +1165,13 @@ export async function handleNamedCampaignCommand(
         boss_name: bossName,
         boss_special: bossStage?.special_name ?? '',
         started_at: mode === 'solo' ? new Date().toISOString() : null,
-        yvannis_stage: rollYvannisStage()
+        yvannis_stage: rollYvannisStage(),
       })
       .select()
       .single()
 
     if (error || !campaign) throw error
 
-    // Add initiator
     await supabase.from('campaign_participants').insert({
       campaign_id: campaign.id,
       username,
@@ -1012,8 +1181,7 @@ export async function handleNamedCampaignCommand(
 
     if (mode === 'solo') {
       await say(client, channel,
-        `🗡️  ${username} descends alone into ${campaignData.setting}. ` +
-        `${bossName} waits at the end.`
+        `🗡️  ${username} enters ${campaignData.setting} alone. ${bossName} waits at the end.`
       )
     } else {
       const joiners = new Set<string>([username])
@@ -1046,7 +1214,6 @@ export async function handleNamedCampaignCommand(
 
     await delay(2000)
 
-    // Load final participant list
     const { data: participantsData } = await supabase
       .from('campaign_participants')
       .select('*')
@@ -1065,14 +1232,13 @@ export async function handleNamedCampaignCommand(
   }
 }
 
-// !joincamp handler for named campaigns (same export as standard)
 export async function handleNamedJoinCamp(
   client: Client,
   channel: string,
   username: string
-) {
+): Promise<boolean> {
   const joiners = namedPendingJoins.get(channel)
-  if (!joiners) return false  // not a named campaign join window
+  if (!joiners) return false
 
   if (joiners.has(username)) {
     await say(client, channel, `@${username} You're already in the party!`)
@@ -1080,15 +1246,9 @@ export async function handleNamedJoinCamp(
   }
 
   joiners.add(username)
-  await say(client, channel,
-    `🛡️  ${username} joins the party! (${joiners.size} adventurers so far)`
-  )
+  await say(client, channel, `🛡️  ${username} joins the party! (${joiners.size} adventurers so far)`)
   return true
 }
-
-// ------------------------------------------------------------
-// Mode choice listener
-// ------------------------------------------------------------
 
 function waitForModeChoice(
   client: Client,

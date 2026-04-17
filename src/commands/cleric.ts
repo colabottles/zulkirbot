@@ -1,6 +1,4 @@
 // ============================================================
-// ZulkirBot: Brother Yvannis — Cleric NPC Handler
-// ============================================================
 // Brother Yvannis appears once per campaign at a random stage
 // (1–4) alongside the rest shrine. Players can interact with
 // him once per appearance to receive healing or cleansing.
@@ -8,10 +6,6 @@
 
 import { Client } from 'tmi.js'
 import { SupabaseClient } from '@supabase/supabase-js'
-
-// ------------------------------------------------------------
-// Types
-// ------------------------------------------------------------
 
 interface YvannisService {
   key: string
@@ -21,10 +15,6 @@ interface YvannisService {
   requiresFlag?: string  // flag that must be active to use
   requiresLowHp?: boolean
 }
-
-// ------------------------------------------------------------
-// Constants
-// ------------------------------------------------------------
 
 const INTERACTION_WINDOW_MS = 90_000  // 90s for players to interact
 
@@ -102,10 +92,6 @@ const ALREADY_SERVED_LINES = [
   'You\'ve had your turn. Yvannis must attend to others. It\'s fine.',
 ]
 
-// ------------------------------------------------------------
-// Utility
-// ------------------------------------------------------------
-
 const pickRandom = <T>(arr: T[]): T =>
   arr[Math.floor(Math.random() * arr.length)]
 
@@ -113,11 +99,6 @@ const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 const say = (client: Client, channel: string, msg: string) =>
   client.say(channel, msg)
-
-// ------------------------------------------------------------
-// Active Yvannis session tracker
-// channel → { campaignId, stage, servedPlayers, participants }
-// ------------------------------------------------------------
 
 interface YvannisSession {
   campaignId: string
@@ -128,10 +109,6 @@ interface YvannisSession {
 }
 
 const activeSessions = new Map<string, YvannisSession>()
-
-// ------------------------------------------------------------
-// Check what services a player actually needs
-// ------------------------------------------------------------
 
 async function getAvailableServices(
   supabase: SupabaseClient,
@@ -159,17 +136,9 @@ async function getAvailableServices(
   })
 }
 
-// ------------------------------------------------------------
-// Calculate cost (percentage of gold, minimum 1)
-// ------------------------------------------------------------
-
 function calculateCost(gold: number, percent: number): number {
   return Math.max(1, Math.floor(gold * percent))
 }
-
-// ------------------------------------------------------------
-// Apply service effect
-// ------------------------------------------------------------
 
 async function applyService(
   supabase: SupabaseClient,
@@ -230,10 +199,6 @@ async function applyService(
       return 'Something was done. It\'s fine.'
   }
 }
-
-// ------------------------------------------------------------
-// Main Yvannis appearance — called from campaign stage loop
-// ------------------------------------------------------------
 
 export async function summonYvannis(
   client: Client,
@@ -415,20 +380,10 @@ export async function handleClericCommand(
   )
 }
 
-// ------------------------------------------------------------
-// Determine which stage Yvannis appears at for a campaign
-// Called once at campaign start, stored for use in stage loop
-// ------------------------------------------------------------
-
 export function rollYvannisStage(): number {
   // Random stage between 1 and 4
   return Math.floor(Math.random() * 4) + 1
 }
-
-// ------------------------------------------------------------
-// Check if Yvannis is currently active in a channel
-// Used by router to pass !cleric to this handler
-// ------------------------------------------------------------
 
 export function isYvannisPresent(channel: string): boolean {
   return activeSessions.has(channel)
