@@ -7,6 +7,7 @@
 // ============================================================
 
 import { Client } from 'tmi.js'
+import { supabase } from './../lib/supabase';
 import { SupabaseClient } from '@supabase/supabase-js'
 import { summonYvannis, rollYvannisStage } from './cleric'
 
@@ -598,6 +599,27 @@ export async function handleCampaignCommand(
     return
   }
 
+  // Check initiator has a living character
+  const { data: initiatorChar } = await supabase
+    .from('characters')
+    .select('hp, is_dead')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!initiatorChar) {
+    await say(client, channel,
+      `@${username} You need a character to run a campaign. Use !join to create one.`
+    )
+    return
+  }
+
+  if (initiatorChar.hp <= 0 || initiatorChar.is_dead) {
+    await say(client, channel,
+      `@${username} Your character is dead. Use !join to start over before running a campaign.`
+    )
+    return
+  }
+
   campaignLock.set(channel, true)
 
   try {
@@ -678,6 +700,20 @@ export async function handleJoinCampCommand(
     )
     return
   }
+
+  const { data: joinerChar } = await supabase
+    .from('characters')
+    .select('hp, is_dead')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!joinerChar || joinerChar.hp <= 0 || joinerChar.is_dead) {
+    await say(client, channel,
+      `@${username} You need a living character to join a campaign. Use !join to create one.`
+    )
+    return
+  }
+
   if (joiners.has(username)) {
     await say(client, channel, `@${username} You're already in the party!`)
     return
