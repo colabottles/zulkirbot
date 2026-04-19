@@ -6,6 +6,8 @@
 
 ### Added v1.5.1
 
+- **Named Campaign: The Tyrant Reforged** — A Forgotten Realms mini-campaign set in Zhentil Keep. Requires 6 standard campaign clears. Features a pure flavor artifact and four outcomes with persistent consequences tied to Bane's network.
+- **Named Campaign: The Smiling Tyrant** — A Greyhawk mini-campaign set in the Flanaess. Requires 8 standard campaign clears. Features a pure flavor artifact and four outcomes with persistent consequences that follow players into future campaigns.
 - **Named Campaign: Ashes of the Black Emperor** — A Dragonlance mini-campaign set on Krynn. Requires 5 standard campaign clears. Features a pure flavor artifact and four outcomes with the heaviest persistent consequence in the game.
 - **Named Campaign: Ashes Beneath the Flame** — An Eberron mini-campaign set in Thrane. Requires 3 standard campaign clears. Features a unique artifact with persistent consequences.
 

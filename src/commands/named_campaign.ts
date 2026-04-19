@@ -141,6 +141,14 @@ export const GREYHAWK_SPAWN_POOL: ElementalSpawn[] = [
   { name: 'Network Enforcer', hp: 55, damage_min: 11, damage_max: 18 },
 ]
 
+// Forgotten Realms spawn pool (banes_ledger consequence)
+export const FORGOTTEN_REALMS_SPAWN_POOL: ElementalSpawn[] = [
+  { name: 'Zhentarim Enforcer', hp: 65, damage_min: 11, damage_max: 18 },
+  { name: 'Banite Doctrine Agent', hp: 60, damage_min: 12, damage_max: 19 },
+  { name: 'Network Node Operative', hp: 70, damage_min: 10, damage_max: 17 },
+  { name: 'Mark-Bound Soldier', hp: 55, damage_min: 11, damage_max: 18 },
+]
+
 // ------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------
@@ -310,6 +318,12 @@ export async function checkConsequences(
     if (flag.flag_type === 'web_remnant' && flag.trigger_ready && !flag.web_triggered) await triggerWebRemnant(client, supabase, channel, username, flag.id)
     if (flag.flag_type === 'smiling_tyrant' && flag.trigger_ready && !flag.smiling_triggered) await triggerSmilingTyrant(client, supabase, channel, username, flag.id)
     if (flag.flag_type === 'old_ones_mark' && flag.trigger_ready && !flag.old_ones_triggered) await triggerOldOnesMark(client, supabase, channel, username, flag.id)
+
+    // ── The Tyrant Reforged ───────────────────────────────────
+    if (flag.flag_type === 'shattered_order' && flag.trigger_ready && !flag.order_triggered) await triggerShatteredOrder(client, supabase, channel, username, flag.id)
+    if (flag.flag_type === 'banes_ledger' && flag.trigger_ready && !flag.ledger_triggered) await triggerBanesLedger(client, supabase, channel, username, flag.id)
+    if (flag.flag_type === 'tyrants_mark' && flag.trigger_ready && !flag.tyrants_triggered) await triggerTyrantsMark(client, supabase, channel, username, flag.id)
+    if (flag.flag_type === 'hand_of_bane' && flag.trigger_ready && !flag.bane_triggered) await triggerHandOfBane(client, supabase, channel, username, flag.id)
   }
 }
 
@@ -355,6 +369,12 @@ export async function checkDragonlanceSpawn(supabase: SupabaseClient, username: 
 
 export async function checkGreyhawkSpawn(supabase: SupabaseClient, username: string): Promise<boolean> {
   const { data: flag } = await supabase.from('player_consequence_flags').select('id').eq('username', username).eq('flag_type', 'web_remnant').eq('is_active', true).single()
+  if (!flag) return false
+  return Math.random() < 0.20
+}
+
+export async function checkForgottenRealmsSpawn(supabase: SupabaseClient, username: string): Promise<boolean> {
+  const { data: flag } = await supabase.from('player_consequence_flags').select('id').eq('username', username).eq('flag_type', 'banes_ledger').eq('is_active', true).single()
   if (!flag) return false
   return Math.random() < 0.20
 }
@@ -1083,6 +1103,200 @@ async function awardGreyhawkStageMilestone(
 }
 
 // ------------------------------------------------------------
+// The Tyrant Reforged consequence triggers
+// ------------------------------------------------------------
+
+// shattered_order — the chaos you unleashed follows you (Break the Tyranny)
+// 35% chance per campaign entry
+async function triggerShatteredOrder(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  if (Math.random() > 0.35) return
+
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const drain = Math.floor(char.max_hp * 0.10)
+  const newHp = Math.max(1, char.hp - drain)
+
+  await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
+
+  await say(client, channel,
+    `@${username} — The order you broke in Zhentil Keep is still breaking. ` +
+    `Chaos does not stay where you leave it. It travels. ` +
+    `-${drain} HP. (${newHp}/${char.max_hp} HP remaining)`
+  )
+
+  await supabase.from('player_consequence_flags').update({ order_triggered: true }).eq('id', flagId)
+}
+
+// banes_ledger — the system still collects (Controlled Order)
+// 35% chance per campaign entry — gold tithe
+async function triggerBanesLedger(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  if (Math.random() > 0.35) return
+
+  const { data: char } = await supabase
+    .from('characters')
+    .select('gold, hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const tithe = Math.floor(char.gold * 0.15)
+
+  if (char.gold >= tithe && tithe > 0) {
+    await supabase.from('characters').update({ gold: char.gold - tithe }).eq('twitch_username', username)
+    await say(client, channel,
+      `@${username} — The ledger of Bane updates without warning. ` +
+      `The system you left intact is still running. It still collects. ` +
+      `${tithe}g taken. (${char.gold - tithe}g remaining)`
+    )
+  } else {
+    const hpCost = Math.floor(char.max_hp * 0.08)
+    const newHp = Math.max(1, char.hp - hpCost)
+    await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
+    await say(client, channel,
+      `@${username} — The ledger of Bane updates without warning. ` +
+      `No gold. The system accepts alternative payment. ` +
+      `-${hpCost} HP. (${newHp}/${char.max_hp} HP remaining)`
+    )
+  }
+
+  await supabase.from('player_consequence_flags').update({ ledger_triggered: true }).eq('id', flagId)
+}
+
+// tyrants_mark — power and its cost (Serve the Tyrant)
+// Always fires — mirrors smiling_tyrant
+async function triggerTyrantsMark(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp, gold')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const isBoon = Math.random() < 0.50
+
+  if (isBoon) {
+    const bonus = roll(15, 35)
+    const newHp = Math.min(char.max_hp, char.hp + bonus)
+    await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
+    await say(client, channel,
+      `@${username} — The Scepter answers to you today. ` +
+      `Bane's network is extensive and today it works in your favor. ` +
+      `+${bonus} HP. (${newHp}/${char.max_hp})`
+    )
+  } else {
+    const debtType = Math.random() < 0.50 ? 'hp' : 'gold'
+    if (debtType === 'hp') {
+      const drain = roll(12, 28)
+      const newHp = Math.max(1, char.hp - drain)
+      await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
+      await say(client, channel,
+        `@${username} — The Scepter answers to you today. ` +
+        `The ledger also answers to you. It has found a discrepancy. ` +
+        `-${drain} HP. (${newHp}/${char.max_hp})`
+      )
+    } else {
+      const drain = Math.floor(char.gold * 0.18)
+      if (drain > 0) {
+        await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username)
+        await say(client, channel,
+          `@${username} — The Scepter answers to you today. ` +
+          `Maintaining a divine mandate has operational costs. ` +
+          `-${drain}g. (${char.gold - drain}g remaining)`
+        )
+      }
+    }
+  }
+
+  await supabase.from('player_consequence_flags').update({ tyrants_triggered: true, tyrants_boon: isBoon }).eq('id', flagId)
+}
+
+// hand_of_bane — Bane's empire remembers you (Tyranny Triumphant)
+// Always fires — heaviest toll, mirrors chains_of_order
+async function triggerHandOfBane(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp, gold')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const goldDrain = Math.floor(char.gold * 0.22)
+  const hpDrain = Math.floor(char.max_hp * 0.14)
+  const newHp = Math.max(1, char.hp - hpDrain)
+  const newGold = Math.max(0, char.gold - goldDrain)
+
+  await supabase.from('characters').update({ hp: newHp, gold: newGold }).eq('twitch_username', username)
+
+  await say(client, channel,
+    `@${username} — Bane's system expanded as designed. ` +
+    `You are in the ledger now. You were always going to be in the ledger. ` +
+    `The mark collects what the mark collects. ` +
+    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+  )
+
+  await supabase.from('player_consequence_flags').update({ bane_triggered: true }).eq('id', flagId)
+}
+
+// ------------------------------------------------------------
+// The Tyrant Reforged stage milestone titles
+// ------------------------------------------------------------
+
+const FORGOTTEN_REALMS_STAGE_TITLES: Record<number, string> = {
+  2: 'Saw the Doctrine Written',
+  3: 'Walked the Network',
+  4: 'Felt the Scepter\'s Reach',
+  5: 'Stood in the Temple of Bane',
+}
+
+async function awardForgottenRealmsStageMilestone(
+  supabase: SupabaseClient,
+  username: string,
+  stageReached: number
+) {
+  const title = FORGOTTEN_REALMS_STAGE_TITLES[stageReached]
+  if (!title) return
+  await supabase
+    .from('player_titles')
+    .upsert(
+      { username, title, source: 'the-tyrant-reforged' },
+      { onConflict: 'username,title', ignoreDuplicates: true }
+    )
+}
+
+// ------------------------------------------------------------
 // Stage combat engine
 // ------------------------------------------------------------
 
@@ -1350,6 +1564,11 @@ async function writeConsequences(supabase: SupabaseClient, campaignId: string, p
       case 'web_remnant': base.web_trigger_at = roll(2, 4); base.web_campaign_counter = 0; break
       case 'smiling_tyrant': base.smiling_trigger_at = 1; base.smiling_campaign_counter = 0; break
       case 'old_ones_mark': base.old_ones_trigger_at = 1; base.old_ones_campaign_counter = 0; break
+      // ── The Tyrant Reforged ───────────────────────────────
+      case 'shattered_order': base.order_trigger_at = roll(2, 4); base.order_campaign_counter = 0; break
+      case 'banes_ledger': base.ledger_trigger_at = roll(2, 4); base.ledger_campaign_counter = 0; break
+      case 'tyrants_mark': base.tyrants_trigger_at = 1; base.tyrants_campaign_counter = 0; break
+      case 'hand_of_bane': base.bane_trigger_at = 1; base.bane_campaign_counter = 0; break
     }
     await supabase.from('player_consequence_flags').upsert(base, { onConflict: 'username,flag_type,is_active', ignoreDuplicates: false })
   }
@@ -1422,6 +1641,7 @@ async function writeNamedRewards(
     if (campaignSlug === 'ashes-beneath-the-flame' && p.stage_reached >= 2) await awardEberronStageMilestone(supabase, p.username, p.stage_reached)
     if (campaignSlug === 'ashes-of-the-black-emperor' && p.stage_reached >= 2) await awardDragonlanceStageMilestone(supabase, p.username, p.stage_reached)
     if (campaignSlug === 'the-smiling-tyrant' && p.stage_reached >= 2) await awardGreyhawkStageMilestone(supabase, p.username, p.stage_reached)
+    if (campaignSlug === 'the-tyrant-reforged' && p.stage_reached >= 2) await awardForgottenRealmsStageMilestone(supabase, p.username, p.stage_reached)
   }
 
   if (fullClear) {
@@ -1504,6 +1724,12 @@ async function runNamedCampaign(
     let greyhawkSpawned = false
     for (const p of participants.filter(p => p.is_alive)) {
       if (!greyhawkSpawned && await checkGreyhawkSpawn(supabase, p.username)) { greyhawkSpawned = true; await runElementalSpawn(client, supabase, channel, campaignId, p.username, participants, GREYHAWK_SPAWN_POOL, `The network Iuz built is still functional. One of its agents has found ${p.username}.`); break }
+    }
+
+    // Forgotten Realms spawn
+    let forgottenRealmsSpawned = false
+    for (const p of participants.filter(p => p.is_alive)) {
+      if (!forgottenRealmsSpawned && await checkForgottenRealmsSpawn(supabase, p.username)) { forgottenRealmsSpawned = true; await runElementalSpawn(client, supabase, channel, campaignId, p.username, participants, FORGOTTEN_REALMS_SPAWN_POOL, `The ledger of Bane is still active. A mark-bound agent has found ${p.username}.`); break }
     }
 
     const result = await runNamedStage(client, supabase, channel, campaignId, stage, participants, diffMod)
@@ -1619,6 +1845,32 @@ async function runNamedCampaign(
       `Iuz wins. The collapse engine completes its final cycle. ` +
       `His empire expands as the only remaining source of order. ` +
       `The party lives in it now. They know exactly how it was built.`
+    )
+    // ── The Tyrant Reforged ───────────────────────────────────
+  } else if (chosenOutcome.outcome_key === 'break_the_tyranny') {
+    await say(client, channel,
+      `The system collapses. Not cleanly. The streets that were controlled are now chaotic. ` +
+      `Freedom is real. It is also fragile. Some people are looking at the chaos and remembering when things worked. ` +
+      `You broke it. The chaos follows you.`
+    )
+  } else if (chosenOutcome.outcome_key === 'controlled_order') {
+    await say(client, channel,
+      `Fzoul is defeated but the system survives. Partially. ` +
+      `The streets are still clean. The ledgers are still running. ` +
+      `The people who live here are safe, in the way that things in a cage are safe. ` +
+      `The cage will be in touch.`
+    )
+  } else if (chosenOutcome.outcome_key === 'serve_the_tyrant') {
+    await say(client, channel,
+      `You take the Scepter. The system is yours now — the ledgers, the marks, the network. ` +
+      `Bane's will continues through different hands. ` +
+      `The ledger notes that this entry appears in every succession of power it has recorded.`
+    )
+  } else if (chosenOutcome.outcome_key === 'tyranny_triumphant') {
+    await say(client, channel,
+      `Fzoul succeeds. The system expands as designed. ` +
+      `Zhentil Keep becomes a model. Other cities begin receiving advisors. ` +
+      `The advisors bring ledgers. The ledgers bring marks. The marks bring order.`
     )
   }
 
