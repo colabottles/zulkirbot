@@ -3,7 +3,7 @@ import { d20, d6, d8 } from './dice'
 import { shouldDropLoot, rollLoot } from './loot'
 import { supabase } from '../lib/supabase'
 import { getMonsterForLevel } from './monsters'
-import { CLASS_HP } from '../lib/classes'
+import { CLASS_HP_DIE, rollHp } from '../lib/classes'
 import { trimGraveyard } from '../lib/graveyard'
 import { getCharacterStats } from '../lib/stats'
 import { trackKill } from '../lib/kills'
@@ -12,7 +12,7 @@ import { getBuff, clearBuff } from '../lib/tavernBuffs'
 import tmi from 'tmi.js'
 
 export const activeFights = new Map<string, ActiveFight>()
-const FIGHT_TIMEOUT_MS = 5 * 60 * 1000
+const FIGHT_TIMEOUT_MS = 20 * 60 * 1000
 
 export function getActiveFight(username: string): ActiveFight | undefined {
   return activeFights.get(username)
@@ -174,15 +174,10 @@ async function handleVictory(
   const newGold = char.gold + fight.monster.gold_reward
   const { newLevel, newXpTotal } = calculateLevel(newXp)
   const leveledUp = newLevel > char.level
-
-  // Recalculate max HP on level up
-  const hpPerLevel = CLASS_HP[char.class] ?? 5
-  const newMaxHp = leveledUp
-    ? char.max_hp + hpPerLevel
-    : char.max_hp
-  const newHp = leveledUp
-    ? fight.character_current_hp + hpPerLevel
-    : fight.character_current_hp
+  const hpDie = CLASS_HP_DIE[char.class] ?? 6
+  const hpRoll = leveledUp ? rollHp(hpDie) : 0
+  const newMaxHp = leveledUp ? char.max_hp + hpRoll : char.max_hp
+  const newHp = leveledUp ? fight.character_current_hp + hpRoll : fight.character_current_hp
 
   let lootMsg = ''
   if (shouldDropLoot(fight.monster.loot_chance)) {
@@ -212,7 +207,7 @@ async function handleVictory(
   }).eq('twitch_username', username)
 
   const levelMsg = leveledUp
-    ? ` 🎉 LEVEL UP! You are now Level ${newLevel}! (+${hpPerLevel} max HP)`
+    ? ` 🎉 LEVEL UP! You are now Level ${newLevel}! (+${hpRoll} max HP)`
     : ''
 
   client.say(
@@ -268,8 +263,19 @@ async function checkFightTimeout(
   if (!fight) return
 
   if (Date.now() - fight.last_action >= FIGHT_TIMEOUT_MS) {
-    await handleDeath(channel, username, fight, client)
-    client.say(channel, `⏰ @${username} fled from battle and was cut down by the ${fight.monster.name}!`)
+    // Remove the active fight without triggering permadeath
+    activeFights.delete(username)
+
+    // Set character HP to 0 (unconscious) in the database
+    await supabase
+      .from('characters')
+      .update({ hp: 0 })
+      .eq('twitch_username', username)
+
+    client.say(channel,
+      `⏰ @${username} lost consciousness during their fight with the ${fight.monster.name}! ` +
+      `They've been dragged to safety. Use !rest or visit a shrine to recover.`
+    )
   }
 }
 

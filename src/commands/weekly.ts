@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { d100 } from '../game/dice'
 import { rollLootByRarity } from '../game/loot'
 import { calculateLevel } from '../game/engine'
-import { CLASS_HP } from '../lib/classes'
+import { CLASS_HP_DIE, rollHp } from '../lib/classes'
 
 const WEEKLY_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -43,10 +43,11 @@ export const weeklyCommand: BotCommand = {
     const newXp = char.xp + xp
     const { newLevel, newXpTotal } = calculateLevel(newXp)
     const leveledUp = newLevel > char.level
-    const hpPerLevel = CLASS_HP[char.class] ?? 5
+    const hpDie = CLASS_HP_DIE[char.class] ?? 6
     const levelsGained = newLevel - char.level
-    const newMaxHp = char.max_hp + (hpPerLevel * levelsGained)
-    const newHp = Math.min(char.hp + (hpPerLevel * levelsGained), newMaxHp)
+    const hpRoll = Array.from({ length: levelsGained }, () => rollHp(hpDie)).reduce((a, b) => a + b, 0)
+    const newMaxHp = char.max_hp + hpRoll
+    const newHp = Math.min(char.hp + hpRoll, newMaxHp)
 
     // 7% chance at uncommon or rarer item
     const itemRoll = d100()

@@ -17,7 +17,7 @@ import { d20, d8, d100 } from '../game/dice'
 import { rollLoot } from '../game/loot'
 import { trackKill } from '../lib/kills'
 import { calculateLevel } from '../game/engine'
-import { CLASS_HP } from '../lib/classes'
+import { CLASS_HP_DIE, rollHp } from '../lib/classes'
 
 export const partyCommand: BotCommand = {
   name: 'party',
@@ -366,9 +366,10 @@ export const partyCommand: BotCommand = {
             const newXp = memberChar.xp + xpShare
             const { newLevel, newXpTotal } = calculateLevel(newXp)
             const leveledUp = newLevel > memberChar.level
-            const hpPerLevel = CLASS_HP[memberChar.class] ?? 5
+            const hpDie = CLASS_HP_DIE[memberChar.class] ?? 6
             const levelsGained = newLevel - memberChar.level
-            const newMaxHp = memberChar.max_hp + (hpPerLevel * levelsGained)
+            const hpRoll = Array.from({ length: levelsGained }, () => rollHp(hpDie)).reduce((a, b) => a + b, 0)
+            const newMaxHp = memberChar.max_hp + hpRoll
 
             await supabase
               .from('characters')
@@ -378,7 +379,7 @@ export const partyCommand: BotCommand = {
                 gold: memberChar.gold + goldShare,
                 max_hp: leveledUp ? newMaxHp : memberChar.max_hp,
                 hp: leveledUp
-                  ? Math.min(memberChar.hp + (hpPerLevel * levelsGained), newMaxHp)
+                  ? Math.min(memberChar.hp + hpRoll, newMaxHp)
                   : memberChar.hp,
               })
               .eq('twitch_username', m.twitch_username)

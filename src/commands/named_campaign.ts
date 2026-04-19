@@ -5,6 +5,13 @@
 //   unlock check → initiation → solo/party prompt →
 //   join window → stage loop → rest shrine → boss fight →
 //   ending vote → consequence writes → reward distribution
+//
+// Campaigns housed in this file:
+//   - Mystara (original)
+//   - Al-Qadim (original)
+//   - Ashes of Xaryxis (Spelljammer)
+//   - Embers of the Second War (Planescape)
+//   - The Shattered Memory of Darkon (Ravenloft)
 // ============================================================
 
 import { Client } from 'tmi.js'
@@ -87,6 +94,21 @@ export const ELEMENTAL_SPAWN_POOL: ElementalSpawn[] = [
   { name: 'Rogue Water Elemental', hp: 70, damage_min: 9, damage_max: 16 },
 ]
 
+export const SPIRIT_SPAWN_POOL: ElementalSpawn[] = [
+  { name: 'Unbound River Spirit', hp: 65, damage_min: 10, damage_max: 17 },
+  { name: 'Rogue Wind Spirit', hp: 50, damage_min: 12, damage_max: 20 },
+  { name: 'Wayward Mountain Spirit', hp: 80, damage_min: 8, damage_max: 15 },
+  { name: 'Lost Flame Spirit', hp: 60, damage_min: 11, damage_max: 18 },
+]
+
+// Darkon Mist spawn pool (mist_marked consequence)
+export const MIST_SPAWN_POOL: ElementalSpawn[] = [
+  { name: 'Mist Wraith', hp: 55, damage_min: 10, damage_max: 18 },
+  { name: 'Memory Shade', hp: 60, damage_min: 11, damage_max: 17 },
+  { name: 'Darkon Phantom', hp: 50, damage_min: 12, damage_max: 19 },
+  { name: 'Lost Soul of Darkon', hp: 65, damage_min: 9, damage_max: 16 },
+]
+
 // ------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------
@@ -151,7 +173,7 @@ async function getChannelDifficultyMod(
 }
 
 // ------------------------------------------------------------
-// Consequence checks — fires at session start on any command
+// Consequence checks
 // ------------------------------------------------------------
 
 export async function checkConsequences(
@@ -267,11 +289,83 @@ export async function checkConsequences(
           .eq('id', flag.id)
       }
     }
+
+    // Mandate Restored: celestial auditor
+    if (flag.flag_type === 'mandate_restored' && flag.trigger_ready && !flag.mandate_triggered) {
+      await triggerCelestialAudit(client, supabase, channel, username, flag.id)
+    }
+
+    // Mandate Reforged: boon or burden
+    if (flag.flag_type === 'mandate_reforged' && flag.trigger_ready && !flag.mandate_triggered) {
+      await triggerMandateReforged(
+        client, supabase, channel, username, flag.id,
+        flag.mandate_boon ?? true
+      )
+    }
+
+    // Celestial Debt: court calls in favor
+    if (flag.flag_type === 'celestial_debt' && flag.trigger_ready && !flag.celestial_triggered) {
+      await triggerCelestialDebt(client, supabase, channel, username, flag.id)
+    }
+
+    // ── Ashes of Xaryxis ─────────────────────────────────────
+
+    if (flag.flag_type === 'starfire_marked' && flag.trigger_ready && !flag.starfire_triggered) {
+      await triggerStarfireMark(client, supabase, channel, username, flag.id)
+    }
+
+    if (flag.flag_type === 'cycle_bound' && flag.trigger_ready && !flag.cycle_triggered) {
+      await triggerCycleBound(client, supabase, channel, username, flag.id)
+    }
+
+    if (flag.flag_type === 'engine_forged' && flag.trigger_ready && !flag.engine_triggered) {
+      await triggerEngineForged(client, supabase, channel, username, flag.id)
+    }
+
+    // ── Embers of the Second War ──────────────────────────────
+
+    if (flag.flag_type === 'infernal_marked' && flag.trigger_ready && !flag.infernal_triggered) {
+      await triggerInfernalMarked(client, supabase, channel, username, flag.id)
+    }
+
+    if (flag.flag_type === 'abyssal_touched' && flag.trigger_ready && !flag.abyssal_triggered) {
+      await triggerAbyssalTouched(client, supabase, channel, username, flag.id)
+    }
+
+    if (flag.flag_type === 'planar_witness' && flag.trigger_ready && !flag.witness_triggered) {
+      await triggerPlanarWitness(client, supabase, channel, username, flag.id)
+    }
+
+    if (flag.flag_type === 'gem_bound' && flag.trigger_ready && !flag.gem_triggered) {
+      await triggerGemBound(client, supabase, channel, username, flag.id)
+    }
+
+    if (flag.flag_type === 'iron_manacles_blight' && flag.trigger_ready && !flag.blight_triggered) {
+      await triggerManaclesBlight(client, supabase, channel, username, flag.id)
+    }
+
+    // ── The Shattered Memory of Darkon ────────────────────────
+
+    if (flag.flag_type === 'domain_bound' && flag.trigger_ready && !flag.domain_triggered) {
+      await triggerDomainBound(client, supabase, channel, username, flag.id)
+    }
+
+    if (flag.flag_type === 'curse_shattered' && flag.trigger_ready && !flag.shatter_triggered) {
+      await triggerCurseShattered(client, supabase, channel, username, flag.id)
+    }
+
+    if (flag.flag_type === 'mist_marked' && flag.trigger_ready && !flag.mist_triggered) {
+      await triggerMistMarked(client, supabase, channel, username, flag.id)
+    }
+
+    if (flag.flag_type === 'darklord_echo' && flag.trigger_ready && !flag.darklord_triggered) {
+      await triggerDarklordEcho(client, supabase, channel, username, flag.id)
+    }
   }
 }
 
 // ------------------------------------------------------------
-// Convergence spawn check (Al-Qadim consequence)
+// Convergence / spirit / mist spawn checks
 // ------------------------------------------------------------
 
 export async function checkConvergenceSpawn(
@@ -290,8 +384,40 @@ export async function checkConvergenceSpawn(
   return Math.random() < 0.20
 }
 
+export async function checkSpiritSpawn(
+  supabase: SupabaseClient,
+  username: string
+): Promise<boolean> {
+  const { data: flag } = await supabase
+    .from('player_consequence_flags')
+    .select('id')
+    .eq('username', username)
+    .eq('flag_type', 'mandate_shattered')
+    .eq('is_active', true)
+    .single()
+
+  if (!flag) return false
+  return Math.random() < 0.15
+}
+
+export async function checkMistSpawn(
+  supabase: SupabaseClient,
+  username: string
+): Promise<boolean> {
+  const { data: flag } = await supabase
+    .from('player_consequence_flags')
+    .select('id')
+    .eq('username', username)
+    .eq('flag_type', 'mist_marked')
+    .eq('is_active', true)
+    .single()
+
+  if (!flag) return false
+  return Math.random() < 0.20
+}
+
 // ------------------------------------------------------------
-// Madness trigger
+// Madness trigger (Mystara / crystal_control)
 // ------------------------------------------------------------
 
 async function triggerMadness(
@@ -366,6 +492,885 @@ async function triggerMadness(
 }
 
 // ------------------------------------------------------------
+// Celestial audit trigger (Al-Qadim / mandate_restored)
+// ------------------------------------------------------------
+
+export async function triggerCelestialAudit(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('gold, hp, max_hp, kill_count')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  if ((char.kill_count ?? 0) < 50) {
+    await supabase
+      .from('player_consequence_flags')
+      .update({ mandate_triggered: true })
+      .eq('id', flagId)
+    return
+  }
+
+  const baseFine = Math.floor(char.gold * 0.35)
+  const harshFine = Math.floor(char.gold * 0.50)
+  const lenientFine = Math.floor(char.gold * 0.40)
+  const hpCost = Math.floor(char.max_hp * 0.20)
+
+  await client.say(channel,
+    `📜 @${username} — A figure in formal grey robes steps from nowhere. ` +
+    `It unrolls a scroll. The scroll is very long. ` +
+    `"The Court has reviewed your record. ${char.kill_count} registered actions of terminal force. " ` +
+    `"The balance tax is assessed at ${baseFine}g. " ` +
+    `"Type !pay to settle or !dispute to contest. You have 60 seconds."`
+  )
+
+  const response = await waitForAuditResponse(client, channel, username, 60_000)
+
+  if (response === 'pay') {
+    if (char.gold >= baseFine && baseFine > 0) {
+      await supabase
+        .from('characters')
+        .update({ gold: char.gold - baseFine })
+        .eq('twitch_username', username)
+      await client.say(channel,
+        `📜 @${username} — The figure makes a note. "Payment received. The Court is satisfied." ` +
+        `The scroll rolls itself back up. ${baseFine}g deducted. Balance: ${char.gold - baseFine}g.`
+      )
+    } else {
+      const newHp = Math.max(1, char.hp - hpCost)
+      await supabase
+        .from('characters')
+        .update({ hp: newHp, max_hp: char.max_hp - hpCost })
+        .eq('twitch_username', username)
+      await client.say(channel,
+        `📜 @${username} — "Insufficient funds. The Court accepts an alternative settlement." ` +
+        `Your max HP is reduced by ${hpCost}. The figure makes a note and departs.`
+      )
+    }
+
+  } else if (response === 'dispute') {
+    const ruling = Math.random() < 0.50
+
+    if (ruling) {
+      await client.say(channel,
+        `📜 @${username} — The figure pauses. Consults a second scroll. ` +
+        `"The Court finds merit in the objection. Fine waived — this cycle." ` +
+        `"Note added to record. Future assessments will reflect this appeal." ` +
+        `The fine is waived. Future audits will cost ${lenientFine}g instead of ${baseFine}g — ` +
+        `but they will come.`
+      )
+      await supabase
+        .from('player_consequence_flags')
+        .update({ mandate_triggered: false })
+        .eq('id', flagId)
+      return
+
+    } else {
+      const actualFine = char.gold >= harshFine ? harshFine : char.gold
+      await supabase
+        .from('characters')
+        .update({ gold: char.gold - actualFine })
+        .eq('twitch_username', username)
+      await client.say(channel,
+        `📜 @${username} — The figure does not look up from the scroll. ` +
+        `"Objection noted. Objection overruled. Fine increased for procedural waste." ` +
+        `${harshFine}g deducted. The Court's patience is not infinite.`
+      )
+    }
+
+  } else {
+    const contemptFine = Math.floor(char.gold * 0.45)
+    const actualFine = char.gold >= contemptFine ? contemptFine : char.gold
+    await supabase
+      .from('characters')
+      .update({ gold: char.gold - actualFine })
+      .eq('twitch_username', username)
+    await client.say(channel,
+      `📜 @${username} — Silence. The figure makes a note without looking up. ` +
+      `"Non-responsive. Contempt assessed." ` +
+      `${contemptFine}g deducted automatically. The Court does not wait.`
+    )
+  }
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ mandate_triggered: true })
+    .eq('id', flagId)
+}
+
+function waitForAuditResponse(
+  client: Client,
+  channel: string,
+  username: string,
+  windowMs: number
+): Promise<'pay' | 'dispute' | 'none'> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      client.removeListener('message', handler)
+      resolve('none')
+    }, windowMs)
+
+    const handler = (
+      _chan: string,
+      tags: Record<string, unknown>,
+      message: string
+    ) => {
+      if (tags['display-name']?.toString().toLowerCase() !== username.toLowerCase()) return
+      const msg = message.trim().toLowerCase()
+      if (msg === '!pay' || msg === '!dispute') {
+        clearTimeout(timeout)
+        client.removeListener('message', handler)
+        resolve(msg === '!pay' ? 'pay' : 'dispute')
+      }
+    }
+
+    client.on('message', handler)
+  })
+}
+
+async function triggerMandateReforged(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string,
+  isBoon: boolean
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  if (isBoon) {
+    await supabase
+      .from('characters')
+      .update({ max_hp: char.max_hp + 20, hp: char.hp + 20 })
+      .eq('twitch_username', username)
+    await client.say(channel,
+      `✨ @${username} — The reforged Mandate stirs. Something in the new order ` +
+      `recognizes what you did. Your max HP is permanently increased by 20.`
+    )
+  } else {
+    const newHp = Math.max(1, char.hp - 20)
+    await supabase
+      .from('characters')
+      .update({ max_hp: char.max_hp - 20, hp: newHp })
+      .eq('twitch_username', username)
+    await client.say(channel,
+      `🌀 @${username} — The reforged Mandate stirs. The new order is still finding ` +
+      `its shape. Some of the cost falls on those who made it. ` +
+      `Your max HP is permanently reduced by 20.`
+    )
+  }
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ mandate_triggered: true })
+    .eq('id', flagId)
+}
+
+async function triggerCelestialDebt(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('gold, hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const tithe = Math.floor(char.gold * 0.20)
+  const hpCost = Math.floor(char.max_hp * 0.20)
+
+  await client.say(channel,
+    `🌟 @${username} — A column of pale light opens. A voice — formal, unhurried, enormous — speaks. ` +
+    `"The Court calls in its debt. A tithe of ${tithe}g is requested in acknowledgment of services rendered." ` +
+    `Type !pay to comply willingly (gain +10% XP for 5 campaigns) or ignore to have the tithe taken automatically.`
+  )
+
+  const response = await waitForAuditResponse(client, channel, username, 60_000)
+
+  if (response === 'pay' && char.gold >= tithe) {
+    await supabase
+      .from('characters')
+      .update({ gold: char.gold - tithe })
+      .eq('twitch_username', username)
+    await client.say(channel,
+      `🌟 @${username} — "Compliance noted. The Court is pleased." ` +
+      `${tithe}g tithed. The Court grants a blessing: +10% XP on your next 5 campaigns.`
+    )
+  } else {
+    if (char.gold >= tithe && tithe > 0) {
+      await supabase
+        .from('characters')
+        .update({ gold: char.gold - tithe })
+        .eq('twitch_username', username)
+      await client.say(channel,
+        `🌟 @${username} — The light dims. "The tithe is collected." ` +
+        `${tithe}g removed. No blessing is granted for reluctant payment.`
+      )
+    } else {
+      const newHp = Math.max(1, char.hp - hpCost)
+      await supabase
+        .from('characters')
+        .update({ hp: newHp, max_hp: char.max_hp - hpCost })
+        .eq('twitch_username', username)
+      await client.say(channel,
+        `🌟 @${username} — "Insufficient funds. The Court accepts vitality in lieu of gold." ` +
+        `Your max HP is reduced by ${hpCost}.`
+      )
+    }
+  }
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ celestial_triggered: true })
+    .eq('id', flagId)
+}
+
+// ------------------------------------------------------------
+// Ashes of Xaryxis consequence triggers
+// ------------------------------------------------------------
+
+async function triggerStarfireMark(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  if (Math.random() > 0.30) return
+
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const drain = Math.floor(char.max_hp * 0.12)
+  const newHp = Math.max(1, char.hp - drain)
+
+  await supabase
+    .from('characters')
+    .update({ hp: newHp })
+    .eq('twitch_username', username)
+
+  await say(client, channel,
+    `⭐ @${username} — Xaryxis is still dying. You can feel it from here. ` +
+    `The starfire mark burns cold beneath your skin and takes ${drain} HP. ` +
+    `(${newHp}/${char.max_hp} HP remaining)`
+  )
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ starfire_triggered: true })
+    .eq('id', flagId)
+}
+
+async function triggerCycleBound(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  if (Math.random() > 0.35) return
+
+  const { data: char } = await supabase
+    .from('characters')
+    .select('gold, hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const tithe = Math.floor(char.gold * 0.15)
+
+  if (char.gold >= tithe && tithe > 0) {
+    await supabase
+      .from('characters')
+      .update({ gold: char.gold - tithe })
+      .eq('twitch_username', username)
+    await say(client, channel,
+      `⚙️  @${username} — The Engine's ledger updates itself. ` +
+      `Somewhere in Wildspace, a world dims a little more. ` +
+      `Your share of the cost: ${tithe}g. (${char.gold - tithe}g remaining)`
+    )
+  } else {
+    const hpCost = Math.floor(char.max_hp * 0.10)
+    const newHp = Math.max(1, char.hp - hpCost)
+    await supabase
+      .from('characters')
+      .update({ hp: newHp })
+      .eq('twitch_username', username)
+    await say(client, channel,
+      `⚙️  @${username} — The Engine's ledger updates itself. ` +
+      `You have no gold to give. It takes vitality instead. ` +
+      `-${hpCost} HP. (${newHp}/${char.max_hp} HP remaining)`
+    )
+  }
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ cycle_triggered: true })
+    .eq('id', flagId)
+}
+
+async function triggerEngineForged(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp, gold')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const isBoon = Math.random() < 0.50
+
+  if (isBoon) {
+    const bonus = roll(10, 25)
+    const newHp = Math.min(char.max_hp, char.hp + bonus)
+    await supabase
+      .from('characters')
+      .update({ hp: newHp })
+      .eq('twitch_username', username)
+    await say(client, channel,
+      `🔧 @${username} — The Engine hums somewhere in Wildspace. ` +
+      `Whatever you changed, it's holding — for now. ` +
+      `Something feeds back through the connection: +${bonus} HP. (${newHp}/${char.max_hp})`
+    )
+  } else {
+    const debtType = Math.random() < 0.50 ? 'hp' : 'gold'
+    if (debtType === 'hp') {
+      const drain = roll(8, 20)
+      const newHp = Math.max(1, char.hp - drain)
+      await supabase
+        .from('characters')
+        .update({ hp: newHp })
+        .eq('twitch_username', username)
+      await say(client, channel,
+        `🔧 @${username} — The Engine hums somewhere in Wildspace. ` +
+        `Something in what you rewrote is pulling back. ` +
+        `The architecture is unstable. -${drain} HP. (${newHp}/${char.max_hp})`
+      )
+    } else {
+      const drain = Math.floor(char.gold * 0.12)
+      if (drain > 0) {
+        await supabase
+          .from('characters')
+          .update({ gold: char.gold - drain })
+          .eq('twitch_username', username)
+        await say(client, channel,
+          `🔧 @${username} — The Engine hums somewhere in Wildspace. ` +
+          `The rewrite is still settling. Something slips through the cracks: ` +
+          `-${drain}g. (${char.gold - drain}g remaining)`
+        )
+      }
+    }
+  }
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ engine_triggered: true, engine_boon: isBoon })
+    .eq('id', flagId)
+}
+
+// ------------------------------------------------------------
+// Ashes of Xaryxis stage milestone titles
+// ------------------------------------------------------------
+
+const XARYXIS_STAGE_TITLES: Record<number, string> = {
+  2: 'Witness to the Dying',
+  3: 'Wildspace Wanderer',
+  4: 'Touched by the Engine',
+  5: 'Who Stood Before the Star',
+}
+
+async function awardXaryxisStageMilestone(
+  supabase: SupabaseClient,
+  username: string,
+  stageReached: number
+) {
+  const title = XARYXIS_STAGE_TITLES[stageReached]
+  if (!title) return
+
+  await supabase
+    .from('player_titles')
+    .upsert(
+      { username, title, source: 'ashes-of-xaryxis' },
+      { onConflict: 'username,title', ignoreDuplicates: true }
+    )
+}
+
+// ------------------------------------------------------------
+// Embers of the Second War consequence triggers
+// ------------------------------------------------------------
+
+async function triggerInfernalMarked(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  if (Math.random() > 0.35) return
+
+  const { data: char } = await supabase
+    .from('characters')
+    .select('gold, hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const tithe = Math.floor(char.gold * 0.15)
+
+  if (char.gold >= tithe && tithe > 0) {
+    await supabase
+      .from('characters')
+      .update({ gold: char.gold - tithe })
+      .eq('twitch_username', username)
+    await say(client, channel,
+      `⛓️  @${username} — The ledger of Dis updates without warning. ` +
+      `The Iron City remembers what you did for it. It collects. ` +
+      `${tithe}g vanishes from your purse. (${char.gold - tithe}g remaining)`
+    )
+  } else {
+    const hpCost = Math.floor(char.max_hp * 0.08)
+    const newHp = Math.max(1, char.hp - hpCost)
+    await supabase
+      .from('characters')
+      .update({ hp: newHp })
+      .eq('twitch_username', username)
+    await say(client, channel,
+      `⛓️  @${username} — The ledger of Dis updates without warning. ` +
+      `You have no gold. The Iron City takes something else. ` +
+      `-${hpCost} HP. (${newHp}/${char.max_hp} HP remaining)`
+    )
+  }
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ infernal_triggered: true })
+    .eq('id', flagId)
+}
+
+async function triggerAbyssalTouched(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  if (Math.random() > 0.30) return
+
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const drain = Math.floor(char.max_hp * 0.10)
+  const newHp = Math.max(1, char.hp - drain)
+
+  await supabase
+    .from('characters')
+    .update({ hp: newHp })
+    .eq('twitch_username', username)
+
+  await say(client, channel,
+    `💀 @${username} — The Abyss does not forget the one who cracked it open. ` +
+    `Something bleeds through the wound you made. ` +
+    `-${drain} HP. (${newHp}/${char.max_hp} HP remaining)`
+  )
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ abyssal_triggered: true })
+    .eq('id', flagId)
+}
+
+async function triggerPlanarWitness(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  await say(client, channel,
+    `⚖️  @${username} — The neutral powers of the planes acknowledge what you did. ` +
+    `You held the line without taking a side. That is rarer than it sounds. ` +
+    `+10% XP this campaign.`
+  )
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ witness_triggered: true })
+    .eq('id', flagId)
+}
+
+async function triggerGemBound(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp, gold')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const isBoon = Math.random() < 0.50
+
+  if (isBoon) {
+    const bonus = roll(10, 30)
+    const newHp = Math.min(char.max_hp, char.hp + bonus)
+    await supabase
+      .from('characters')
+      .update({ hp: newHp })
+      .eq('twitch_username', username)
+    await say(client, channel,
+      `💎 @${username} — The Gem of Stygian Accord pulses somewhere in your possession. ` +
+      `The power is real today. +${bonus} HP. (${newHp}/${char.max_hp})`
+    )
+  } else {
+    const debtType = Math.random() < 0.50 ? 'hp' : 'gold'
+    if (debtType === 'hp') {
+      const drain = roll(10, 25)
+      const newHp = Math.max(1, char.hp - drain)
+      await supabase
+        .from('characters')
+        .update({ hp: newHp })
+        .eq('twitch_username', username)
+      await say(client, channel,
+        `💎 @${username} — The Gem of Stygian Accord pulses somewhere in your possession. ` +
+        `Both sides are still looking for it. The pressure costs you. ` +
+        `-${drain} HP. (${newHp}/${char.max_hp})`
+      )
+    } else {
+      const drain = Math.floor(char.gold * 0.15)
+      if (drain > 0) {
+        await supabase
+          .from('characters')
+          .update({ gold: char.gold - drain })
+          .eq('twitch_username', username)
+        await say(client, channel,
+          `💎 @${username} — The Gem of Stygian Accord pulses somewhere in your possession. ` +
+          `Keeping it hidden has costs. -${drain}g. (${char.gold - drain}g remaining)`
+        )
+      }
+    }
+  }
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ gem_triggered: true, gem_boon: isBoon })
+    .eq('id', flagId)
+}
+
+async function triggerManaclesBlight(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  if (Math.random() > 0.25) return
+
+  await say(client, channel,
+    `🔥 @${username} — The Iron Manacles of Dis tighten. ` +
+    `Dispater's mark burns through the metal and into your mind — ` +
+    `a psionic fire that scatters thought and numbs the sword arm. ` +
+    `Pain. Agony. The iron is in your skull now. ` +
+    `-3 to all attacks this campaign. The manacles remember who made them.`
+  )
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ blight_triggered: true, blight_attack_penalty: 3 })
+    .eq('id', flagId)
+}
+
+export async function applyIronManaclesBlight(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string
+) {
+  await supabase
+    .from('player_consequence_flags')
+    .upsert({
+      username,
+      flag_type: 'iron_manacles_blight',
+      is_active: true,
+      source_campaign_slug: 'embers-of-the-second-war',
+      blight_attack_penalty: 3,
+      blight_triggered: false,
+    }, { onConflict: 'username,flag_type,is_active', ignoreDuplicates: false })
+
+  await say(client, channel,
+    `🔥 @${username} equips the Iron Manacles of Dis. ` +
+    `The metal closes. Dispater's mark seals into your wrists. ` +
+    `Power flows through you — and behind it, pain. ` +
+    `A psionic blight settles into your mind. -3 to all attacks while equipped. ` +
+    `The +5 damage bonus is real. So is the cost.`
+  )
+}
+
+export async function removeIronManaclesBlight(
+  supabase: SupabaseClient,
+  username: string
+) {
+  await supabase
+    .from('player_consequence_flags')
+    .update({ is_active: false, resolved_at: new Date().toISOString() })
+    .eq('username', username)
+    .eq('flag_type', 'iron_manacles_blight')
+    .eq('is_active', true)
+}
+
+// ------------------------------------------------------------
+// Embers of the Second War stage milestone titles
+// ------------------------------------------------------------
+
+const EMBERS_STAGE_TITLES: Record<number, string> = {
+  2: 'Walked the Iron Streets',
+  3: 'Vault Breaker',
+  4: 'Caught Between Hells',
+  5: 'Stood in the Infernal Crucible',
+}
+
+async function awardEmbersStageMilestone(
+  supabase: SupabaseClient,
+  username: string,
+  stageReached: number
+) {
+  const title = EMBERS_STAGE_TITLES[stageReached]
+  if (!title) return
+
+  await supabase
+    .from('player_titles')
+    .upsert(
+      { username, title, source: 'embers-of-the-second-war' },
+      { onConflict: 'username,title', ignoreDuplicates: true }
+    )
+}
+
+// ------------------------------------------------------------
+// Shattered Memory of Darkon consequence triggers
+// ------------------------------------------------------------
+
+// domain_bound — Darkon's memory tether (Restore Azalin)
+// 35% chance per campaign entry — HP drain, the domain pulls at you
+async function triggerDomainBound(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  if (Math.random() > 0.35) return
+
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const drain = Math.floor(char.max_hp * 0.10)
+  const newHp = Math.max(1, char.hp - drain)
+
+  await supabase
+    .from('characters')
+    .update({ hp: newHp })
+    .eq('twitch_username', username)
+
+  await say(client, channel,
+    `🌫️  @${username} — Darkon remembers you. You stabilized it. ` +
+    `Now it holds onto you like a drowning thing holds onto whatever is close. ` +
+    `A memory drains from you — not a thought, but something physical. ` +
+    `-${drain} HP. (${newHp}/${char.max_hp} HP remaining)`
+  )
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ domain_triggered: true })
+    .eq('id', flagId)
+}
+
+// curse_shattered — backlash from the broken curse (Destroy Azalin)
+// Always fires — random debuff, the curse does not end cleanly
+async function triggerCurseShattered(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp, gold')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const debtType = Math.random() < 0.50 ? 'hp' : 'gold'
+
+  if (debtType === 'hp') {
+    const drain = roll(8, 22)
+    const newHp = Math.max(1, char.hp - drain)
+    await supabase
+      .from('characters')
+      .update({ hp: newHp })
+      .eq('twitch_username', username)
+    await say(client, channel,
+      `💥 @${username} — The curse broke. It did not break cleanly. ` +
+      `Fragments of Azalin's unraveling still cling to those who were there. ` +
+      `Something tears through you today. -${drain} HP. (${newHp}/${char.max_hp})`
+    )
+  } else {
+    const drain = Math.floor(char.gold * 0.12)
+    if (drain > 0) {
+      await supabase
+        .from('characters')
+        .update({ gold: char.gold - drain })
+        .eq('twitch_username', username)
+      await say(client, channel,
+        `💥 @${username} — The curse broke. It did not break cleanly. ` +
+        `Darkon's collapse took things with it — some of them yours. ` +
+        `-${drain}g lost in the unraveling. (${char.gold - drain}g remaining)`
+      )
+    }
+  }
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ shatter_triggered: true })
+    .eq('id', flagId)
+}
+
+// mist_marked — the Mists remember (Exploit the Curse)
+// 20% chance per stage of a Mist spawn — handled in runNamedCampaign
+// This trigger fires at campaign entry as a reminder/warning
+async function triggerMistMarked(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  await say(client, channel,
+    `🌫️  @${username} — The Mists remember the crack you slipped through. ` +
+    `They are looking for it again. They are looking for you. ` +
+    `Something from Darkon may find you before this campaign is over.`
+  )
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ mist_triggered: true })
+    .eq('id', flagId)
+}
+
+// darklord_echo — the domain's hunger (Replace the Darklord)
+// Always fires — heavy gold and HP toll, the domain feeds through the echo
+async function triggerDarklordEcho(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp, gold')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const goldDrain = Math.floor(char.gold * 0.20)
+  const hpDrain = Math.floor(char.max_hp * 0.12)
+  const newHp = Math.max(1, char.hp - hpDrain)
+  const newGold = Math.max(0, char.gold - goldDrain)
+
+  await supabase
+    .from('characters')
+    .update({ hp: newHp, gold: newGold })
+    .eq('twitch_username', username)
+
+  await say(client, channel,
+    `🌑 @${username} — The domain feeds. ` +
+    `Darkon does not have a Darklord anymore — but the echo of what you left behind does. ` +
+    `It reaches across the planes and takes what it needs to keep existing. ` +
+    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+  )
+
+  await supabase
+    .from('player_consequence_flags')
+    .update({ darklord_triggered: true })
+    .eq('id', flagId)
+}
+
+// ------------------------------------------------------------
+// Shattered Memory of Darkon stage milestone titles
+// ------------------------------------------------------------
+
+const DARKON_STAGE_TITLES: Record<number, string> = {
+  2: 'Touched by the Mists',
+  3: 'Who Knew the Broken King',
+  4: 'Witness to Unraveling',
+  5: 'Stood Before Azalin Ascendant',
+}
+
+async function awardDarkonStageMilestone(
+  supabase: SupabaseClient,
+  username: string,
+  stageReached: number
+) {
+  const title = DARKON_STAGE_TITLES[stageReached]
+  if (!title) return
+
+  await supabase
+    .from('player_titles')
+    .upsert(
+      { username, title, source: 'shattered-memory-of-darkon' },
+      { onConflict: 'username,title', ignoreDuplicates: true }
+    )
+}
+
+// ------------------------------------------------------------
 // Stage combat engine
 // ------------------------------------------------------------
 
@@ -403,7 +1408,7 @@ async function runNamedStage(
       const targetIdx = enemyHPs.findIndex(hp => hp > 0)
       if (targetIdx === -1) break
 
-      // Check stabilize hit penalty
+      // Check corruption_stabilized hit penalty
       let hitPenaltyActive = false
       const { data: stabilizeFlag } = await supabase
         .from('player_consequence_flags')
@@ -425,10 +1430,30 @@ async function runNamedStage(
         continue
       }
 
-      const dmg = roll(12, 28)
+      // Check iron_manacles_blight attack penalty (-3 to damage)
+      let manaclesPenalty = 0
+      const { data: blightFlag } = await supabase
+        .from('player_consequence_flags')
+        .select('blight_attack_penalty')
+        .eq('username', player.username)
+        .eq('flag_type', 'iron_manacles_blight')
+        .eq('is_active', true)
+        .single()
+
+      if (blightFlag) {
+        manaclesPenalty = blightFlag.blight_attack_penalty ?? 3
+      }
+
+      const rawDmg = roll(12, 28)
+      const dmg = Math.max(1, rawDmg - manaclesPenalty)
       enemyHPs[targetIdx] = Math.max(0, enemyHPs[targetIdx] - dmg)
+
+      const penaltyNote = manaclesPenalty > 0
+        ? ` (−${manaclesPenalty} from psionic blight)`
+        : ''
+
       await say(client, channel,
-        `🗡️  ${player.username} hits ${stage.enemy_name} for ${dmg} damage! ` +
+        `🗡️  ${player.username} hits ${stage.enemy_name} for ${dmg} damage!${penaltyNote} ` +
         `(${Math.max(0, enemyHPs[targetIdx])} HP remaining)`
       )
       await delay(1200)
@@ -582,7 +1607,7 @@ async function restShrine(
 }
 
 // ------------------------------------------------------------
-// Elemental spawn combat (convergence_marked consequence)
+// Elemental / spirit / mist spawn combat
 // ------------------------------------------------------------
 
 async function runElementalSpawn(
@@ -591,14 +1616,15 @@ async function runElementalSpawn(
   channel: string,
   campaignId: string,
   markedUsername: string,
-  participants: Participant[]
+  participants: Participant[],
+  pool: ElementalSpawn[] = ELEMENTAL_SPAWN_POOL,
+  flavorPrefix?: string
 ) {
-  const spawnEnemy = pickRandom(ELEMENTAL_SPAWN_POOL)
+  const spawnEnemy = pickRandom(pool)
+  const prefix = flavorPrefix ??
+    `🌪️  The elemental planes bleed through! A ${spawnEnemy.name} manifests — drawn by ${markedUsername}'s mark from Zakhara!`
 
-  await say(client, channel,
-    `🌪️  The elemental planes bleed through! ` +
-    `A ${spawnEnemy.name} manifests — drawn by ${markedUsername}'s mark from Zakhara!`
-  )
+  await say(client, channel, prefix)
   await delay(1500)
 
   const spawnHp = [spawnEnemy.hp]
@@ -629,7 +1655,7 @@ async function runElementalSpawn(
           target.is_alive = false
           await handleDeath(supabase, campaignId, target, 0)
           await say(client, channel,
-            `💀 ${target.username} has fallen to the elemental spawn! Permadeath.`
+            `💀 ${target.username} has fallen to the spawn! Permadeath.`
           )
         }
         await delay(1000)
@@ -641,9 +1667,7 @@ async function runElementalSpawn(
   }
 
   if (spawnHp[0] <= 0) {
-    await say(client, channel,
-      `💥 The ${spawnEnemy.name} dissipates back into the elemental planes.`
-    )
+    await say(client, channel, `💥 The ${spawnEnemy.name} is defeated!`)
   }
   await delay(1500)
 }
@@ -801,6 +1825,69 @@ async function writeConsequences(
         base.debt_trigger_at = roll(2, 3)
         base.debt_campaign_counter = 0
         break
+      case 'mandate_restored':
+        base.mandate_trigger_at = roll(2, 4)
+        base.mandate_campaign_counter = 0
+        break
+      case 'mandate_shattered':
+        base.spirit_spawn_active = true
+        break
+      case 'mandate_reforged':
+        base.mandate_trigger_at = roll(3, 5)
+        base.mandate_campaign_counter = 0
+        base.mandate_boon = Math.random() < 0.50
+        break
+      case 'celestial_debt':
+        base.celestial_trigger_at = roll(2, 3)
+        base.celestial_campaign_counter = 0
+        break
+      // ── Ashes of Xaryxis ──────────────────────────────────
+      case 'starfire_marked':
+        base.starfire_trigger_at = roll(1, 3)
+        base.starfire_campaign_counter = 0
+        break
+      case 'cycle_bound':
+        base.cycle_trigger_at = roll(2, 4)
+        base.cycle_campaign_counter = 0
+        break
+      case 'engine_forged':
+        base.engine_trigger_at = 1
+        base.engine_campaign_counter = 0
+        break
+      // ── Embers of the Second War ───────────────────────────
+      case 'infernal_marked':
+        base.infernal_trigger_at = roll(2, 4)
+        base.infernal_campaign_counter = 0
+        break
+      case 'abyssal_touched':
+        base.abyssal_trigger_at = roll(1, 3)
+        base.abyssal_campaign_counter = 0
+        break
+      case 'planar_witness':
+        base.witness_trigger_at = 1
+        base.witness_campaign_counter = 0
+        break
+      case 'gem_bound':
+        base.gem_trigger_at = 1
+        base.gem_campaign_counter = 0
+        break
+      // ── Shattered Memory of Darkon ─────────────────────────
+      case 'domain_bound':
+        base.domain_trigger_at = roll(2, 4)
+        base.domain_campaign_counter = 0
+        break
+      case 'curse_shattered':
+        base.shatter_trigger_at = 1
+        base.shatter_campaign_counter = 0
+        break
+      case 'mist_marked':
+        base.mist_trigger_at = 1
+        base.mist_campaign_counter = 0
+        break
+      case 'darklord_echo':
+        base.darklord_trigger_at = 1
+        base.darklord_campaign_counter = 0
+        break
     }
 
     await supabase
@@ -851,7 +1938,14 @@ async function writeNamedRewards(
 
   const titlePool = (titleRows ?? []) as { title: string }[]
   const artifactPool = (artifactRows ?? []) as { artifact_name: string }[]
-  const titleEarned = titlePool.length > 0 ? pickRandom(titlePool).title : null
+
+  // Embers: Iron City Survivor only on balance_preserved and power_seized
+  const EMBERS_TITLE_OUTCOMES = ['balance_preserved', 'power_seized']
+  const titleEarned = titlePool.length > 0 &&
+    (campaignSlug !== 'embers-of-the-second-war' || EMBERS_TITLE_OUTCOMES.includes(outcome.outcome_key))
+    ? pickRandom(titlePool).title
+    : null
+
   const artifactName = artifactPool.length > 0 ? pickRandom(artifactPool).artifact_name : null
   const survivors = participants.filter(p => p.is_alive)
   const artWinner = survivors.length > 0 ? pickRandom(survivors) : null
@@ -862,6 +1956,11 @@ async function writeNamedRewards(
 
     xp = Math.floor(xp * outcome.reward_modifier)
     gold = Math.floor(gold * outcome.reward_modifier)
+
+    // planar_witness XP bonus (+10%)
+    if (outcome.consequence_key === 'planar_witness' && p.is_alive) {
+      xp = Math.floor(xp * 1.10)
+    }
 
     if (fullClear && p.is_alive) {
       xp += Math.floor(CLEAR_BONUS_XP * outcome.reward_modifier) + outcome.bonus_xp
@@ -891,6 +1990,26 @@ async function writeNamedRewards(
     }
 
     await supabase.rpc('increment_campaign_counters', { p_username: p.username })
+
+    // Award artifact stat bonus (Iron Manacles of Dis only)
+    if (p.username === artWinner?.username && artifactName === 'Iron Manacles of Dis') {
+      await supabase
+        .from('inventory')
+        .update({ stat_bonus: 5 })
+        .eq('twitch_username', p.username)
+        .eq('item_name', 'Iron Manacles of Dis')
+    }
+
+    // Stage milestone titles
+    if (campaignSlug === 'ashes-of-xaryxis' && p.stage_reached >= 2) {
+      await awardXaryxisStageMilestone(supabase, p.username, p.stage_reached)
+    }
+    if (campaignSlug === 'embers-of-the-second-war' && p.stage_reached >= 2) {
+      await awardEmbersStageMilestone(supabase, p.username, p.stage_reached)
+    }
+    if (campaignSlug === 'shattered-memory-of-darkon' && p.stage_reached >= 2) {
+      await awardDarkonStageMilestone(supabase, p.username, p.stage_reached)
+    }
   }
 
   if (fullClear) {
@@ -934,7 +2053,6 @@ async function runNamedCampaign(
     const alive = participants.filter(p => p.is_alive)
     if (alive.length === 0) break
 
-    // Rest shrine + Yvannis before stages 2–5
     if (stage.stage > 1) {
       await delay(3000)
       await restShrine(client, supabase, channel, campaignId, stage, participants)
@@ -946,13 +2064,12 @@ async function runNamedCampaign(
       }
     }
 
-    // Update current stage
     await supabase
       .from('campaigns')
       .update({ stage: stage.stage })
       .eq('id', campaignId)
 
-    // Convergence spawn check (Al-Qadim consequence)
+    // Convergence spawn (Al-Qadim / convergence_marked)
     let convergenceSpawned = false
     for (const p of participants.filter(p => p.is_alive)) {
       if (!convergenceSpawned && await checkConvergenceSpawn(supabase, p.username)) {
@@ -964,12 +2081,37 @@ async function runNamedCampaign(
       }
     }
 
-    // Run the stage
+    // Spirit spawn (Al-Qadim / mandate_shattered)
+    let spiritSpawned = false
+    for (const p of participants.filter(p => p.is_alive)) {
+      if (!spiritSpawned && await checkSpiritSpawn(supabase, p.username)) {
+        spiritSpawned = true
+        await runElementalSpawn(
+          client, supabase, channel, campaignId, p.username,
+          participants, SPIRIT_SPAWN_POOL
+        )
+        break
+      }
+    }
+
+    // Mist spawn (Darkon / mist_marked)
+    let mistSpawned = false
+    for (const p of participants.filter(p => p.is_alive)) {
+      if (!mistSpawned && await checkMistSpawn(supabase, p.username)) {
+        mistSpawned = true
+        await runElementalSpawn(
+          client, supabase, channel, campaignId, p.username,
+          participants, MIST_SPAWN_POOL,
+          `🌫️  The Mists tear open. Something from Darkon has followed ${p.username} through the crack.`
+        )
+        break
+      }
+    }
+
     const result = await runNamedStage(
       client, supabase, channel, campaignId, stage, participants, diffMod
     )
 
-    // Update stage_reached for survivors
     for (const p of result.survivors) {
       p.stage_reached = stage.stage
       await supabase
@@ -997,7 +2139,6 @@ async function runNamedCampaign(
     await delay(2000)
   }
 
-  // All 5 stages cleared — ending vote
   const survivors = participants.filter(p => p.is_alive)
 
   await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
@@ -1016,9 +2157,9 @@ async function runNamedCampaign(
   await say(client, channel, chosenOutcome.flavor_text)
   await delay(3000)
 
-  // Write consequences
   await writeConsequences(supabase, campaignId, participants, chosenOutcome, campaignData.slug)
 
+  // Outcome-specific announcements
   if (chosenOutcome.outcome_key === 'spread') {
     await writeSpreadDifficulty(supabase, channel, campaignId)
     await say(client, channel,
@@ -1045,9 +2186,70 @@ async function runNamedCampaign(
     await say(client, channel,
       `🌪️  The Seal is returned. The genie courts remember your name.`
     )
+    // ── Ashes of Xaryxis ──────────────────────────────────────
+  } else if (chosenOutcome.outcome_key === 'sacrifice_empire') {
+    await say(client, channel,
+      `⭐ The Engine is gone. Xaryxis dims. Your world lives. ` +
+      `The cost will follow you — the starfire mark burns in all who made this choice.`
+    )
+  } else if (chosenOutcome.outcome_key === 'continue_cycle') {
+    await say(client, channel,
+      `⚙️  The Engine runs on. Another world pays the price. ` +
+      `The cycle continues — and so do you, as part of it. The machine remembers its servants.`
+    )
+  } else if (chosenOutcome.outcome_key === 'rewrite_system') {
+    await say(client, channel,
+      `🔧 The Engine is different now. Whether that is enough, time will tell. ` +
+      `Those who reached into the machine carry its mark — unstable, uncertain, yours.`
+    )
+    // ── Embers of the Second War ───────────────────────────────
+  } else if (chosenOutcome.outcome_key === 'devil_victory') {
+    await say(client, channel,
+      `⛓️  The Gem passes to infernal hands. The devils tighten their grip on the war. ` +
+      `Order returns to the planes — Dis's order. The Iron City's ledger now includes your name.`
+    )
+  } else if (chosenOutcome.outcome_key === 'demonic_chaos') {
+    await say(client, channel,
+      `💥 The Gem is gone. The Blood War tears wider than it has in centuries. ` +
+      `You stopped the devils from winning. The Abyss does not forget who opened the door.`
+    )
+  } else if (chosenOutcome.outcome_key === 'balance_preserved') {
+    await say(client, channel,
+      `⚖️  The Gem is hidden. Neither side gains the fulcrum. The war continues — contained. ` +
+      `It is not a victory. It is the prevention of something worse. The planes take note.`
+    )
+  } else if (chosenOutcome.outcome_key === 'power_seized') {
+    await say(client, channel,
+      `💎 You kept it. The power is yours. So is the target on your back. ` +
+      `Both devils and demons now know your name. The Gem hums in your possession. Good luck.`
+    )
+    // ── Shattered Memory of Darkon ─────────────────────────────
+  } else if (chosenOutcome.outcome_key === 'restore_azalin') {
+    await say(client, channel,
+      `👑 Azalin is whole again. Darkon stabilizes. The Mists thicken at the borders. ` +
+      `He looks at you the way a collector looks at something rare. You saved the domain. ` +
+      `Whether you are free to leave it is another question entirely.`
+    )
+  } else if (chosenOutcome.outcome_key === 'destroy_azalin') {
+    await say(client, channel,
+      `💥 The phylactery breaks. Azalin ends — not with fury, but with something like relief. ` +
+      `Darkon tears at the seams. You find a way through the collapse. ` +
+      `It is not clean. Nothing about this was clean.`
+    )
+  } else if (chosenOutcome.outcome_key === 'exploit_curse') {
+    await say(client, channel,
+      `🌫️  You used the fracture and slipped through. You are out. ` +
+      `Darkon is still there — broken, leaking, worse than when you arrived. ` +
+      `The Mists remember the crack you used. They are already looking for you again.`
+    )
+  } else if (chosenOutcome.outcome_key === 'replace_darklord') {
+    await say(client, channel,
+      `🌑 Someone stepped into the space Azalin left. The domain has an anchor again. ` +
+      `The others may escape. The one who stayed becomes what Azalin was. ` +
+      `The cycle does not end. It just has a new name.`
+    )
   }
 
-  // Write rewards
   const { titleEarned, artifactName, artWinner } = await writeNamedRewards(
     supabase, campaignId, participants, chosenOutcome, campaignData.slug, true
   )
@@ -1063,7 +2265,7 @@ async function runNamedCampaign(
     `${survivors.map(p => p.username).join(' & ')} emerge victorious.`
   )
   if (titleEarned) {
-    await say(client, channel, `🎖️  Title earned: [${titleEarned}] — awarded to all survivors!`)
+    await say(client, channel, `🎖️  Title earned: [${titleEarned}] — awarded to qualifying survivors!`)
   }
   if (artifactName && artWinner) {
     await say(client, channel, `🏺 Artifact: ${artifactName} — claimed by ${artWinner.username}!`)
@@ -1104,7 +2306,6 @@ export async function handleNamedCampaignCommand(
     return
   }
 
-  // Check initiator has a living character
   const { data: initiatorChar } = await supabase
     .from('characters')
     .select('hp, is_dead')
@@ -1149,8 +2350,6 @@ export async function handleNamedCampaignCommand(
     )
     return
   }
-
-
 
   namedCampaignLock.set(channel, true)
 
@@ -1274,7 +2473,7 @@ export async function handleNamedJoinCamp(
     await say(client, channel,
       `@${username} You need a living character to join a campaign. Use !join to create one.`
     )
-    return false  // was missing the false
+    return false
   }
 
   if (joiners.has(username)) {

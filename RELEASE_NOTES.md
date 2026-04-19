@@ -177,7 +177,7 @@ Players can no longer equip an item that is already equipped, preventing the sam
 Removed unused `tmi` import from `flee.ts`
 Removed unused `formatClass` import from `party.ts`
 Removed unused `getPartyById` import from `party.ts`
-Replaced dynamic `await import()` calls in `party.ts` with static top-level imports for `calculateLevel` and `CLASS_HP`
+Replaced dynamic `await import()` calls in `party.ts` with static top-level imports for `calculateLevel` and `CLASS_HP_DIE`
 
 ## v1.3.0 — April 12, 2026
 

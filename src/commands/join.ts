@@ -1,7 +1,7 @@
 import { BotCommand, CharacterClass } from '../types'
 import { supabase } from '../lib/supabase'
 import { formatClass } from '../lib/format'
-import { CLASS_HP } from '../lib/classes'
+import { CLASS_HP_DIE, rollHp } from '../lib/classes'
 
 const CLASSES: CharacterClass[] = ['alchemist', 'artificer', 'barbarian', 'bard', 'cleric', 'druid', 'favored_soul', 'fighter', 'monk', 'paladin', 'ranger', 'rogue', 'sorcerer', 'warlock', 'wizard', 'sacred_fist', 'dark_apostate', 'stormsinger', 'blightcaster', 'acolyte_of_the_skin', 'dark_hunter', 'dragon_lord', 'wild_mage', 'dragon_disciple', 'arcane_trickster']
 
@@ -25,14 +25,16 @@ export const joinCommand: BotCommand = {
       return
     }
 
+    const startingHp = rollHp(CLASS_HP_DIE[chosenClass] ?? 6)
+
     const { error } = await supabase.from('characters').insert({
       twitch_username: username,
       display_name: username,
       class: chosenClass,
       level: 1,
       xp: 0,
-      hp: CLASS_HP[chosenClass],
-      max_hp: CLASS_HP[chosenClass],
+      hp: startingHp,
+      max_hp: startingHp,
       gold: 10,
     })
 

@@ -1,6 +1,6 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
-import { CLASS_HP } from '../lib/classes'
+import { CLASS_HP_DIE, rollHp } from '../lib/classes'
 
 export const reviveCommand: BotCommand = {
   name: 'revive',
@@ -43,7 +43,8 @@ export const reviveCommand: BotCommand = {
       return
     }
 
-    const maxHp = (CLASS_HP[fallen.class] ?? 5) * fallen.level
+    const hpDie = CLASS_HP_DIE[fallen.class] ?? 6
+    const maxHp = Array.from({ length: fallen.level }, () => rollHp(hpDie)).reduce((a, b) => a + b, 0)
 
     await supabase.from('characters').insert({
       twitch_username: fallen.twitch_username,

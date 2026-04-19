@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { getActiveDuel, removeDuel } from '../lib/duels'
 import { getCharacterStats } from '../lib/stats'
 import { d20, d8 } from '../game/dice'
-import { CLASS_HP } from '../lib/classes'
+import { CLASS_HP_DIE, rollHp } from '../lib/classes'
 
 const XP_REWARD = 50
 
@@ -91,9 +91,10 @@ export const strikeCommand: BotCommand = {
         const newXp = winnerChar.xp + XP_REWARD
         const { newLevel, newXpTotal } = calculateLevel(newXp)
         const leveledUp = newLevel > winnerChar.level
-        const hpPerLevel = CLASS_HP[winnerChar.class] ?? 5
+        const hpDie = CLASS_HP_DIE[winnerChar.class] ?? 6
         const levelsGained = newLevel - winnerChar.level
-        const newMaxHp = winnerChar.max_hp + (hpPerLevel * levelsGained)
+        const hpRoll = Array.from({ length: levelsGained }, () => rollHp(hpDie)).reduce((a, b) => a + b, 0)
+        const newMaxHp = winnerChar.max_hp + hpRoll
 
         await supabase
           .from('characters')
@@ -102,7 +103,7 @@ export const strikeCommand: BotCommand = {
             level: newLevel,
             max_hp: leveledUp ? newMaxHp : winnerChar.max_hp,
             hp: leveledUp
-              ? Math.min(winnerChar.hp + (hpPerLevel * levelsGained), newMaxHp)
+              ? Math.min(winnerChar.hp + hpRoll, newMaxHp)
               : winnerChar.hp,
           })
           .eq('twitch_username', username)
