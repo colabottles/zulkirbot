@@ -7,14 +7,14 @@
 //   ending vote → consequence writes → reward distribution
 //
 // Campaigns housed in this file:
-//   - Mystara (original)
-//   - Al-Qadim (original)
-//   - Ashes of Xaryxis (Spelljammer)
+//   - The Crystal of Rafiel (Mystara)
+//   - The Seal of the Incomparable (Al-Qadim)
+//   - The Dying Star (Spelljammer)
 //   - Embers of the Second War (Planescape)
 //   - The Shattered Memory of Darkon (Ravenloft)
-//   - Ashes of the Shadow King (Dark Sun)
-//   - Ashes Beneath the Flame (Eberron)
-//   - Ashes of the Black Emperor (Dragonlance)
+//   - The Ritual of Nibenay (Dark Sun)
+//   - The Whispering Flame (Eberron)
+//   - The Black Emperor (Dragonlance)
 //   - The Smiling Tyrant (Greyhawk)
 // ============================================================
 
@@ -560,7 +560,7 @@ async function triggerEngineForged(client: Client, supabase: SupabaseClient, cha
 const XARYXIS_STAGE_TITLES: Record<number, string> = { 2: 'Witness to the Dying', 3: 'Wildspace Wanderer', 4: 'Touched by the Engine', 5: 'Who Stood Before the Star' }
 async function awardXaryxisStageMilestone(supabase: SupabaseClient, username: string, stageReached: number) {
   const title = XARYXIS_STAGE_TITLES[stageReached]; if (!title) return
-  await supabase.from('player_titles').upsert({ username, title, source: 'ashes-of-xaryxis' }, { onConflict: 'username,title', ignoreDuplicates: true })
+  await supabase.from('player_titles').upsert({ username, title, source: 'the-dying-star' }, { onConflict: 'username,title', ignoreDuplicates: true })
 }
 
 // ------------------------------------------------------------
@@ -748,7 +748,7 @@ async function triggerAthasianLord(client: Client, supabase: SupabaseClient, cha
 const DARKSUN_STAGE_TITLES: Record<number, string> = { 2: 'Walked the Crescent Forest', 3: 'Inside the City of Spires', 4: 'Witnessed the Devouring', 5: 'Stood Before the Shadow King' }
 async function awardDarkSunStageMilestone(supabase: SupabaseClient, username: string, stageReached: number) {
   const title = DARKSUN_STAGE_TITLES[stageReached]; if (!title) return
-  await supabase.from('player_titles').upsert({ username, title, source: 'ashes-of-the-shadow-king' }, { onConflict: 'username,title', ignoreDuplicates: true })
+  await supabase.from('player_titles').upsert({ username, title, source: 'the-ritual-of-nibenay' }, { onConflict: 'username,title', ignoreDuplicates: true })
 }
 
 // ------------------------------------------------------------
@@ -805,7 +805,7 @@ async function triggerBelShalorsEye(client: Client, supabase: SupabaseClient, ch
 const EBERRON_STAGE_TITLES: Record<number, string> = { 2: 'Faith in Fracture', 3: 'Who Named the Wyrmbreaker', 4: 'Held the Brazier', 5: 'Stood in the Shadow of the Flame' }
 async function awardEberronStageMilestone(supabase: SupabaseClient, username: string, stageReached: number) {
   const title = EBERRON_STAGE_TITLES[stageReached]; if (!title) return
-  await supabase.from('player_titles').upsert({ username, title, source: 'ashes-beneath-the-flame' }, { onConflict: 'username,title', ignoreDuplicates: true })
+  await supabase.from('player_titles').upsert({ username, title, source: 'the-whispering-flame' }, { onConflict: 'username,title', ignoreDuplicates: true })
 }
 
 // ------------------------------------------------------------
@@ -872,7 +872,7 @@ async function triggerChainsOfOrder(client: Client, supabase: SupabaseClient, ch
 const DRAGONLANCE_STAGE_TITLES: Record<number, string> = { 2: 'Witnessed the Perfect Weapon', 3: 'Stood Against the Dragonarmies', 4: 'Who Faced the Clone', 5: 'Walked into the Emperor\'s Citadel' }
 async function awardDragonlanceStageMilestone(supabase: SupabaseClient, username: string, stageReached: number) {
   const title = DRAGONLANCE_STAGE_TITLES[stageReached]; if (!title) return
-  await supabase.from('player_titles').upsert({ username, title, source: 'ashes-of-the-black-emperor' }, { onConflict: 'username,title', ignoreDuplicates: true })
+  await supabase.from('player_titles').upsert({ username, title, source: 'the-black-emperor' }, { onConflict: 'username,title', ignoreDuplicates: true })
 }
 
 // ------------------------------------------------------------
@@ -1634,12 +1634,12 @@ async function writeNamedRewards(
     }
 
     // Stage milestone titles
-    if (campaignSlug === 'ashes-of-xaryxis' && p.stage_reached >= 2) await awardXaryxisStageMilestone(supabase, p.username, p.stage_reached)
+    if (campaignSlug === 'the-dying-star' && p.stage_reached >= 2) await awardXaryxisStageMilestone(supabase, p.username, p.stage_reached)
     if (campaignSlug === 'embers-of-the-second-war' && p.stage_reached >= 2) await awardEmbersStageMilestone(supabase, p.username, p.stage_reached)
     if (campaignSlug === 'shattered-memory-of-darkon' && p.stage_reached >= 2) await awardDarkonStageMilestone(supabase, p.username, p.stage_reached)
-    if (campaignSlug === 'ashes-of-the-shadow-king' && p.stage_reached >= 2) await awardDarkSunStageMilestone(supabase, p.username, p.stage_reached)
-    if (campaignSlug === 'ashes-beneath-the-flame' && p.stage_reached >= 2) await awardEberronStageMilestone(supabase, p.username, p.stage_reached)
-    if (campaignSlug === 'ashes-of-the-black-emperor' && p.stage_reached >= 2) await awardDragonlanceStageMilestone(supabase, p.username, p.stage_reached)
+    if (campaignSlug === 'the-ritual-of-nibenay' && p.stage_reached >= 2) await awardDarkSunStageMilestone(supabase, p.username, p.stage_reached)
+    if (campaignSlug === 'the-whispering-flame' && p.stage_reached >= 2) await awardEberronStageMilestone(supabase, p.username, p.stage_reached)
+    if (campaignSlug === 'the-black-emperor' && p.stage_reached >= 2) await awardDragonlanceStageMilestone(supabase, p.username, p.stage_reached)
     if (campaignSlug === 'the-smiling-tyrant' && p.stage_reached >= 2) await awardGreyhawkStageMilestone(supabase, p.username, p.stage_reached)
     if (campaignSlug === 'the-tyrant-reforged' && p.stage_reached >= 2) await awardForgottenRealmsStageMilestone(supabase, p.username, p.stage_reached)
   }
