@@ -1,6 +1,4 @@
 import { BotCommand } from '../types'
-import { soCommand } from './so'
-import { uptimeCommand } from './uptime'
 import { joinCommand } from './join'
 import { statusCommand } from './status'
 import { fightCommand } from './fight'
@@ -52,8 +50,6 @@ import { pauseCommand } from './pause'
 import { resumeCommand } from './resume'
 
 export const allCommands: BotCommand[] = [
-  soCommand,
-  uptimeCommand,
   joinCommand,
   statusCommand,
   fightCommand,

@@ -2,6 +2,35 @@
 
 ---
 
+## v1.5.1 — April 19, 2026
+
+### Added v1.5.1
+
+- **Named Campaign: Ashes of the Black Emperor** — A Dragonlance mini-campaign set on Krynn. Requires 5 standard campaign clears. Features a pure flavor artifact and four outcomes with the heaviest persistent consequence in the game.
+- **Named Campaign: Ashes Beneath the Flame** — An Eberron mini-campaign set in Thrane. Requires 3 standard campaign clears. Features a unique artifact with persistent consequences.
+
+## v1.5.0 — April 18, 2026
+
+### Added v1.5.0
+
+- **Named Campaign: Ashes of Xaryxis** — A Spelljammer mini-campaign set in Wildspace. Requires 3 standard campaign clears.
+- **Named Campaign: Embers of the Second War** — A Planescape mini-campaign set in Dis, the Iron City. Requires 5 standard campaign clears. Features a legendary artifact with unique properties.
+- **Named Campaign: The Shattered Memory of Darkon** — A Ravenloft mini-campaign set in Darkon. Requires 5 standard campaign clears. Features a unique artifact.
+- **HP dice rolls on character creation** — Starting HP is now rolled on the class hit die rather than using a fixed value. Each class maps to its correct die (d4 through d12).
+- **HP dice rolls on level up** — Each level gained now rolls the class hit die once, matching tabletop rules. Multiple levels gained at once roll once per level.
+
+### Changed v1.5.0
+
+- **Fight timeout extended** from 5 minutes to 20 minutes. AFK players have more time before the monster finishes them off.
+
+### Fixed v1.5.0
+
+- **`!revive` HP calculation** was incorrectly multiplying die size by character level. It now rolls the class hit die once per level, same as normal level up.
+
+### Internal
+
+- `CLASS_HP` removed and replaced with `CLASS_HP_DIE` and `rollHp` across `engine.ts`, `join.ts`, `party.ts`, `strike.ts`, `revive.ts`, `weekly.ts`, and `classes.ts`.
+
 ## v1.4.4 — April 16, 2026
 
 ### Al-Qadim Named Campaign & Codebase Cleanup
