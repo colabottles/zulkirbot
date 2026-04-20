@@ -113,6 +113,14 @@ export interface ShopItem {
   price: number
 }
 
+export type UndeadSpecial =
+  | 'level_drain'
+  | 'disease'
+  | 'paralysis'
+  | 'fear'
+  | 'gold_drain'
+  | 'necrotic_fire'
+
 export interface Monster {
   name: string
   hp: number
@@ -121,6 +129,9 @@ export interface Monster {
   xp_reward: number
   gold_reward: number
   loot_chance: number
+  is_undead?: boolean
+  undead_specials?: UndeadSpecial[]
+  special_chance?: number // 0-100, chance per hit to trigger a special
 }
 
 export interface BotCommand {

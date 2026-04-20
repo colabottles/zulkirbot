@@ -82,7 +82,7 @@ export function rollLoot(): Item {
 }
 
 export function rollLootByRarity(rarity: string): Item {
-  const pool = LOOT_TABLES.filter(i => i.rarity === rarity && i.type !== 'potion' && i.type !== 'scroll')
+  const pool = LOOT_TABLES.filter(i => i.rarity === rarity && i.type !== 'potion')
   return pool[Math.floor(Math.random() * pool.length)]
 }
 

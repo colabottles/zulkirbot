@@ -6,6 +6,7 @@ import { isManuallyPaused } from './lib/gamePause'
 import { handleCampaignCommand, handleJoinCampCommand } from './commands/campaign'
 import { handleNamedCampaignCommand, handleNamedJoinCamp, checkConsequences } from './commands/named_campaign'
 import { handleClericCommand, isYvannisPresent } from './commands/cleric'
+import { isFeebleminded, isPolymorphed, isTashaed, getTashaMessage } from './commands/new_commands'
 
 const EXEMPT_COMMANDS = new Set([
   'so', 'uptime', 'help', 'status',
@@ -99,6 +100,13 @@ export function registerCommands(
         return
       }
       userCooldowns.set(username, now)
+    }
+
+    // Inside the message handler, before cmd.handler():
+    if (isFeebleminded(username) || isPolymorphed(username)) return
+    if (isTashaed(username)) {
+      client.say(channel, getTashaMessage(username))
+      return
     }
 
     try {

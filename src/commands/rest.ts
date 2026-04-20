@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase'
 import { activeFights, startFight } from '../game/engine'
 import { d100 } from '../game/dice'
 import { getMonsterForLevel } from '../game/monsters'
+import { resetTurnUndeadCooldown } from './turnundead'
+import { hirelingRest } from './hireling'
+import { rechargeSpellPoints } from '../lib/spellPoints'
 
 const REST_INTERRUPT_CHANCE = 20
 
@@ -55,5 +58,8 @@ export const restCommand: BotCommand = {
       channel,
       `😴 @${username} rests and wakes fully restored. (HP: ${newHp}/${char.max_hp})`
     )
+    resetTurnUndeadCooldown(username)
+    hirelingRest(username)
+    await rechargeSpellPoints(username)
   }
 }

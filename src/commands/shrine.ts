@@ -2,6 +2,9 @@ import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
 import { d100 } from '../game/dice'
 import { activeFights } from '../game/engine'
+import { resetTurnUndeadCooldown } from './turnundead'
+import { hirelingRest } from './hireling'
+import { rechargeSpellPoints } from '../lib/spellPoints'
 
 export const shrineCommand: BotCommand = {
   name: 'shrine',
@@ -83,6 +86,9 @@ export const shrineCommand: BotCommand = {
         `🛕 @${username} prays at the shrine but the gods do not answer. ` +
         `The ${cursedItem.item_name} remains cursed. (${100 - roll}% away from success)`
       )
+      resetTurnUndeadCooldown(username)
+      hirelingRest(username)
+      await rechargeSpellPoints(username)
     }
   }
 }

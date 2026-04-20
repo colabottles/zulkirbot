@@ -2,6 +2,125 @@
 
 ---
 
+## v1.6.0 — April 19, 2026
+
+### Spell System, Hireling System, Rogue Skills, Combat Overhaul
+
+### Added v1.6.0
+
+- **Spell system** — Full spellbook for all 16 caster classes.
+  - 6 spells per class drawn from official D&D rulebooks, spanning spell levels 1–9.
+  - `!spells` — view your spellbook and current spell points.
+  - `!cast [spellname]` — cast a spell in or out of combat. Offensive spells require an active fight.
+  - `!learnspell` — browse available spells for your class. `!learnspell [name]` to learn one.
+  - `!prayforspells` — divine casters (Cleric, Paladin, Favored Soul, Dark Apostate) prepare spells this way.
+  - `!scribescroll [name]` — learn a spell from a scroll found in your inventory. Scroll is consumed.
+  - Spell points pool scales with class and level: full casters get level × 2, half casters get level × 1.5.
+  - Spell points recharge on `!rest` or `!shrine`.
+  - Spell slots unlock every 2 levels up to a maximum of 6.
+  - Armor spell failure — arcane casters wearing armor have a chance to fail casting (light 10%, medium 25%, heavy 50%).
+  - Concentration — spells with duration can break if the caster takes damage mid-fight (10–60% chance scaling with damage taken).
+  - Wild Magic Surge — Wild Mage has a 10% chance on every cast to trigger a random effect from the official 50-entry surge table.
+
+- **Hireling system** — Hire a companion from the tavern for 2g per stream session.
+  - `!hireling [class]` — hire a companion of the specified class.
+  - `!hireling status` — check your current hireling's HP and class.
+  - 25 available classes across 5 archetypes: melee (d10), finesse (d8), divine (d6), arcane (d6), support (d4).
+  - Hirelings deal damage each combat round, absorb hits (20% chance per monster attack, 3 HP before dying), and fire mid-battle quips.
+  - Each archetype has a passive special: finesse finds bonus gold, divine occasionally heals, arcane can double damage, support grants attack bonuses.
+  - Unique purchase flavor, mid-battle quips, and melodramatic death speeches per archetype.
+  - Hireling HP persists across fights. Restores 1 HP on `!rest` or `!shrine`.
+
+- **Rogue skill commands** — Four new skill commands tied to `!explore` events.
+  - `!picklock` — attempt to open a locked chest. Eligible: Rogue, Arcane Trickster, Artificer.
+  - `!disabletrap` — disarm a trapped chest or corridor. Eligible: Rogue, Arcane Trickster, Ranger.
+  - `!findtraps` — reveal hidden traps before they fire. Eligible: Rogue, Arcane Trickster, Artificer.
+  - `!searchdoor` — find hidden doors and secret passages. Eligible: Rogue, Arcane Trickster, Ranger.
+  - Success chance varies by class. Ineligible classes can attempt with a low chance of success.
+  - Pending events expire after 3 minutes.
+  - Four new explore events: locked chest, trapped chest, hidden door, trapped corridor.
+
+- **`!rage`** — Barbarian only. Channels battle fury into the next attack for +d12 bonus damage. 30 second cooldown.
+
+- **`!turnundead`** — Cleric, Paladin, Sacred Fist, Dark Apostate only. Level-scaled turning based on official D&D CR thresholds. Clerics and allied classes destroy undead; Paladins force flee. 2 minute cooldown, resets on `!rest` or `!shrine`.
+
+- **`!xptable`** — Displays XP thresholds centered on your current level. Accepts an optional level argument (`!xptable 20`). Shows 11 levels, marks your current level with ★, and shows XP needed for the next level.
+
+- **`!lag`** — DDO server lag flavor command. 15 random messages. 10 second cooldown.
+
+- **`!hairdye`** — Sarcastic SSG hair dye flavor command. 15 messages. 10 second cooldown.
+
+- **Broadcaster commands** — 16 new broadcaster-only commands:
+  - `!layonhands [user]` — heals a target for a specified amount.
+  - `!inspiration [user]` — grants guaranteed natural 20, ×2 damage, +d8 on next fight.
+  - `!feeblemind [user]` — locks all commands for 2 minutes.
+  - `!polymorph [user]` — transforms target into a sheep, locking all commands for 5 minutes.
+  - `!tasha [user]` — Tasha's Hideous Laughter, locks commands for 2 minutes with flavor on every attempt.
+  - `!scry [user]` — reveals HP, gold, level, class, and kill count in flavor text.
+  - `!deathward [user]` — next time target reaches 0 HP they survive at 1 HP instead. Clears on bot restart.
+  - `!heroesfeast` — grants all players in active fights +50% XP and gold on their next fight for 10 minutes.
+  - `!critical [user]` — next action is an automatic critical hit.
+  - `!fumble [user]` — next action is an automatic fumble.
+  - `!advantage [user]` — next action rolls twice, takes higher.
+  - `!disadvantage [user]` — next action rolls twice, takes lower.
+  - `!identify [user]` — reveals kill count in flavor text.
+  - `!beholder [user]` — fires a random eye ray (10 rays) at target.
+  - `!deckofmany [user]` — draws from the canonical 22-card Deck of Many Things.
+  - `!tarokka [user]` — same as deckofmany with Vistani flavor.
+
+- **Deck of Many Things** — Full canonical 22-card implementation. Cards include The Void and Donjon (permadeath to graveyard — Donjon sends the player to an SSG hair dye factory), Skull (spawns a Death Avatar boss fight), Euryale (permanent -2 attack penalty), Rogue (forced PvP duel with random player), The Fates (d100: clear consequence flag or reverse last campaign outcome), and The Throne (unique title).
+
+- **Undead special damage types** — Undead monsters now have special attacks that trigger on hit.
+  - Level drain — temporary 10% XP loss (Shadow, Specter, Vampire Spawn, Vampire, Lich).
+  - Disease — d6 damage per fight for 3 fights (Zombie, Revenant, Death Knight).
+  - Paralysis — lose next turn, monster still attacks (Skeleton, Ghoul, Lich).
+  - Fear — lose next turn, monster still attacks (Banshee, Death Knight).
+  - Gold drain — 15% gold loss (Vampire Spawn, Vampire).
+  - Necrotic fire — d6 fire + d6 necrotic damage (Death Knight only).
+  - Trigger chance ranges from 25–40% depending on monster.
+
+- **Scrolls in loot system** — Scrolls now drop from explore chests and rogue skill rewards. Rarity maps to spell level: common (1–3), uncommon (4–6), rare (7–9).
+
+### Changed v1.6.0
+
+- **`!explore`** — Four new event types added: locked chest, trapped chest, hidden door, trapped corridor. Roll thresholds adjusted to accommodate new events.
+- **`!rest` and `!shrine`** — Now recharge spell points, restore 1 hireling HP, and reset `!turnundead` cooldown on successful use.
+- **Campaign slug renames** — Four campaigns renamed for consistency:
+  - Ashes of Xaryxis → **The Dying Star**
+  - Ashes of the Shadow King → **The Ritual of Nibenay**
+  - Ashes Beneath the Flame → **The Whispering Flame**
+  - Ashes of the Black Emperor → **The Black Emperor**
+
+### Database v1.6.0
+
+- New tables: `spells`, `player_spellbook`, `player_spell_points`, `active_concentration`, `active_spell_effects`, `wild_magic_log`.
+- New RPC: `recharge_spell_points`.
+- New columns on `player_consequence_flags`: `order_triggered`, `ledger_triggered`, `tyrants_triggered`, `tyrants_boon`, `bane_triggered`, `euryale_attack_penalty`, `euryale_cursed` flag type added.
+- Campaign slug updates propagated to `named_campaign_stages`, `named_campaign_outcomes`, `named_campaign_titles`, `named_campaign_artifacts`, `player_consequence_flags`.
+
+### Files v1.6.0
+
+- `src/commands/spells.ts` — spell system commands
+- `src/commands/rage.ts` — rage command
+- `src/commands/turnundead.ts` — turn undead command
+- `src/commands/xptable.ts` — XP table command
+- `src/commands/lag.ts` — lag flavor command
+- `src/commands/hairdye.ts` — hair dye flavor command
+- `src/commands/hireling.ts` — hireling system
+- `src/commands/rogue_commands.ts` — rogue skill commands
+- `src/commands/new_commands.ts` — broadcaster and special commands
+- `src/lib/spellPoints.ts` — spell point utilities
+- `src/lib/wildMagic.ts` — Wild Magic Surge table
+- `src/lib/undeadSpecials.ts` — undead special damage system
+- `src/game/engine.ts` — updated with all new combat hooks
+- `src/game/monsters.ts` — undead monsters tagged with specials
+- `src/types.ts` — `UndeadSpecial` type, `Monster` interface extended
+- `src/commands/index.ts` — all new commands wired
+- `src/commands/rest.ts` — spell recharge, hireling rest, turn undead reset
+- `src/commands/shrine.ts` — spell recharge, hireling rest, turn undead reset
+- `src/router.ts` — feeblemind, polymorph, tasha locks added
+- `src/game/loot.ts` — scrolls included in `rollLootByRarity`
+
 ## v1.5.1 — April 19, 2026
 
 ### Added v1.5.1

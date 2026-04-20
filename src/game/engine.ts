@@ -1,5 +1,5 @@
-import { ActiveFight, Character, Monster } from '../types'
-import { d20, d6, d8 } from './dice'
+import { ActiveFight, Monster } from '../types'
+import { d20, d8 } from './dice'
 import { shouldDropLoot, rollLoot } from './loot'
 import { supabase } from '../lib/supabase'
 import { getMonsterForLevel } from './monsters'
@@ -9,7 +9,27 @@ import { getCharacterStats } from '../lib/stats'
 import { trackKill } from '../lib/kills'
 import { BOSSES } from './bosses'
 import { getBuff, clearBuff } from '../lib/tavernBuffs'
+import { ragingPlayers } from '../commands/rage'
 import tmi from 'tmi.js'
+import {
+  deathwardedPlayers,
+  criticalPlayers,
+  fumblePlayers,
+  advantagePlayers,
+  disadvantagePlayers,
+  inspiredPlayers,
+  hasHeroesFeast,
+} from '../commands/new_commands'
+import {
+  isParalyzed, isFeared, tickParalysis, tickFear,
+  tickDisease, applyUndeadSpecial,
+} from '../lib/undeadSpecials'
+import {
+  activeHirelings, hirelingAbsorbsHit, hirelingTakeHit,
+  rollHirelingDamage, getHirelingQuip, getHirelingDeathMessage,
+  applyHirelingSpecial,
+} from '../commands/hireling'
+import { checkConcentrationOnHit, breakConcentration } from '../commands/spells'
 
 export const activeFights = new Map<string, ActiveFight>()
 const FIGHT_TIMEOUT_MS = 20 * 60 * 1000
@@ -45,6 +65,12 @@ export async function startFight(
     return
   }
 
+  const diseaseTick = await tickDisease(username, char.hp, char.max_hp)
+  if (diseaseTick) {
+    client.say(channel, diseaseTick.message)
+    char.hp = Math.max(1, char.hp - diseaseTick.damage)
+  }
+
   const monster = existingMonster ?? getMonsterForLevel(char.level)
 
   const fight: ActiveFight = {
@@ -57,20 +83,16 @@ export async function startFight(
   }
 
   activeFights.set(username, fight)
-
-  // Set timeout for dormant fight
   setTimeout(() => checkFightTimeout(channel, username, client), FIGHT_TIMEOUT_MS)
 
   if (!existingMonster) {
-    client.say(
-      channel,
+    client.say(channel,
       `⚔️ @${username} encounters a ${monster.name}! ` +
       `(HP: ${monster.hp} | ATK: ${monster.attack} | DEF: ${monster.defense}) ` +
       `Type !attack to attack!`
     )
   } else {
-    client.say(
-      channel,
+    client.say(channel,
       `⚔️ @${username} — a ${monster.name} stands before you! ` +
       `(HP: ${monster.hp} | ATK: ${monster.attack} | DEF: ${monster.defense}) ` +
       `Type !attack to fight!`
@@ -102,42 +124,215 @@ export async function continueFight(
     clearBuff(username)
   }
 
-  // Player attacks
-  const playerRoll = d20()
-  const playerHit = playerRoll + 2 + stats.attackBonus > fight.monster.defense
+  // ── Paralysis check ──────────────────────────────────────────
+  if (isParalyzed(username)) {
+    tickParalysis(username)
+    client.say(channel, `🧊 @${username} is paralyzed and cannot move! Their turn is lost.`)
+    const monsterRollP = d20()
+    const monsterHitP = monsterRollP + fight.monster.attack > 12 + stats.defenseBonus
+    if (monsterHitP) {
+      fight.character_current_hp -= fight.monster.attack
+      client.say(channel,
+        `The ${fight.monster.name} strikes the helpless @${username} for ${fight.monster.attack} damage! ` +
+        `(HP: ${fight.character_current_hp}/${char?.max_hp})`
+      )
+      if (fight.character_current_hp <= 0) {
+        if (deathwardedPlayers.has(username)) {
+          deathwardedPlayers.delete(username)
+          fight.character_current_hp = 1
+          await supabase.from('characters').update({ hp: 1 }).eq('twitch_username', username)
+          client.say(channel, `🛡️ @${username}'s Death Ward triggers! They survive at 1 HP.`)
+          activeFights.delete(username)
+        } else {
+          await handleDeath(channel, username, fight, client)
+        }
+      }
+    } else {
+      client.say(channel, `The ${fight.monster.name} swings at the paralyzed @${username} but misses!`)
+    }
+    return
+  }
+
+  // ── Fear check ───────────────────────────────────────────────
+  if (isFeared(username)) {
+    tickFear(username)
+    client.say(channel, `😱 @${username} is overcome with fear and cannot act! Their turn is lost.`)
+    const monsterRollF = d20()
+    const monsterHitF = monsterRollF + fight.monster.attack > 12 + stats.defenseBonus
+    if (monsterHitF) {
+      fight.character_current_hp -= fight.monster.attack
+      client.say(channel,
+        `The ${fight.monster.name} presses the advantage on the fleeing @${username} for ${fight.monster.attack} damage! ` +
+        `(HP: ${fight.character_current_hp}/${char?.max_hp})`
+      )
+      if (fight.character_current_hp <= 0) {
+        if (deathwardedPlayers.has(username)) {
+          deathwardedPlayers.delete(username)
+          fight.character_current_hp = 1
+          await supabase.from('characters').update({ hp: 1 }).eq('twitch_username', username)
+          client.say(channel, `🛡️ @${username}'s Death Ward triggers! They survive at 1 HP.`)
+          activeFights.delete(username)
+        } else {
+          await handleDeath(channel, username, fight, client)
+        }
+      }
+    } else {
+      client.say(channel, `The ${fight.monster.name} can't catch the fleeing @${username}!`)
+    }
+    return
+  }
+
+  // ── Critical / Fumble / Advantage / Disadvantage hooks ──────
+  const hasCrit = criticalPlayers.has(username)
+  const hasFumble = fumblePlayers.has(username)
+  const hasAdvantage = advantagePlayers.has(username)
+  const hasDisadvantage = disadvantagePlayers.has(username)
+
+  if (hasCrit) criticalPlayers.delete(username)
+  if (hasFumble) fumblePlayers.delete(username)
+  if (hasAdvantage) advantagePlayers.delete(username)
+  if (hasDisadvantage) disadvantagePlayers.delete(username)
+
+  // ── Inspiration hook ─────────────────────────────────────────
+  const hasInspiration = inspiredPlayers.has(username)
+  if (hasInspiration) inspiredPlayers.delete(username)
+
+  // ── Player attack roll ───────────────────────────────────────
+  let playerRoll: number
+  if (hasCrit) {
+    playerRoll = 20
+  } else if (hasFumble) {
+    playerRoll = 1
+  } else if (hasAdvantage) {
+    playerRoll = Math.max(d20(), d20())
+  } else if (hasDisadvantage) {
+    playerRoll = Math.min(d20(), d20())
+  } else {
+    playerRoll = d20()
+  }
+
+  const playerHit = hasCrit || (!hasFumble && playerRoll + 2 + stats.attackBonus > fight.monster.defense)
   let playerDamage = 0
+  let rageBonusDamage = 0
 
   if (playerHit) {
-    playerDamage = d8() + stats.damageBonus
+    const { data: euryaleFlag } = await supabase
+      .from('player_consequence_flags')
+      .select('euryale_attack_penalty')
+      .eq('username', username)
+      .eq('flag_type', 'euryale_cursed')
+      .eq('is_active', true)
+      .single()
+
+    const euryalePenalty = euryaleFlag?.euryale_attack_penalty ?? 0
+    const baseDamage = d8() + stats.damageBonus - euryalePenalty
+
+    if (ragingPlayers.has(username)) {
+      ragingPlayers.delete(username)
+      rageBonusDamage = Math.floor(Math.random() * 12) + 1
+    }
+
+    if (hasCrit || hasInspiration) {
+      const bonusDamage = d8()
+      playerDamage = Math.max(1, baseDamage * 2 + bonusDamage + rageBonusDamage)
+    } else {
+      playerDamage = Math.max(1, baseDamage + rageBonusDamage)
+    }
+
     fight.monster_current_hp -= playerDamage
   }
 
-  // Monster dies
+  // ── Hireling attacks ─────────────────────────────────────────
+  const hireling = activeHirelings.get(username)
+  if (hireling) {
+    const hirelingDmg = rollHirelingDamage(hireling)
+    fight.monster_current_hp -= hirelingDmg
+    const quip = getHirelingQuip(hireling, fight.monster.name)
+    if (quip) {
+      client.say(channel, `🗡️ ${quip} (${hirelingDmg} damage)`)
+    } else {
+      client.say(channel, `🗡️ ${hireling.name} attacks the ${fight.monster.name} for ${hirelingDmg} damage!`)
+    }
+  }
+
+  // ── Monster dies ─────────────────────────────────────────────
   if (fight.monster_current_hp <= 0) {
     await handleVictory(channel, username, fight, client)
     return
   }
 
-  // Monster attacks back
+  // ── Monster attacks back ─────────────────────────────────────
   const monsterRoll = d20()
   const monsterHit = monsterRoll + fight.monster.attack > 12 + stats.defenseBonus
   let monsterDamage = 0
 
   if (monsterHit) {
     monsterDamage = fight.monster.attack
-    fight.character_current_hp -= monsterDamage
+    const hirelingForAbsorb = activeHirelings.get(username)
+    if (hirelingForAbsorb && hirelingAbsorbsHit(hirelingForAbsorb)) {
+      const died = hirelingTakeHit(username)
+      if (died) {
+        client.say(channel, `💀 ${getHirelingDeathMessage(hirelingForAbsorb)}`)
+      } else {
+        client.say(channel, `🛡️ ${hirelingForAbsorb.name} takes the hit for @${username}!`)
+      }
+    } else {
+      fight.character_current_hp -= monsterDamage
+    }
   }
 
-  // Character dies
+  // ── Concentration check ──────────────────────────────────────
+  if (monsterHit && monsterDamage > 0) {
+    checkConcentrationOnHit(username, monsterDamage, channel, client)
+  }
+
+  // ── Undead special ───────────────────────────────────────────
+  if (monsterHit && fight.monster.is_undead && fight.monster.undead_specials && fight.monster.special_chance) {
+    const special = await applyUndeadSpecial(
+      username,
+      fight.monster.undead_specials,
+      fight.monster.special_chance,
+      {
+        hp: fight.character_current_hp,
+        max_hp: char?.max_hp ?? 100,
+        gold: char?.gold ?? 0,
+        xp: char?.xp ?? 0,
+        level: char?.level ?? 1,
+      }
+    )
+    if (special) {
+      client.say(channel, special.message)
+      if (special.hpDrain > 0) {
+        fight.character_current_hp -= special.hpDrain
+      }
+    }
+  }
+
+  // ── Character dies ───────────────────────────────────────────
   if (fight.character_current_hp <= 0) {
+    if (deathwardedPlayers.has(username)) {
+      deathwardedPlayers.delete(username)
+      fight.character_current_hp = 1
+      await supabase.from('characters').update({ hp: 1 }).eq('twitch_username', username)
+      client.say(channel, `🛡️ @${username}'s Death Ward triggers! They survive at 1 HP. The ward is spent.`)
+      activeFights.delete(username)
+      breakConcentration(username)
+      return
+    }
     await handleDeath(channel, username, fight, client)
     return
   }
 
-  // Fight continues
+  // ── Fight continues ──────────────────────────────────────────
+  const critMsg = hasCrit ? ' CRITICAL HIT!' : ''
+  const fumbleMsg = hasFumble ? ' FUMBLE!' : ''
+  const advMsg = hasAdvantage ? ' (advantage)' : hasDisadvantage ? ' (disadvantage)' : ''
+  const inspMsg = hasInspiration ? ' INSPIRED!' : ''
+  const rageMsg = rageBonusDamage > 0 ? ` RAGING! (+${rageBonusDamage} rage damage)` : ''
+
   const hitMsg = playerHit
-    ? `You hit the ${fight.monster.name} for ${playerDamage} damage!`
-    : `You missed the ${fight.monster.name}!`
+    ? `You hit the ${fight.monster.name} for ${playerDamage} damage!${critMsg}${inspMsg}${advMsg}${rageMsg}`
+    : `You missed the ${fight.monster.name}!${fumbleMsg}${advMsg}`
 
   const monsterMsg = monsterHit
     ? `The ${fight.monster.name} strikes back for ${monsterDamage} damage!`
@@ -159,7 +354,6 @@ async function handleVictory(
 ): Promise<void> {
   activeFights.delete(username)
 
-  // Track kill and check for new titles
   const isBoss = BOSSES.some(b => b.name === fight.monster.name)
 
   const { data: char } = await supabase
@@ -170,8 +364,11 @@ async function handleVictory(
 
   if (!char) return
 
-  const newXp = char.xp + fight.monster.xp_reward
-  const newGold = char.gold + fight.monster.gold_reward
+  const heroesFeastActive = hasHeroesFeast(username)
+  const xpMultiplier = heroesFeastActive ? 1.5 : 1
+  const goldMultiplier = heroesFeastActive ? 1.5 : 1
+  const newXp = char.xp + Math.floor(fight.monster.xp_reward * xpMultiplier)
+  const newGold = char.gold + Math.floor(fight.monster.gold_reward * goldMultiplier)
   const { newLevel, newXpTotal } = calculateLevel(newXp)
   const leveledUp = newLevel > char.level
   const hpDie = CLASS_HP_DIE[char.class] ?? 6
@@ -209,6 +406,12 @@ async function handleVictory(
   const levelMsg = leveledUp
     ? ` 🎉 LEVEL UP! You are now Level ${newLevel}! (+${hpRoll} max HP)`
     : ''
+
+  const hireling = activeHirelings.get(username)
+  if (hireling) {
+    const specialMsg = await applyHirelingSpecial(username, hireling, fight.monster.gold_reward)
+    if (specialMsg) client.say(channel, `✨ ${specialMsg}`)
+  }
 
   client.say(
     channel,
@@ -263,10 +466,8 @@ async function checkFightTimeout(
   if (!fight) return
 
   if (Date.now() - fight.last_action >= FIGHT_TIMEOUT_MS) {
-    // Remove the active fight without triggering permadeath
     activeFights.delete(username)
 
-    // Set character HP to 0 (unconscious) in the database
     await supabase
       .from('characters')
       .update({ hp: 0 })
