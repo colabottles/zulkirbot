@@ -8,7 +8,7 @@ export const statusCommand: BotCommand = {
   aliases: ['char', 'character', 'stats'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
-    const target = args[0]?.replace('@', '') ?? username
+    const target = (args[0]?.replace('@', '') ?? username).toLowerCase()
 
     const { data: char } = await supabase
       .from('characters')
