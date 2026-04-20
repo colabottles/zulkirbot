@@ -68,7 +68,12 @@ export const exploreCommand: BotCommand = {
 
       // Regular trap damage
       const damage = rollTrapDamage(trap)
-      const newHp = char.hp - damage
+      const { data: freshChar } = await supabase
+        .from('characters')
+        .select('hp')
+        .eq('twitch_username', username)
+        .single()
+      const newHp = (freshChar?.hp ?? char.hp) - damage
 
       if (newHp <= 0) {
         await supabase.from('graveyard').insert({

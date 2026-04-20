@@ -22,7 +22,11 @@ export const fleeCommand: BotCommand = {
       .single()
 
     if (!char || char.hp <= 0) {
-      activeFights.delete(username) // clean up stale fight if still present
+      activeFights.delete(username)
+      await supabase
+        .from('characters')
+        .update({ hp: fight.character_current_hp })
+        .eq('twitch_username', username) // clean up stale fight if still present
       return
     }
 

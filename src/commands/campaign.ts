@@ -603,7 +603,7 @@ export async function handleCampaignCommand(
   const { data: initiatorChar } = await supabase
     .from('characters')
     .select('hp, is_dead')
-    .eq('twitch_username', username)
+    .eq('twitch_username', username.toLowerCase())
     .single()
 
   if (!initiatorChar) {
@@ -704,7 +704,7 @@ export async function handleJoinCampCommand(
   const { data: joinerChar } = await supabase
     .from('characters')
     .select('hp, is_dead')
-    .eq('twitch_username', username)
+    .eq('twitch_username', username.toLowerCase())
     .single()
 
   if (!joinerChar || joinerChar.hp <= 0 || joinerChar.is_dead) {

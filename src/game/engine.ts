@@ -465,17 +465,61 @@ async function checkFightTimeout(
   const fight = activeFights.get(username)
   if (!fight) return
 
-  if (Date.now() - fight.last_action >= FIGHT_TIMEOUT_MS) {
-    activeFights.delete(username)
+  if (Date.now() - fight.last_action < FIGHT_TIMEOUT_MS) return
 
-    await supabase
-      .from('characters')
-      .update({ hp: 0 })
-      .eq('twitch_username', username)
+  // Auto-combat — fight until one side is dead
+  client.say(channel,
+    `⏰ @${username} is AFK! The ${fight.monster.name} grows impatient — ` +
+    `auto-combat begins!`
+  )
 
+  const { data: char } = await supabase
+    .from('characters')
+    .select('*')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) { activeFights.delete(username); return }
+
+  let playerHp = fight.character_current_hp
+  let monsterHp = fight.monster_current_hp
+  let rounds = 0
+
+  while (playerHp > 0 && monsterHp > 0 && rounds < 20) {
+    // Player auto-attacks
+    const playerDmg = Math.floor(Math.random() * 8) + 1
+    monsterHp = Math.max(0, monsterHp - playerDmg)
+
+    // Monster attacks back
+    const monsterDmg = fight.monster.attack
+    playerHp = Math.max(0, playerHp - monsterDmg)
+
+    rounds++
+  }
+
+  activeFights.delete(username)
+
+  if (monsterHp <= 0 && playerHp > 0) {
+    // Player wins
+    const { handleVictory } = await import('./engine') as any
+    fight.character_current_hp = playerHp
+    fight.monster_current_hp = 0
+    await supabase.from('characters').update({ hp: playerHp }).eq('twitch_username', username)
     client.say(channel,
-      `⏰ @${username} lost consciousness during their fight with the ${fight.monster.name}! ` +
-      `They've been dragged to safety. Use !rest or visit a shrine to recover.`
+      `⚔️ Auto-combat: @${username} defeated the ${fight.monster.name} while AFK! ` +
+      `+${fight.monster.xp_reward} XP | +${fight.monster.gold_reward}g (HP: ${playerHp}/${char.max_hp})`
+    )
+    await supabase.from('characters').update({
+      xp: char.xp + fight.monster.xp_reward,
+      gold: char.gold + fight.monster.gold_reward,
+      hp: playerHp,
+    }).eq('twitch_username', username)
+  } else {
+    // Player dies
+    fight.character_current_hp = 0
+    await handleDeath(channel, username, fight, client)
+    client.say(channel,
+      `💀 Auto-combat: @${username} was slain by the ${fight.monster.name} while AFK!`
     )
   }
 }

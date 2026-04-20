@@ -48,6 +48,11 @@ export const unequipCommand: BotCommand = {
       .eq('id', itemId)
       .single()
 
+    if (!item || item.character_id !== char.id) {
+      client.say(channel, `@${username} — that item doesn't belong to you.`)
+      return
+    }
+
     if (item?.is_cursed && item?.curse_revealed) {
       client.say(
         channel,
@@ -66,6 +71,11 @@ export const unequipCommand: BotCommand = {
       .from('characters')
       .update({ [slotColumn]: null })
       .eq('twitch_username', username)
+
+    if (!item || item.character_id !== char.id) {
+      client.say(channel, `@${username} — that item doesn't belong to you.`)
+      return
+    }
 
     client.say(channel, `@${username} unequipped their ${slot}.`)
   }
