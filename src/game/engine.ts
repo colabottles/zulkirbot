@@ -501,7 +501,6 @@ async function checkFightTimeout(
 
   if (monsterHp <= 0 && playerHp > 0) {
     // Player wins
-    const { handleVictory } = await import('./engine') as any
     fight.character_current_hp = playerHp
     fight.monster_current_hp = 0
     await supabase.from('characters').update({ hp: playerHp }).eq('twitch_username', username)

@@ -22,11 +22,7 @@ export const fleeCommand: BotCommand = {
       .single()
 
     if (!char || char.hp <= 0) {
-      activeFights.delete(username)
-      await supabase
-        .from('characters')
-        .update({ hp: fight.character_current_hp })
-        .eq('twitch_username', username) // clean up stale fight if still present
+      activeFights.delete(username) // clean up stale fight if still present
       return
     }
 
@@ -49,6 +45,10 @@ export const fleeCommand: BotCommand = {
 
     // They make it out
     activeFights.delete(username)
+    await supabase
+      .from('characters')
+      .update({ hp: fight.character_current_hp })
+      .eq('twitch_username', username)
     const damageMsg = monsterHit
       ? `The ${fight.monster.name} hit you for ${monsterDamage} damage on your way out!`
       : `The ${fight.monster.name} missed as you ran!`
