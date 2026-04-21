@@ -5,7 +5,15 @@ import { rollLootByRarity } from '../game/loot'
 import { calculateLevel } from '../game/engine'
 import { CLASS_HP_DIE, rollHp } from '../lib/classes'
 
-const WEEKLY_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
+function getLastMonday(): Date {
+  const now = new Date()
+  const day = now.getUTCDay() // 0 = Sunday, 1 = Monday
+  const diff = day === 0 ? 6 : day - 1 // days since last Monday
+  const lastMonday = new Date(now)
+  lastMonday.setUTCDate(now.getUTCDate() - diff)
+  lastMonday.setUTCHours(0, 0, 0, 0)
+  return lastMonday
+}
 
 export const weeklyCommand: BotCommand = {
   name: 'weekly',
@@ -22,19 +30,21 @@ export const weeklyCommand: BotCommand = {
       return
     }
 
-    const now = Date.now()
+    const lastMonday = getLastMonday()
     const lastClaimed = char.weekly_claimed_at
       ? new Date(char.weekly_claimed_at).getTime()
       : 0
 
-    if (now - lastClaimed < WEEKLY_COOLDOWN_MS) {
-      const remainingMs = WEEKLY_COOLDOWN_MS - (now - lastClaimed)
+    if (lastClaimed >= lastMonday.getTime()) {
+      const nextMonday = new Date(lastMonday)
+      nextMonday.setUTCDate(lastMonday.getUTCDate() + 7)
+      const remainingMs = nextMonday.getTime() - Date.now()
       const remainingDays = Math.floor(remainingMs / 86400000)
       const remainingHours = Math.floor((remainingMs % 86400000) / 3600000)
       client.say(
         channel,
         `@${username} — you already claimed your weekly reward! ` +
-        `Come back in ${remainingDays}d ${remainingHours}h.`
+        `Resets next Monday in ${remainingDays}d ${remainingHours}h.`
       )
       return
     }
