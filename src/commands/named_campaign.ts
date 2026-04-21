@@ -16,12 +16,15 @@
 //   - The Whispering Flame (Eberron)
 //   - The Black Emperor (Dragonlance)
 //   - The Smiling Tyrant (Greyhawk)
+//   - The Tyrant Reforged (Forgotten Realms / Zhentil Keep)
+//   - The Lich King of Thay (Forgotten Realms / Thay)
 // ============================================================
 
 import { Client } from 'tmi.js'
 import { supabase } from './../lib/supabase';
 import { SupabaseClient } from '@supabase/supabase-js'
 import { summonYvannis, rollYvannisStage } from './cleric'
+import { d20 } from '../game/dice'
 
 // ------------------------------------------------------------
 // Types
@@ -149,6 +152,14 @@ export const FORGOTTEN_REALMS_SPAWN_POOL: ElementalSpawn[] = [
   { name: 'Mark-Bound Soldier', hp: 55, damage_min: 11, damage_max: 18 },
 ]
 
+// Thay spawn pool (lich_servant consequence)
+export const THAY_SPAWN_POOL: ElementalSpawn[] = [
+  { name: 'Thayan Knight', hp: 70, damage_min: 13, damage_max: 20 },
+  { name: 'Red Wizard Acolyte', hp: 65, damage_min: 14, damage_max: 21 },
+  { name: 'Eltabbar Undead Soldier', hp: 75, damage_min: 12, damage_max: 19 },
+  { name: 'Phylactery Shard Construct', hp: 60, damage_min: 15, damage_max: 22 },
+]
+
 // ------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------
@@ -187,6 +198,24 @@ async function ensureClearRecord(supabase: SupabaseClient, username: string) {
   await supabase
     .from('player_campaign_clears')
     .upsert({ username }, { onConflict: 'username', ignoreDuplicates: true })
+}
+
+// ------------------------------------------------------------
+// Ultimate Unlock check
+// ------------------------------------------------------------
+
+async function checkUltimateUnlock(
+  supabase: SupabaseClient,
+  username: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('player_campaign_clears')
+    .select('standard_clears, named_clears')
+    .eq('username', username)
+    .single()
+
+  if (!data) return false
+  return data.standard_clears >= 10 && (data.named_clears ?? 0) >= 10
 }
 
 // ------------------------------------------------------------
@@ -324,6 +353,12 @@ export async function checkConsequences(
     if (flag.flag_type === 'banes_ledger' && flag.trigger_ready && !flag.ledger_triggered) await triggerBanesLedger(client, supabase, channel, username, flag.id)
     if (flag.flag_type === 'tyrants_mark' && flag.trigger_ready && !flag.tyrants_triggered) await triggerTyrantsMark(client, supabase, channel, username, flag.id)
     if (flag.flag_type === 'hand_of_bane' && flag.trigger_ready && !flag.bane_triggered) await triggerHandOfBane(client, supabase, channel, username, flag.id)
+
+    // ── The Lich King of Thay ─────────────────────────────────
+    if (flag.flag_type === 'thayan_survivor' && flag.trigger_ready && !flag.thayan_triggered) await triggerThayanSurvivor(client, supabase, channel, username, flag.id)
+    if (flag.flag_type === 'lich_servant' && flag.trigger_ready && !flag.lich_triggered) await triggerLichServant(client, supabase, channel, username, flag.id)
+    if (flag.flag_type === 'uneasy_pact' && flag.trigger_ready && !flag.pact_triggered) await triggerUneasyPact(client, supabase, channel, username, flag.id)
+    if (flag.flag_type === 'zulkirjax_triumphant' && flag.trigger_ready && !flag.triumphant_triggered) await triggerZulkirjaxTriumphant(client, supabase, channel, username, flag.id)
   }
 }
 
@@ -375,6 +410,12 @@ export async function checkGreyhawkSpawn(supabase: SupabaseClient, username: str
 
 export async function checkForgottenRealmsSpawn(supabase: SupabaseClient, username: string): Promise<boolean> {
   const { data: flag } = await supabase.from('player_consequence_flags').select('id').eq('username', username).eq('flag_type', 'banes_ledger').eq('is_active', true).single()
+  if (!flag) return false
+  return Math.random() < 0.20
+}
+
+export async function checkThaySpawn(supabase: SupabaseClient, username: string): Promise<boolean> {
+  const { data: flag } = await supabase.from('player_consequence_flags').select('id').eq('username', username).eq('flag_type', 'lich_servant').eq('is_active', true).single()
   if (!flag) return false
   return Math.random() < 0.20
 }
@@ -1297,6 +1338,190 @@ async function awardForgottenRealmsStageMilestone(
 }
 
 // ------------------------------------------------------------
+// The Lich King of Thay consequence triggers
+// ------------------------------------------------------------
+
+// thayan_survivor — chaos of Thay's collapse follows you (Defeat the Lich)
+// 35% chance per campaign entry
+async function triggerThayanSurvivor(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  if (Math.random() > 0.35) return
+
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const drain = Math.floor(char.max_hp * 0.10)
+  const newHp = Math.max(1, char.hp - drain)
+
+  await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
+
+  await say(client, channel,
+    `@${username} — Thay without a Zulkir is not peaceful. ` +
+    `The chaos you caused follows you as it follows everyone who caused it. ` +
+    `-${drain} HP. (${newHp}/${char.max_hp} HP remaining)`
+  )
+
+  await supabase.from('player_consequence_flags').update({ thayan_triggered: true }).eq('id', flagId)
+}
+
+// lich_servant — Zulkirjax's mark collects (Submit to Zulkirjax)
+// Always fires — heavy toll
+async function triggerLichServant(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp, gold')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const isBoon = Math.random() < 0.30 // tilted toward toll — serving a lich is costly
+
+  if (isBoon) {
+    const bonus = roll(15, 40)
+    const newHp = Math.min(char.max_hp, char.hp + bonus)
+    await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
+    await say(client, channel,
+      `@${username} — Zulkir Jax's network answers to you today. ` +
+      `Serving the Lich King has its advantages. He is generous when it costs him nothing. ` +
+      `+${bonus} HP. (${newHp}/${char.max_hp})`
+    )
+  } else {
+    const goldDrain = Math.floor(char.gold * 0.22)
+    const hpDrain = Math.floor(char.max_hp * 0.14)
+    const newHp = Math.max(1, char.hp - hpDrain)
+    const newGold = Math.max(0, char.gold - goldDrain)
+    await supabase.from('characters').update({ hp: newHp, gold: newGold }).eq('twitch_username', username)
+    await say(client, channel,
+      `@${username} — the mark of the Lich King collects what the mark collects. ` +
+      `He told you it would. He was not lying. He does not need to lie. ` +
+      `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    )
+  }
+
+  await supabase.from('player_consequence_flags').update({ lich_triggered: true, lich_boon: isBoon }).eq('id', flagId)
+}
+
+// uneasy_pact — the pact holds, for now (Negotiate)
+// Random boon or toll
+async function triggerUneasyPact(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp, gold')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const isBoon = Math.random() < 0.50
+
+  if (isBoon) {
+    const bonus = roll(10, 30)
+    const newHp = Math.min(char.max_hp, char.hp + bonus)
+    await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
+    await say(client, channel,
+      `@${username} — the pact with Zulkir Jax holds. Today it works in your favor. ` +
+      `He has not forgotten the fine print. Neither has he forgotten the agreement. ` +
+      `+${bonus} HP. (${newHp}/${char.max_hp})`
+    )
+  } else {
+    const drain = Math.floor(char.gold * 0.18)
+    if (drain > 0) {
+      await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username)
+      await say(client, channel,
+        `@${username} — the pact with Zulkir Jax holds. Today it collects. ` +
+        `The fine print was always going to say something like this. ` +
+        `-${drain}g. (${char.gold - drain}g remaining)`
+      )
+    }
+  }
+
+  await supabase.from('player_consequence_flags').update({ pact_triggered: true, pact_boon: isBoon }).eq('id', flagId)
+}
+
+// zulkirjax_triumphant — Thay expanded, you live in it (Failure)
+// Always fires — heaviest toll
+async function triggerZulkirjaxTriumphant(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  flagId: string
+) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp, gold')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char) return
+
+  const goldDrain = Math.floor(char.gold * 0.25)
+  const hpDrain = Math.floor(char.max_hp * 0.16)
+  const newHp = Math.max(1, char.hp - hpDrain)
+  const newGold = Math.max(0, char.gold - goldDrain)
+
+  await supabase.from('characters').update({ hp: newHp, gold: newGold }).eq('twitch_username', username)
+
+  await say(client, channel,
+    `@${username} — Thay expanded as designed. The letters arrived as promised. ` +
+    `You live in what Zulkir Jax built. You know exactly how it was built. ` +
+    `You were there. That knowledge has a cost. ` +
+    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+  )
+
+  await supabase.from('player_consequence_flags').update({ triumphant_triggered: true }).eq('id', flagId)
+}
+
+// ------------------------------------------------------------
+// The Lich King of Thay stage milestone titles
+// ------------------------------------------------------------
+
+const THAY_STAGE_TITLES: Record<number, string> = {
+  2: 'Passed the Gates of Eltabbar',
+  3: 'Walked the Undead Warrens',
+  4: 'Survived the Conclave',
+  5: 'Breached the Vault',
+}
+
+async function awardThayStageMilestone(
+  supabase: SupabaseClient,
+  username: string,
+  stageReached: number
+) {
+  const title = THAY_STAGE_TITLES[stageReached]
+  if (!title) return
+  await supabase
+    .from('player_titles')
+    .upsert(
+      { username, title, source: 'the-lich-king-of-thay' },
+      { onConflict: 'username,title', ignoreDuplicates: true }
+    )
+}
+
+// ------------------------------------------------------------
 // Stage combat engine
 // ------------------------------------------------------------
 
@@ -1569,6 +1794,11 @@ async function writeConsequences(supabase: SupabaseClient, campaignId: string, p
       case 'banes_ledger': base.ledger_trigger_at = roll(2, 4); base.ledger_campaign_counter = 0; break
       case 'tyrants_mark': base.tyrants_trigger_at = 1; base.tyrants_campaign_counter = 0; break
       case 'hand_of_bane': base.bane_trigger_at = 1; base.bane_campaign_counter = 0; break
+      // ── The Lich King of Thay ─────────────────────────────
+      case 'thayan_survivor': base.thayan_trigger_at = roll(2, 4); base.thayan_campaign_counter = 0; break
+      case 'lich_servant': base.lich_trigger_at = 1; base.lich_campaign_counter = 0; break
+      case 'uneasy_pact': base.pact_trigger_at = 1; base.pact_campaign_counter = 0; break
+      case 'zulkirjax_triumphant': base.triumphant_trigger_at = 1; base.triumphant_campaign_counter = 0; break
     }
     await supabase.from('player_consequence_flags').upsert(base, { onConflict: 'username,flag_type,is_active', ignoreDuplicates: false })
   }
@@ -1642,6 +1872,7 @@ async function writeNamedRewards(
     if (campaignSlug === 'the-black-emperor' && p.stage_reached >= 2) await awardDragonlanceStageMilestone(supabase, p.username, p.stage_reached)
     if (campaignSlug === 'the-smiling-tyrant' && p.stage_reached >= 2) await awardGreyhawkStageMilestone(supabase, p.username, p.stage_reached)
     if (campaignSlug === 'the-tyrant-reforged' && p.stage_reached >= 2) await awardForgottenRealmsStageMilestone(supabase, p.username, p.stage_reached)
+    if (campaignSlug === 'the-lich-king-of-thay' && p.stage_reached >= 2) await awardThayStageMilestone(supabase, p.username, p.stage_reached)
   }
 
   if (fullClear) {
@@ -1652,6 +1883,162 @@ async function writeNamedRewards(
   }
 
   return { titleEarned, artifactName, artWinner }
+}
+
+// ------------------------------------------------------------
+// Zulkirjax boss fight — two phases
+// ------------------------------------------------------------
+
+async function runZulkirjaxFight(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  campaignId: string,
+  participants: Participant[],
+  diffMod: { hpMod: number; dmgMod: number }
+): Promise<{ survivors: Participant[]; defeated: Participant[] }> {
+  const alive = participants.filter(p => p.is_alive)
+  const dmgMin = Math.ceil(22 * diffMod.dmgMod)
+  const dmgMax = Math.ceil(35 * diffMod.dmgMod)
+
+  await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+  await say(client, channel, `Stage 5/5 — The Throne of Szass Tam`)
+  await delay(1500)
+  await say(client, channel,
+    `The throne room is exactly what it was under Szass Tam. Zulkir Jax changed nothing. ` +
+    `The bones of Szass Tam's honor guard are arranged along the walls in the same positions they fell. ` +
+    `The figure on the throne stands as the party enters.`
+  )
+  await delay(3000)
+  await say(client, channel,
+    `"I know your names. I know where you came from." He steps down from the throne. ` +
+    `The phylactery pulses with cold light. "I won. Against everything. Against Szass Tam. ` +
+    `Against the gods who apparently decided this was acceptable. What you are doing right now is the epilogue." ` +
+    `He raises one hand. "Insects. Come, then."`
+  )
+  await delay(3000)
+
+  // ── Phase 1 ──────────────────────────────────────────────────
+  await say(client, channel, `⚔️ PHASE 1 — Zulkir Jax, Lich King of Thay (400 HP)`)
+  await delay(1500)
+
+  let zulkirjaxHp = Math.ceil(400 * diffMod.hpMod)
+  let armyFired = false
+  let pulseFired = false
+  let round = 1
+  let inPhase2 = false
+
+  while (zulkirjaxHp > 0 && alive.some(p => p.is_alive)) {
+    await say(client, channel, `— Round ${round} —`)
+    await delay(1500)
+
+    // Players attack
+    for (const player of alive.filter(p => p.is_alive)) {
+      const rawDmg = roll(12, 28)
+      zulkirjaxHp = Math.max(0, zulkirjaxHp - rawDmg)
+      await say(client, channel, `${player.username} strikes Zulkir Jax for ${rawDmg} damage! (${zulkirjaxHp} HP remaining)`)
+      await delay(1200)
+      if (zulkirjaxHp <= 0) break
+    }
+
+    // Army of Ten Thousand — fires when HP drops below 300 in phase 1
+    if (!armyFired && zulkirjaxHp <= Math.ceil(300 * diffMod.hpMod) && !inPhase2) {
+      armyFired = true
+      await say(client, channel,
+        `💀 "You wanted an army? I have one." Zulkir Jax raises both hands. ` +
+        `The bones along the walls begin to move. The doors open. ` +
+        `THE ARMY OF TEN THOUSAND — every living participant takes 25 damage. ` +
+        `Those at or below 25 HP are eliminated.`
+      )
+      await delay(2500)
+      for (const p of alive.filter(p => p.is_alive)) {
+        p.hp = Math.max(0, p.hp - 25)
+        if (p.hp <= 0) {
+          p.is_alive = false
+          await handleDeath(supabase, campaignId, p, 5)
+          await say(client, channel, `${p.username} is overwhelmed by the undead army! Permadeath.`)
+        } else {
+          await say(client, channel, `${p.username} — ${p.hp} HP remaining.`)
+        }
+      }
+      await delay(2000)
+    }
+
+    if (zulkirjaxHp <= 0) break
+    if (!alive.some(p => p.is_alive)) break
+
+    // Phase 1 → Phase 2 transition at 200 HP
+    if (zulkirjaxHp <= Math.ceil(200 * diffMod.hpMod) && !inPhase2) {
+      inPhase2 = true
+      await say(client, channel,
+        `The phylactery blazes. Zulkir Jax stops. ` +
+        `"Adequate. You have done adequate damage. Let me show you what adequate means." ` +
+        `⚡ PHASE 2 BEGINS — The Phylactery Pulse activates.`
+      )
+      await delay(3000)
+    }
+
+    // Zulkirjax attacks
+    const monsterRoll = d20()
+    const monsterHit = monsterRoll + 15 > 12
+    if (monsterHit) {
+      const dmg = roll(dmgMin, dmgMax)
+      const target = pickRandom(alive.filter(p => p.is_alive))
+      if (target) {
+        target.hp = Math.max(0, target.hp - dmg)
+        await say(client, channel, `Zulkirjax strikes ${target.username} for ${dmg} damage! (${target.hp} HP remaining)`)
+        await delay(1200)
+
+        // Undead specials — 45% chance in phase 1, 55% in phase 2
+        const specialChance = inPhase2 ? 55 : 45
+        if (Math.floor(Math.random() * 100) + 1 <= specialChance) {
+          const specials = ['level_drain', 'fear', 'paralysis', 'necrotic_fire']
+          const special = specials[Math.floor(Math.random() * specials.length)]
+          const { applyUndeadSpecial } = await import('../lib/undeadSpecials')
+          const { data: charData } = await supabase.from('characters').select('hp, max_hp, gold, xp, level').eq('twitch_username', target.username).single()
+          if (charData) {
+            const result = await applyUndeadSpecial(target.username, [special as any], 100, charData)
+            if (result) {
+              await say(client, channel, result.message)
+              if (result.hpDrain > 0) target.hp = Math.max(0, target.hp - result.hpDrain)
+            }
+          }
+        }
+
+        if (target.hp <= 0) {
+          target.is_alive = false
+          await handleDeath(supabase, campaignId, target, 5)
+          await say(client, channel, `${target.username} has fallen! Permadeath — they are out of the campaign.`)
+        }
+      }
+    } else {
+      await say(client, channel, `Zulkir Jax gestures and the attack passes through empty air. He seems mildly interested in this development.`)
+    }
+
+    // Phylactery Pulse — fires once in phase 2 when HP would reach 0
+    if (inPhase2 && zulkirjaxHp <= 0 && !pulseFired) {
+      pulseFired = true
+      zulkirjaxHp = Math.ceil(200 * diffMod.hpMod)
+      await say(client, channel,
+        `THE PHYLACTERY PULSES. The killing blow lands. Zulkir Jax stops. ` +
+        `The cold light from the phylactery floods the room. His wounds close. ` +
+        `"Interesting. You actually did it. No one has ever actually done it." ` +
+        `He looks at the phylactery. Back at the party. ` +
+        `"That was the one. You have to do it again. I am, genuinely, curious if you can." ` +
+        `Zulkir Jax resets to 200 HP. The phylactery is cracked but not broken.`
+      )
+      await delay(4000)
+    }
+
+    round++
+    if (round > 15) {
+      zulkirjaxHp = 0
+      await say(client, channel, `Zulkir Jax is overwhelmed. "Well. That is unexpected." He falls.`)
+    }
+    await delay(1500)
+  }
+
+  return { survivors: alive.filter(p => p.is_alive), defeated: alive.filter(p => !p.is_alive) }
 }
 
 // ------------------------------------------------------------
@@ -1732,7 +2119,19 @@ async function runNamedCampaign(
       if (!forgottenRealmsSpawned && await checkForgottenRealmsSpawn(supabase, p.username)) { forgottenRealmsSpawned = true; await runElementalSpawn(client, supabase, channel, campaignId, p.username, participants, FORGOTTEN_REALMS_SPAWN_POOL, `The ledger of Bane is still active. A mark-bound agent has found ${p.username}.`); break }
     }
 
-    const result = await runNamedStage(client, supabase, channel, campaignId, stage, participants, diffMod)
+    // Thay spawn
+    let thaySpawned = false
+    for (const p of participants.filter(p => p.is_alive)) {
+      if (!thaySpawned && await checkThaySpawn(supabase, p.username)) { thaySpawned = true; await runElementalSpawn(client, supabase, channel, campaignId, p.username, participants, THAY_SPAWN_POOL, `The mark of the Lich King activates. One of Zulkir Jax's agents has found ${p.username}.`); break }
+    }
+
+    let result: { survivors: Participant[]; defeated: Participant[] }
+
+    if (campaignData.slug === 'the-lich-king-of-thay' && stage.stage === 5) {
+      result = await runZulkirjaxFight(client, supabase, channel, campaignId, participants, diffMod)
+    } else {
+      result = await runNamedStage(client, supabase, channel, campaignId, stage, participants, diffMod)
+    }
 
     for (const p of result.survivors) {
       p.stage_reached = stage.stage
@@ -1840,13 +2239,13 @@ async function runNamedCampaign(
       `You take the network. Stability returns, because you are now the one managing the instability. ` +
       `You are smiling. You did not notice when that started.`
     )
-  } else if (chosenOutcome.outcome_key === 'failure') {
+  } else if (chosenOutcome.outcome_key === 'zulkirjax_failure') {
     await say(client, channel,
-      `Iuz wins. The collapse engine completes its final cycle. ` +
-      `His empire expands as the only remaining source of order. ` +
-      `The party lives in it now. They know exactly how it was built.`
+      `Zulkir Jax wins, which is to say Zulkir Jax continues. ` +
+      `The party survives because he allows it. Witnesses are useful. ` +
+      `Thay expands. The letters start arriving in other cities. ` +
+      `The party knows exactly how it was built. They were there.`
     )
-    // ── The Tyrant Reforged ───────────────────────────────────
   } else if (chosenOutcome.outcome_key === 'break_the_tyranny') {
     await say(client, channel,
       `The system collapses. Not cleanly. The streets that were controlled are now chaotic. ` +
@@ -1872,7 +2271,28 @@ async function runNamedCampaign(
       `Zhentil Keep becomes a model. Other cities begin receiving advisors. ` +
       `The advisors bring ledgers. The ledgers bring marks. The marks bring order.`
     )
-  }
+  // ── The Lich King of Thay ─────────────────────────────────────
+  } else if (chosenOutcome.outcome_key === 'defeat_the_lich') {
+  await say(client, channel,
+    `The phylactery breaks. Zulkir Jax does not go quietly. ` +
+    `Thay without a Zulkir is not peaceful — it is a power vacuum the size of a nation. ` +
+    `The party walks out through a city that does not know yet what happened. ` +
+    `The chaos follows them. It will for a while.`
+  )
+} else if (chosenOutcome.outcome_key === 'submit_to_zulkirjax') {
+  await say(client, channel,
+    `He accepts. Not magnanimously. The mark goes on. ` +
+    `It is not painful. It is worse than painful — it is comfortable. ` +
+    `The party serves the Lich King of Thay. He is an excellent employer ` +
+    `if you do not think too hard about the broader context.`
+  )
+} else if (chosenOutcome.outcome_key === 'negotiate_with_zulkirjax') {
+  await say(client, channel,
+    `He considers for exactly three seconds. "Interesting. You came here to kill me ` +
+    `and now you want a treaty. I respect the flexibility." ` +
+    `The pact is real. What the fine print implies is for the party to discover.`
+  )
+}
 
   const { titleEarned, artifactName, artWinner } = await writeNamedRewards(supabase, campaignId, participants, chosenOutcome, campaignData.slug, true)
 
@@ -1927,13 +2347,24 @@ export async function handleNamedCampaignCommand(
   }
 
   await ensureClearRecord(supabase, username)
-  const unlocked = await checkUnlock(supabase, username, campaignData.unlock_required)
-  if (!unlocked) {
-    await say(client, channel,
-      `@${username} You haven't earned access to this campaign yet. ` +
-      `Complete ${campaignData.unlock_required} standard campaigns first with !campaign.`
-    )
-    return
+  if (slug === 'the-lich-king-of-thay') {
+    const ultimateUnlocked = await checkUltimateUnlock(supabase, username)
+    if (!ultimateUnlocked) {
+      await say(client, channel,
+        `@${username} — The Lich King of Thay requires completing all 10 standard campaigns ` +
+        `AND all 10 named campaigns. Zulkirjax is not a beginning. He is an ending.`
+      )
+      return
+    }
+  } else {
+    const unlocked = await checkUnlock(supabase, username, campaignData.unlock_required)
+    if (!unlocked) {
+      await say(client, channel,
+        `@${username} You haven't earned access to this campaign yet. ` +
+        `Complete ${campaignData.unlock_required} standard campaigns first with !campaign.`
+      )
+      return
+    }
   }
 
   namedCampaignLock.set(channel, true)
