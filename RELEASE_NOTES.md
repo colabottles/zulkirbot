@@ -2,6 +2,26 @@
 
 ---
 
+## v1.6.1 — April 20, 2026
+
+### Bug Fixes & Improvements
+
+- **Flee HP persistence** — `!flee` now correctly writes the player's post-flee HP to the database. Previously flee damage was applied in memory but not saved, causing `!status` to show stale HP.
+- **Trap death fix** — Trap damage in `!explore` now re-fetches current HP from the database before calculating death, preventing a player with reduced HP from surviving a lethal trap hit.
+- **`!unequip` ownership check** — Players can no longer attempt to unequip items that don't belong to their character.
+- **`!campaign` character lookup** — Username is now normalized to lowercase before the character lookup, fixing the bug where fafhyrd and similar players were told they had no character when trying to start a campaign.
+- **AFK auto-combat** — Players who go AFK during a fight now have auto-combat trigger after 20 minutes. The fight resolves automatically — player and monster trade hits until one falls. Permadeath still applies on loss. Previously AFK players were simply knocked to 0 HP.
+- **`!weekly` Monday reset** — Weekly reward now resets every Monday at midnight UTC instead of on a rolling 7-day window. The cooldown message now shows time until next Monday.
+
+### Files v1.6.1
+
+- `src/commands/flee.ts` — HP write-back added on successful flee
+- `src/commands/explore.ts` — fresh HP fetch before trap damage
+- `src/commands/unequip.ts` — item ownership check added
+- `src/commands/campaign.ts` — `.toLowerCase()` on username lookups
+- `src/game/engine.ts` — `checkFightTimeout` replaced with auto-combat loop
+- `src/commands/weekly.ts` — Monday reset logic replacing 7-day rolling window
+
 ## v1.6.0 — April 19, 2026
 
 ### Spell System, Hireling System, Rogue Skills, Combat Overhaul
