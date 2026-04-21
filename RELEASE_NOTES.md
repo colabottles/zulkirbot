@@ -2,6 +2,49 @@
 
 ---
 
+## v1.7.0 — April 21, 2026
+
+### Named Campaign: The Lich King of Thay
+
+#### Added v1.7.0
+
+- **`!campaign the-lich-king-of-thay`** — The ultimate named campaign. Forgotten Realms / Thay setting. Requires all 10 standard campaign clears AND all 10 named campaign clears — the only campaign with a dual unlock requirement.
+  - Difficulty modifier: 1.50× — the hardest campaign in the game.
+  - Five stages through Eltabbar: The Gates, The Undead Warrens, The Red Wizard Conclave, The Phylactery Vault, and The Throne of Szass Tam.
+  - Stage 2 Death Wave (all, 30 damage), Stage 3 Arcane Suppression (single, 35), Stage 4 Soul Rend (all, 40).
+  - Zulkir Jax uses all four undead specials throughout: level drain, fear, paralysis, necrotic fire.
+
+- **Zulkir Jax two-phase boss fight** — Custom boss fight replacing the standard stage 5 combat loop.
+  - Phase 1 (400 HP → 200 HP): standard attacks, undead specials at 45% chance, and Army of Ten Thousand — fires once when HP drops below 300, dealing 25 damage to all participants and eliminating any at or below 25 HP.
+  - Phase 2 (200 HP → 0): Phylactery Pulse fires once when Zulkir Jax would be killed — resets him to 200 HP. Must be killed again. Undead special chance increases to 55%.
+  - Round cap: 15 rounds, after which Zulkir Jax falls regardless of HP.
+
+- **Four outcomes with persistent consequences:**
+  - `defeat_the_lich` → `thayan_survivor` — 35% chance HP drain per future campaign
+  - `submit_to_zulkirjax` → `lich_servant` — always fires, 30/70 boon/toll split, Thayan agents may spawn in future campaigns
+  - `negotiate_with_zulkirjax` → `uneasy_pact` — always fires, 50/50 boon or gold toll
+  - `zulkirjax_failure` → `zulkirjax_triumphant` — always fires, heaviest toll (25% gold + 16% HP drain)
+
+- **Titles:** `[Stood in the Throne of Szass Tam]` (clear), `[The Lich Breaker]`, `[Thrall of the Lich King]`, `[Who Bargained with the Lich King]`, `[Witness to the Inevitable]`, plus four stage milestone titles.
+
+- **Artifact:** The Seal of Eltabbar — pure flavor.
+
+- **Thayan spawn pool** — `THAY_SPAWN_POOL` added. Triggered by `lich_servant` consequence, 20% chance per campaign stage.
+
+- **`checkUltimateUnlock()`** — new function checking both `standard_clears >= 10` AND `named_clears >= 10`. Used exclusively for the Thay campaign unlock gate.
+
+#### Database v1.7.0
+
+- Seeded `named_campaigns`, `named_campaign_stages`, `named_campaign_outcomes`, `named_campaign_titles`, `named_campaign_artifacts` for slug `the-lich-king-of-thay`.
+- New consequence flag columns: `thayan_triggered`, `lich_triggered`, `lich_boon`, `pact_triggered`, `pact_boon`, `triumphant_triggered`.
+- `player_consequence_flags.flag_type` constraint extended with `thayan_survivor`, `lich_servant`, `uneasy_pact`, `zulkirjax_triumphant`.
+
+#### Files v1.7.0
+
+- `src/commands/named_campaigns.ts` — Thay campaign consequence triggers, spawn check, milestone titles, `runZulkirjaxFight`, `checkUltimateUnlock`, outcome announcements, stage loop routing
+- `zulkirbot-docs/docs/campaigns/thay.md` — campaign documentation
+- `zulkirbot-docs/docs/.vitepress/config.mts` — sidebar entry added
+
 ## v1.6.1 — April 20, 2026
 
 ### Bug Fixes & Improvements
