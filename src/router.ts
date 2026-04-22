@@ -7,11 +7,12 @@ import { handleCampaignCommand, handleJoinCampCommand } from './commands/campaig
 import { handleNamedCampaignCommand, handleNamedJoinCamp, checkConsequences } from './commands/named_campaign'
 import { handleClericCommand, isYvannisPresent } from './commands/cleric'
 import { isFeebleminded, isPolymorphed, isTashaed, getTashaMessage } from './commands/new_commands'
+import { handlePollVote } from './commands/poll'
 
 const EXEMPT_COMMANDS = new Set([
   'so', 'uptime', 'help', 'status',
   'start', 'stop', 'setcode', 'ddo', 'draw',
-  'pause', 'resume'
+  'pause', 'resume', 'poll'
 ])
 
 const cooldowns = new Map<string, Map<string, number>>()
@@ -30,6 +31,9 @@ export function registerCommands(
 
   client.on('message', async (channel, tags, message, self) => {
     if (self) return
+
+    handlePollVote(channel, tags.username ?? 'unknown', message)
+
     if (!message.startsWith('!')) return
 
     const [rawCmd, ...args] = message.trim().split(/\s+/)

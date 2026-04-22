@@ -76,6 +76,8 @@ import { killCommand } from './kill'
 import { reviveCommand } from './revive'
 import { lagCommand } from './lag'
 import { hairdyeCommand } from './hairdye'
+import { pollCommand } from './poll'
+import { handlePollVote } from './poll'
 import {
   layonhandsCommand, inspirationCommand, feeblemindCommand, polymorphCommand,
   tashaCommand, scryCommand, deathwardCommand, heroesfeastCommand, criticalCommand,
@@ -183,4 +185,5 @@ export const allCommands: BotCommand[] = [
   beholderCommand,
   deckofmanyCommand,
   tarokkaCommand,
+  pollCommand,
 ]
