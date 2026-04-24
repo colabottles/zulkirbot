@@ -2,6 +2,60 @@
 
 ---
 
+## v1.8.0 — April 23, 2026
+
+### Greyhawk Arc & Poll Command
+
+#### Added v1.8.0
+
+- **Greyhawk Arc** — Five sequential named campaigns adapted from the classic TSR Greyhawk modules. The arc runs from a village inn east of Hommlet to the Demonweb Pits. Each campaign unlocks the next. The arc has a single through-line and persistent consequences that carry forward between campaigns.
+
+  - **`!campaign village-of-hommlet`** — T1. Greyhawk / Hommlet. Requires 3 standard clears. Difficulty 1.0×. Five stages through the village, the old moathouse, and the dungeon beneath it. Boss: Lareth the Beautiful (220 HP). Four outcomes with persistent consequences.
+
+  - **`!campaign temple-of-elemental-evil`** — T1-4. Greyhawk / Hommlet Region. Requires completing Hommlet. Difficulty 1.15×. Five stages descending into the Temple, through the four elemental nodes, and into the chamber of the Elder Elemental Eye. Boss: Zuggtmoy, Demon Queen of Fungi (280 HP). Four outcomes with persistent consequences.
+
+  - **`!campaign scourge-of-the-slave-lords`** — A1-4. Greyhawk / Pomarj. Requires completing the Temple. Difficulty 1.25×. Five stages through Highport, the warrens, Suderham, the council chamber, and the Aerie. Boss: Stalman Klim, High Priest of the Slave Lords (300 HP). Four outcomes with persistent consequences.
+
+  - **`!campaign against-the-giants`** — G1-2-3. Greyhawk / Sterich and the Underdark approaches. Requires completing the Slave Lords. Difficulty 1.35×. Five stages through the hill giant steading, the glacial rift, the fire giant hall, the dark passage, and the Vault of the Drow. Boss: Eclavdra, Drow Noble of House Eilservs (320 HP). Four outcomes with persistent consequences.
+
+  - **`!campaign queen-of-the-spiders`** — GDQ1-7. Greyhawk / Underdark / Demonweb Pits. Requires completing Against the Giants. Difficulty 1.50×. Five stages through the Underdark roads, the city of the drow, the Fane of Lolth, the Demonweb entrance, and the Demonweb Pits. Boss: Lolth, Demon Queen of Spiders — two-phase fight (450 HP). Four outcomes with persistent consequences.
+
+- **Lolth two-phase boss fight** — Custom boss fight for Queen of the Spiders stage 5.
+  - Phase 1 (450 HP → 225 HP): standard attacks, Web of Fate fires once when HP drops below 300 (55 damage to all participants).
+  - Phase 2 (225 HP → 0): Demonweb bonus attacks (45% chance, 15–25 damage). Web Resurrection fires once when Lolth would be killed — resets her to 225 HP. Must be killed again.
+  - Round cap: 15 rounds.
+
+- **Arc completion title** — Completing all five Greyhawk Arc campaigns awards `[Who Walked the Greyhawk Arc]` to all survivors of Queen of the Spiders. Recorded in `player_greyhawk_arc_complete`.
+
+- **20 persistent consequences** — Four per campaign, covering all outcomes including failure. Consequences carry forward into future campaigns via `checkGreyhawkConsequences()`.
+
+- **`!poll`** — Broadcaster-only general chat poll command.
+  - Usage: `!poll "Question" Option1 | Option2 | Option3` — up to 5 options.
+  - `!poll stop` — ends the poll early and announces results.
+  - 5-minute timer with a 1-minute reminder.
+  - All viewers vote by typing 1–5. One vote per viewer, changeable before the poll closes.
+  - Results announced with vote counts and percentages. Winner called or tie declared.
+
+#### Database v1.8.0
+
+- Seeded `named_campaigns`, `named_campaign_stages`, `named_campaign_outcomes`, `named_campaign_titles`, `named_campaign_artifacts` for all five Greyhawk Arc slugs.
+- New tables: `player_greyhawk_clears`, `player_greyhawk_arc_complete`.
+- New consequence flag columns for all 20 Greyhawk Arc consequence types.
+- Failure outcome keys made unique per campaign: `temple_failure`, `slavers_failure`, `giants_failure`, `spiders_failure`.
+
+#### Files v1.8.0
+
+- `src/commands/greyhawk_campaigns.ts` — all five campaigns, all consequence triggers, Lolth boss fight, arc completion logic, `handleGreyhawkCampaignCommand`, `handleGreyhawkJoinCamp`, `checkGreyhawkConsequences`
+- `src/commands/poll.ts` — poll command and `handlePollVote`
+- `src/commands/index.ts` — `pollCommand` added to `allCommands`
+- `src/router.ts` — Greyhawk slug routing, `handleGreyhawkJoinCamp` wired into `!joincamp`, `checkGreyhawkConsequences` called after `checkConsequences`, `handlePollVote` called on every message, `!campaigns` response updated
+- `zulkirbot-docs/docs/.vitepress/config.mts` — Greyhawk Arc sidebar section added
+- `zulkirbot-docs/docs/campaigns/greyhawk-arc/hommlet.md` — campaign documentation
+- `zulkirbot-docs/docs/campaigns/greyhawk-arc/temple.md` — campaign documentation
+- `zulkirbot-docs/docs/campaigns/greyhawk-arc/slavers.md` — campaign documentation
+- `zulkirbot-docs/docs/campaigns/greyhawk-arc/giants.md` — campaign documentation
+- `zulkirbot-docs/docs/campaigns/greyhawk-arc/spiders.md` — campaign documentation
+
 ## v1.7.0 — April 21, 2026
 
 ### Named Campaign: The Lich King of Thay

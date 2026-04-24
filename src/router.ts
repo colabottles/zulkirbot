@@ -5,6 +5,7 @@ import { isGamePaused } from './lib/giveaway'
 import { isManuallyPaused } from './lib/gamePause'
 import { handleCampaignCommand, handleJoinCampCommand } from './commands/campaign'
 import { handleNamedCampaignCommand, handleNamedJoinCamp, checkConsequences } from './commands/named_campaign'
+import { handleGreyhawkCampaignCommand, checkGreyhawkConsequences, handleGreyhawkJoinCamp } from './commands/greyhawk_campaign'
 import { handleClericCommand, isYvannisPresent } from './commands/cleric'
 import { isFeebleminded, isPolymorphed, isTashaed, getTashaMessage } from './commands/new_commands'
 import { handlePollVote } from './commands/poll'
@@ -29,6 +30,14 @@ export function registerCommands(
     }
   }
 
+  const GREYHAWK_SLUGS = new Set([
+    'village-of-hommlet',
+    'temple-of-elemental-evil',
+    'scourge-of-the-slave-lords',
+    'against-the-giants',
+    'queen-of-the-spiders',
+  ])
+
   client.on('message', async (channel, tags, message, self) => {
     if (self) return
 
@@ -47,20 +56,26 @@ export function registerCommands(
 
     // Consequence check fires on every command before routing
     await checkConsequences(client, supabase, channel, username)
+    await checkGreyhawkConsequences(client, supabase, channel, username)
 
     // --- Campaign commands (handled outside normal command map) ---
 
     if (cmdName === 'campaigns') {
       await client.say(channel,
-        `📜 Available campaigns: !campaign mystara (The Crystal of Rafiel — Mystara/Hollow World). ` +
-        `More coming soon. Requires 1 standard campaign clear to unlock.`
+        `📜 Named campaigns: !campaign mystara | !campaign alqadim | !campaign spelljammer | ` +
+        `!campaign planescape | !campaign ravenloft | !campaign darksun | !campaign eberron | ` +
+        `!campaign dragonlance | !campaign greyhawk | !campaign forgotten-realms | ` +
+        `!campaign the-lich-king-of-thay | ` +
+        `Greyhawk Arc: !campaign village-of-hommlet (start here, requires 3 standard clears)`
       )
       return
     }
 
     if (cmdName === 'campaign') {
       const slug = args[0]?.toLowerCase()
-      if (slug && slug !== 'solo' && slug !== 'party') {
+      if (slug && GREYHAWK_SLUGS.has(slug)) {
+        await handleGreyhawkCampaignCommand(client, supabase, channel, username, slug)
+      } else if (slug && slug !== 'solo' && slug !== 'party') {
         await handleNamedCampaignCommand(client, supabase, channel, username, slug)
       } else {
         await handleCampaignCommand(client, supabase, channel, username)
@@ -69,9 +84,12 @@ export function registerCommands(
     }
 
     if (cmdName === 'joincamp') {
-      const handledByNamed = await handleNamedJoinCamp(client, channel, username)
-      if (!handledByNamed) {
-        await handleJoinCampCommand(client, channel, username)
+      const handledByGreyhawk = await handleGreyhawkJoinCamp(client, channel, username)
+      if (!handledByGreyhawk) {
+        const handledByNamed = await handleNamedJoinCamp(client, channel, username)
+        if (!handledByNamed) {
+          await handleJoinCampCommand(client, channel, username)
+        }
       }
       return
     }
