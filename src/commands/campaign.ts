@@ -11,6 +11,8 @@ import { supabase } from './../lib/supabase';
 import { SupabaseClient } from '@supabase/supabase-js'
 import { summonYvannis, rollYvannisStage } from './cleric'
 
+export const campaignAttackPending = new Map<string, () => void>()
+
 interface Participant {
   username: string
   hp: number
@@ -109,6 +111,30 @@ const say = (client: Client, channel: string, msg: string) =>
 
 const pickRandom = <T>(arr: T[]): T =>
   arr[Math.floor(Math.random() * arr.length)]
+
+const ATTACK_TIMEOUT_MS = 2 * 60 * 1000
+
+function waitForAttack(
+  channel: string,
+  username: string,
+  client: Client
+): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(async () => {
+      campaignAttackPending.delete(username)
+      await say(client, channel,
+        `⏰ ${username} hesitates too long — auto-attacking!`
+      )
+      resolve()
+    }, ATTACK_TIMEOUT_MS)
+
+    campaignAttackPending.set(username, () => {
+      clearTimeout(timer)
+      campaignAttackPending.delete(username)
+      resolve()
+    })
+  })
+}
 
 async function getTodaysCampaign(supabase: SupabaseClient, channel: string) {
   const { data } = await supabase
@@ -296,41 +322,45 @@ async function runCombat(
 ): Promise<CombatResult> {
   const enemyList = Array.isArray(enemies) ? enemies : [enemies]
   const alive = participants.filter(p => p.is_alive)
-
-  // Announce
   const enemyNames = enemyList.map(e => e.name).join(' & ')
+
   await say(client, channel, STAGE_FLAVOR[stageIndex].replace('{enemy}', enemyNames))
   await delay(2000)
 
-  // Track enemy HP
   const enemyHPs = enemyList.map(e => e.hp)
-
-  // Each alive player attacks each enemy in turn
-  // Simple round-based: players attack, then enemies attack back
   let round = 1
   let specialFired = false
 
   while (enemyHPs.some(hp => hp > 0) && alive.some(p => p.is_alive)) {
     await say(client, channel, `⚔️  — Round ${round} —`)
-    await delay(1500)
+    await delay(1000)
 
-    // Players attack
+    // Each alive player takes their turn
     for (const player of alive.filter(p => p.is_alive)) {
-      const targetIdx = enemyHPs.findIndex(hp => hp > 0)
-      if (targetIdx === -1) break
+      if (!enemyHPs.some(hp => hp > 0)) break
 
+      await say(client, channel,
+        `@${player.username} — type !attack to strike the ${enemyList.find((_, i) => enemyHPs[i] > 0)?.name}! (2 min to act)`
+      )
+
+      // Wait for player to !attack or timeout
+      await waitForAttack(channel, player.username, client)
+
+      if (!enemyHPs.some(hp => hp > 0)) break
+
+      const targetIdx = enemyHPs.findIndex(hp => hp > 0)
       const dmg = roll(10, 25)
       enemyHPs[targetIdx] = Math.max(0, enemyHPs[targetIdx] - dmg)
 
       await say(client, channel,
         `🗡️  ${player.username} hits ${enemyList[targetIdx].name} for ${dmg} damage! ` +
-        `(${Math.max(0, enemyHPs[targetIdx])} HP remaining)`
+        `(${enemyHPs[targetIdx]} HP remaining)`
       )
-      await delay(1200)
+      await delay(1000)
 
       if (enemyHPs[targetIdx] === 0) {
         await say(client, channel, `💥 ${enemyList[targetIdx].name} has fallen!`)
-        await delay(1000)
+        await delay(800)
       }
     }
 
@@ -342,63 +372,51 @@ async function runCombat(
       const target = pickRandom(alive.filter(p => p.is_alive))
       if (!target) break
 
-      // Stage 3 special / Stage 4 power fire once at round 2
       if (!specialFired && round === 2 && enemy.special) {
         const specialDmg = enemy.specialDamage ?? 20
         target.hp = Math.max(0, target.hp - specialDmg)
-
         await say(client, channel,
           `⚡ ${enemy.name} uses ${enemy.special}! ` +
-          `${target.username} takes ${specialDmg} damage! (${Math.max(0, target.hp)} HP)`
+          `${target.username} takes ${specialDmg} damage! (${target.hp} HP)`
         )
         specialFired = true
-        await delay(1500)
+        await delay(1200)
       } else {
         const dmg = roll(enemy.damage[0], enemy.damage[1])
         target.hp = Math.max(0, target.hp - dmg)
-
         await say(client, channel,
           `🩸 ${enemy.name} strikes ${target.username} for ${dmg} damage! ` +
           `(${target.hp} HP remaining)`
         )
-        await delay(1200)
+        await delay(1000)
       }
 
-      // Check death
       if (target.hp <= 0) {
         target.is_alive = false
-        target.stage_reached = stageIndex + 1  // stages they reached, 1-indexed
-
+        target.stage_reached = stageIndex + 1
         await updateParticipant(supabase, campaign.id, target.username, {
           hp: 0,
           is_alive: false,
           stage_reached: stageIndex + 1,
         })
-
         await say(client, channel,
-          `💀 ${target.username} has fallen in battle! Permadeath — they are out of the campaign.`
+          `💀 ${target.username} has fallen in battle!`
         )
-        await delay(1500)
+        await delay(1200)
       }
     }
 
     round++
-
-    // Safety valve — max 8 rounds
     if (round > 8) {
-      // Remaining enemies deal 1 last surge
-      for (let i = 0; i < enemyList.length; i++) {
-        if (enemyHPs[i] > 0) enemyHPs[i] = 0
-      }
+      for (let i = 0; i < enemyHPs.length; i++) enemyHPs[i] = 0
       await say(client, channel, `⚡ The enemies are overwhelmed and routed!`)
     }
 
-    await delay(1500)
+    await delay(1000)
   }
 
   const survivors = alive.filter(p => p.is_alive)
   const defeated = alive.filter(p => !p.is_alive)
-
   return { survivors, defeated, enemyName: enemyNames }
 }
 
@@ -602,7 +620,7 @@ export async function handleCampaignCommand(
   // Check initiator has a living character
   const { data: initiatorChar } = await supabase
     .from('characters')
-    .select('hp')
+    .select('hp, is_dead')
     .eq('twitch_username', username.toLowerCase())
     .single()
 
@@ -613,7 +631,7 @@ export async function handleCampaignCommand(
     return
   }
 
-  if (initiatorChar.hp <= 0) {
+  if (initiatorChar.hp <= 0 || initiatorChar.is_dead) {
     await say(client, channel,
       `@${username} Your character is dead. Use !join to start over before running a campaign.`
     )
@@ -703,11 +721,11 @@ export async function handleJoinCampCommand(
 
   const { data: joinerChar } = await supabase
     .from('characters')
-    .select('hp')
+    .select('hp, is_dead')
     .eq('twitch_username', username.toLowerCase())
     .single()
 
-  if (!joinerChar || joinerChar.hp <= 0) {
+  if (!joinerChar || joinerChar.hp <= 0 || joinerChar.is_dead) {
     await say(client, channel,
       `@${username} You need a living character to join a campaign. Use !join to create one.`
     )
