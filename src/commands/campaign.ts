@@ -112,24 +112,13 @@ const say = (client: Client, channel: string, msg: string) =>
 const pickRandom = <T>(arr: T[]): T =>
   arr[Math.floor(Math.random() * arr.length)]
 
-const ATTACK_TIMEOUT_MS = 2 * 60 * 1000
-
 function waitForAttack(
   channel: string,
   username: string,
   client: Client
 ): Promise<void> {
   return new Promise((resolve) => {
-    const timer = setTimeout(async () => {
-      campaignAttackPending.delete(username)
-      await say(client, channel,
-        `⏰ ${username} hesitates too long — auto-attacking!`
-      )
-      resolve()
-    }, ATTACK_TIMEOUT_MS)
-
     campaignAttackPending.set(username, () => {
-      clearTimeout(timer)
       campaignAttackPending.delete(username)
       resolve()
     })
@@ -199,12 +188,20 @@ async function createCampaign(
 async function addParticipant(
   supabase: SupabaseClient,
   campaignId: string,
-  username: string,
-  maxHp = 100
+  username: string
 ) {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('hp, max_hp')
+    .eq('twitch_username', username)
+    .single()
+
+  const hp = char?.hp ?? 100
+  const maxHp = char?.max_hp ?? 100
+
   await supabase
     .from('campaign_participants')
-    .insert({ campaign_id: campaignId, username, hp: maxHp, max_hp: maxHp })
+    .insert({ campaign_id: campaignId, username, hp, max_hp: maxHp })
 }
 
 async function getParticipants(
