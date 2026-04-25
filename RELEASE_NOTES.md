@@ -2,6 +2,15 @@
 
 ---
 
+## v1.8.1 — April 24, 2026
+
+### Documentation Fixes
+
+- Fixed broken Next links throughout the docs site — `hirelings.md` was in `combat/` instead of `tavern/`, and `campaigns/gauntlet.md` was missing entirely
+- Fixed truncated `::: danger Permadeath` block in `greyhawk.md`
+- Fixed malformed stage table in the Mystara campaign page
+- Added missing doc pages: Introduction, The Gauntlet, Deck of Many Things, Flavor Commands, Broadcaster Commands
+
 ## v1.8.0 — April 23, 2026
 
 ### Greyhawk Arc & Poll Command
