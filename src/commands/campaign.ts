@@ -70,21 +70,57 @@ const ELITE_POWERS = [
   'Battle Trance',
 ]
 
-const STAGE_ENEMIES: Record<number, StageEnemy | StageEnemy[]> = {
-  0: { name: 'Goblin Skirmisher', hp: 40, damage: [5, 12] },
-  1: [
-    { name: 'Hobgoblin Scout', hp: 55, damage: [7, 14] },
-    { name: 'Hobgoblin Archer', hp: 45, damage: [6, 12] },
-  ],
-  2: {
-    name: 'Orc Patrol Captain', hp: 90, damage: [10, 18],
-    special: 'Shield Bash', specialDamage: 20,
-  },
-  3: {
-    name: 'Elite Shadowguard', hp: 130, damage: [14, 24],
-    special: '',
-    specialDamage: 30,
-  },
+function getScaledEnemies(avgLevel: number): Record<number, StageEnemy | StageEnemy[]> {
+  const s = Math.max(1, Math.min(avgLevel, 10))
+  return {
+    0: {
+      name: 'Goblin Skirmisher',
+      hp: 15 + s * 4,
+      damage: [2 + s, 5 + s * 2] as [number, number],
+    },
+    1: [
+      {
+        name: 'Hobgoblin Scout',
+        hp: 20 + s * 5,
+        damage: [3 + s, 7 + s * 2] as [number, number],
+      },
+      {
+        name: 'Hobgoblin Archer',
+        hp: 18 + s * 4,
+        damage: [2 + s, 6 + s * 2] as [number, number],
+      },
+    ],
+    2: {
+      name: 'Orc Patrol Captain',
+      hp: 35 + s * 8,
+      damage: [4 + s * 2, 9 + s * 2] as [number, number],
+      special: 'Shield Bash',
+      specialDamage: 8 + s * 2,
+    },
+    3: {
+      name: 'Elite Shadowguard',
+      hp: 55 + s * 10,
+      damage: [6 + s * 2, 12 + s * 2] as [number, number],
+      special: '',
+      specialDamage: 12 + s * 2,
+    },
+  }
+}
+
+function getScaledBoss(avgLevel: number, bossName: string, bossSpecial: string): StageEnemy {
+  const s = Math.max(1, Math.min(avgLevel, 10))
+  return {
+    name: bossName,
+    hp: 80 + s * 15,
+    damage: [8 + s * 2, 14 + s * 3] as [number, number],
+    special: bossSpecial,
+    specialDamage: 15 + s * 3,
+  }
+}
+
+function getPlayerDamageRange(avgLevel: number): [number, number] {
+  const s = Math.max(1, Math.min(avgLevel, 10))
+  return [8 + s * 2, 18 + s * 2]
 }
 
 const STAGE_FLAVOR: Record<number, string> = {
@@ -119,7 +155,16 @@ function waitForAttack(
   client: Client
 ): Promise<void> {
   return new Promise((resolve) => {
+    const timer = setTimeout(async () => {
+      campaignAttackPending.delete(username)
+      await say(client, channel,
+        `⏰ @${username} is absent — auto-attacking!`
+      )
+      resolve()
+    }, 2_000)
+
     campaignAttackPending.set(username, () => {
+      clearTimeout(timer)
       campaignAttackPending.delete(username)
       resolve()
     })
@@ -144,7 +189,7 @@ function waitForModeChoice(
     ) => {
       if (tags['username']?.toString().toLowerCase() !== username.toLowerCase()) return
       const msg = message.trim().toLowerCase()
-      if (msg === '!solo' || msg === '!joincamp') {
+      if (msg === '!solo' || msg === '!party') {
         clearTimeout(timeout)
         client.removeListener('message', handler)
         resolve(msg === '!solo' ? 'solo' : 'party')
@@ -336,7 +381,8 @@ async function runCombat(
   campaign: Campaign,
   participants: Participant[],
   enemies: StageEnemy | StageEnemy[],
-  stageIndex: number
+  stageIndex: number,
+  avgLevel: number       // ← add this
 ): Promise<CombatResult> {
   const enemyList = Array.isArray(enemies) ? enemies : [enemies]
   const alive = participants.filter(p => p.is_alive)
@@ -366,7 +412,8 @@ async function runCombat(
 
       if (!enemyHPs.some(hp => hp > 0)) break
 
-      const dmg = roll(10, 25)
+      const [minDmg, maxDmg] = getPlayerDamageRange(avgLevel)
+      const dmg = roll(minDmg, maxDmg)
       enemyHPs[targetIdx] = Math.max(0, enemyHPs[targetIdx] - dmg)
 
       await say(client, channel,
@@ -463,16 +510,11 @@ async function runBossFight(
   supabase: SupabaseClient,
   channel: string,
   campaign: Campaign,
-  participants: Participant[]
+  participants: Participant[],
+  avgLevel: number       // ← add this
 ): Promise<CombatResult> {
-  const bossEnemy: StageEnemy = {
-    name: campaign.boss_name,
-    hp: 200,
-    damage: [18, 30],
-    special: campaign.boss_special,
-    specialDamage: 35,
-  }
-  return runCombat(client, supabase, channel, campaign, participants, bossEnemy, 4)
+  const bossEnemy = getScaledBoss(avgLevel, campaign.boss_name, campaign.boss_special)
+  return runCombat(client, supabase, channel, campaign, participants, bossEnemy, 4, avgLevel)
 }
 
 async function runCampaign(
@@ -484,41 +526,48 @@ async function runCampaign(
 ) {
   await updateCampaign(supabase, campaign.id, { status: 'active' })
 
+  // Fetch levels for all participants
+  const levelResults = await Promise.all(
+    participants.map(p =>
+      supabase
+        .from('characters')
+        .select('level')
+        .eq('twitch_username', p.username)
+        .single()
+        .then(({ data }) => data?.level ?? 1)
+    )
+  )
+  const avgLevel = Math.round(
+    levelResults.reduce((a, b) => a + b, 0) / levelResults.length
+  )
+  const scaledEnemies = getScaledEnemies(avgLevel)
   for (let stageIndex = 0; stageIndex < 5; stageIndex++) {
     const stageNum = stageIndex + 1
     const alive = participants.filter(p => p.is_alive)
-
     if (alive.length === 0) break
-
     if (stageIndex > 0) {
       await delay(3000)
       await restShrine(client, supabase, channel, campaign, participants)
       await delay(2000)
-
       if (stageNum === campaign.yvannis_stage) {
         await summonYvannis(client, supabase, channel, campaign.id, stageNum, participants)
         await delay(1500)
       }
     }
-
     await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
     await say(client, channel, `📜 Stage ${stageNum}/5 begins!`)
     await delay(1500)
-
     await updateCampaign(supabase, campaign.id, { stage: stageNum })
-
     let result: CombatResult
-
     if (stageIndex === 4) {
-      result = await runBossFight(client, supabase, channel, campaign, participants)
+      result = await runBossFight(client, supabase, channel, campaign, participants, avgLevel)
     } else {
-      let enemies = STAGE_ENEMIES[stageIndex]
+      let enemies = scaledEnemies[stageIndex]
       if (stageIndex === 3 && !Array.isArray(enemies)) {
         enemies = { ...enemies, special: pickRandom(ELITE_POWERS) }
       }
-      result = await runCombat(client, supabase, channel, campaign, participants, enemies, stageIndex)
+      result = await runCombat(client, supabase, channel, campaign, participants, enemies, stageIndex, avgLevel)
     }
-
     for (const p of result.survivors) {
       p.stage_reached = stageNum
       await updateParticipant(supabase, campaign.id, p.username, {
@@ -526,13 +575,10 @@ async function runCampaign(
         stage_reached: stageNum,
       })
     }
-
     const outcome = result.survivors.length === 0
       ? 'defeat'
       : result.defeated.length > 0 ? 'partial' : 'victory'
-
     await logStage(supabase, campaign.id, stageNum, result.enemyName, outcome, STAGE_FLAVOR[stageIndex])
-
     if (result.survivors.length === 0) {
       await say(client, channel,
         `💀 All adventurers have fallen. The campaign ends in defeat.`
@@ -543,25 +589,20 @@ async function runCampaign(
       })
       return
     }
-
     await say(client, channel,
       `✅ Stage ${stageNum} cleared! Survivors: ${result.survivors.map(p => p.username).join(', ')}`
     )
     await delay(2000)
   }
-
   const survivors = participants.filter(p => p.is_alive)
   const title = await drawTitle(supabase)
   const artifact = await drawArtifact(supabase)
   const artWinner = pickRandom(survivors)
-
   await updateCampaign(supabase, campaign.id, {
     status: 'completed',
     completed_at: new Date().toISOString(),
   })
-
   await writeRewards(supabase, campaign.id, participants, true, title, artWinner.username, artifact)
-
   await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel,
     `🏆 CAMPAIGN COMPLETE! ${survivors.map(p => p.username).join(' & ')} defeated ${campaign.boss_name}!`
@@ -619,7 +660,7 @@ export async function handleCampaignCommand(
 
     await say(client, channel,
       `⚔️  @${username} calls for a campaign! ` +
-      `Type !solo to run alone or !joincamp to form a party (60 seconds to gather).`
+      `Type !solo to run alone or !party to form a group (60 seconds to gather).`
     )
 
     const mode = await waitForModeChoice(client, channel, username)
