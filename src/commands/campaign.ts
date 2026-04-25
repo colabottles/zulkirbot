@@ -7,7 +7,7 @@
 // ============================================================
 
 import { Client } from 'tmi.js'
-import { supabase } from './../lib/supabase';
+import { supabase } from './../lib/supabase'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { summonYvannis, rollYvannisStage } from './cleric'
 
@@ -44,31 +44,32 @@ interface BossPoolEntry {
 interface StageEnemy {
   name: string
   hp: number
-  damage: [number, number]   // [min, max]
-  special?: string           // stage 4 only
+  damage: [number, number]
+  special?: string
   specialDamage?: number
 }
 
-const JOIN_WINDOW_MS = 60_000   // 60s party join window
-const SHRINE_HEAL_HP = 20       // flat HP restored at rest shrine
-const CHANNEL = '#yourchannel' // replace with your channel
+interface CombatResult {
+  survivors: Participant[]
+  defeated: Participant[]
+  enemyName: string
+}
 
-// XP and gold per stage (index 0 = stage 1)
+const JOIN_WINDOW_MS = 60_000
+const SHRINE_HEAL_HP = 20
+
 const STAGE_XP = [50, 100, 150, 200, 300]
 const STAGE_GOLD = [20, 40, 60, 80, 120]
 const CLEAR_BONUS_XP = 250
 const CLEAR_BONUS_GOLD = 100
 
-// Stage 4 elite power names (random pick)
 const ELITE_POWERS = [
-  'Iron Bulwark',      // damage reduction
-  'Warlord\'s Fury',   // bonus damage
-  'Cursed Ground',     // all party takes chip damage
-  'Battle Trance',     // elite attacks twice
+  'Iron Bulwark',
+  'Warlord\'s Fury',
+  'Cursed Ground',
+  'Battle Trance',
 ]
 
-// Stage enemies by stage index (0-based)
-// Boss at stage 4 is drawn from campaign_boss_pool
 const STAGE_ENEMIES: Record<number, StageEnemy | StageEnemy[]> = {
   0: { name: 'Goblin Skirmisher', hp: 40, damage: [5, 12] },
   1: [
@@ -77,12 +78,12 @@ const STAGE_ENEMIES: Record<number, StageEnemy | StageEnemy[]> = {
   ],
   2: {
     name: 'Orc Patrol Captain', hp: 90, damage: [10, 18],
-    special: 'Shield Bash', specialDamage: 20
+    special: 'Shield Bash', specialDamage: 20,
   },
   3: {
     name: 'Elite Shadowguard', hp: 130, damage: [14, 24],
-    special: '',  // filled at runtime from ELITE_POWERS
-    specialDamage: 30
+    special: '',
+    specialDamage: 30,
   },
 }
 
@@ -91,7 +92,7 @@ const STAGE_FLAVOR: Record<number, string> = {
   1: '🏹 You round a bend and walk straight into a hobgoblin ambush!',
   2: '🛡️  A heavily armed orc patrol bars the passage, their captain sneering.',
   3: '💀 An Elite Shadowguard steps from the darkness. This one is different.',
-  4: '',  // filled at runtime with boss flavor_intro
+  4: '',
 }
 
 const SHRINE_FLAVOR = [
@@ -125,11 +126,41 @@ function waitForAttack(
   })
 }
 
-async function getTodaysCampaign(supabase: SupabaseClient, channel: string) {
+function waitForModeChoice(
+  client: Client,
+  channel: string,
+  username: string
+): Promise<'solo' | 'party'> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      client.removeListener('message', handler)
+      resolve('solo')
+    }, 30_000)
+
+    const handler = (
+      _chan: string,
+      tags: Record<string, unknown>,
+      message: string
+    ) => {
+      if (tags['username']?.toString().toLowerCase() !== username.toLowerCase()) return
+      const msg = message.trim().toLowerCase()
+      if (msg === '!solo' || msg === '!joincamp') {
+        clearTimeout(timeout)
+        client.removeListener('message', handler)
+        resolve(msg === '!solo' ? 'solo' : 'party')
+      }
+    }
+
+    client.on('message', handler)
+  })
+}
+
+async function getTodaysCampaign(supabase: SupabaseClient, username: string) {
   const { data } = await supabase
-    .from('campaign_today')
+    .from('campaigns')
     .select('*')
-    .eq('channel', channel)
+    .eq('initiated_by', username)
+    .gte('started_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
     .limit(1)
     .single()
   return data
@@ -177,7 +208,7 @@ async function createCampaign(
       boss_name: boss.boss_name,
       boss_special: boss.special_move,
       started_at: new Date().toISOString(),
-      yvannis_stage: rollYvannisStage(),   // <-- add this line
+      yvannis_stage: rollYvannisStage(),
     })
     .select()
     .single()
@@ -270,7 +301,6 @@ async function writeRewards(
       gold += CLEAR_BONUS_GOLD
     }
 
-    // Write to campaign_rewards table
     await supabase.from('campaign_rewards').insert({
       campaign_id: campaignId,
       username: p.username,
@@ -280,7 +310,6 @@ async function writeRewards(
       artifact_earned: p.username === artifactWinner ? artifactName : null,
     })
 
-    // Write XP and gold directly to characters table
     const { data: char } = await supabase
       .from('characters')
       .select('xp, gold')
@@ -290,22 +319,14 @@ async function writeRewards(
     if (char) {
       await supabase
         .from('characters')
-        .update({
-          xp: char.xp + xp,
-          gold: char.gold + gold,
-        })
+        .update({ xp: char.xp + xp, gold: char.gold + gold })
         .eq('twitch_username', p.username)
     }
+
     if (fullClear && p.is_alive) {
       await supabase.rpc('increment_standard_clears', { p_username: p.username })
     }
   }
-}
-
-interface CombatResult {
-  survivors: Participant[]
-  defeated: Participant[]
-  enemyName: string
 }
 
 async function runCombat(
@@ -332,20 +353,19 @@ async function runCombat(
     await say(client, channel, `⚔️  — Round ${round} —`)
     await delay(1000)
 
-    // Each alive player takes their turn
     for (const player of alive.filter(p => p.is_alive)) {
       if (!enemyHPs.some(hp => hp > 0)) break
 
+      const targetIdx = enemyHPs.findIndex(hp => hp > 0)
+
       await say(client, channel,
-        `@${player.username} — type !attack to strike the ${enemyList.find((_, i) => enemyHPs[i] > 0)?.name}! (2 min to act)`
+        `@${player.username} — type !attack to strike the ${enemyList[targetIdx].name}!`
       )
 
-      // Wait for player to !attack or timeout
       await waitForAttack(channel, player.username, client)
 
       if (!enemyHPs.some(hp => hp > 0)) break
 
-      const targetIdx = enemyHPs.findIndex(hp => hp > 0)
       const dmg = roll(10, 25)
       enemyHPs[targetIdx] = Math.max(0, enemyHPs[targetIdx] - dmg)
 
@@ -397,7 +417,7 @@ async function runCombat(
           stage_reached: stageIndex + 1,
         })
         await say(client, channel,
-          `💀 ${target.username} has fallen in battle!`
+          `💀 ${target.username} has fallen in battle! They are out of the campaign.`
         )
         await delay(1200)
       }
@@ -430,17 +450,13 @@ async function restShrine(
   for (const p of participants.filter(p => p.is_alive)) {
     const healed = Math.min(SHRINE_HEAL_HP, p.max_hp - p.hp)
     p.hp += healed
-
     await updateParticipant(supabase, campaign.id, p.username, { hp: p.hp })
-
     await say(client, channel,
       `💚 ${p.username} recovers ${healed} HP at the shrine. (${p.hp}/${p.max_hp} HP)`
     )
     await delay(800)
   }
 }
-
-// Boss fight (Stage 5)
 
 async function runBossFight(
   client: Client,
@@ -456,10 +472,7 @@ async function runBossFight(
     special: campaign.boss_special,
     specialDamage: 35,
   }
-
-  return runCombat(
-    client, supabase, channel, campaign, participants, bossEnemy, 4
-  )
+  return runCombat(client, supabase, channel, campaign, participants, bossEnemy, 4)
 }
 
 async function runCampaign(
@@ -477,20 +490,13 @@ async function runCampaign(
 
     if (alive.length === 0) break
 
-    // Rest shrine before stages 2–5
     if (stageIndex > 0) {
       await delay(3000)
       await restShrine(client, supabase, channel, campaign, participants)
       await delay(2000)
 
-      // Summon Yvannis if this is his stage
-      // campaign.yvannis_stage is 1-indexed, stageNum is 1-indexed
       if (stageNum === campaign.yvannis_stage) {
-        await summonYvannis(
-          client, supabase, channel,
-          campaign.id, stageNum,
-          participants
-        )
+        await summonYvannis(client, supabase, channel, campaign.id, stageNum, participants)
         await delay(1500)
       }
     }
@@ -504,20 +510,15 @@ async function runCampaign(
     let result: CombatResult
 
     if (stageIndex === 4) {
-      // Boss fight
       result = await runBossFight(client, supabase, channel, campaign, participants)
     } else {
-      // Build stage 3/4 enemies with runtime data
       let enemies = STAGE_ENEMIES[stageIndex]
       if (stageIndex === 3 && !Array.isArray(enemies)) {
         enemies = { ...enemies, special: pickRandom(ELITE_POWERS) }
       }
-      result = await runCombat(
-        client, supabase, channel, campaign, participants, enemies, stageIndex
-      )
+      result = await runCombat(client, supabase, channel, campaign, participants, enemies, stageIndex)
     }
 
-    // Update stage_reached for survivors after this stage
     for (const p of result.survivors) {
       p.stage_reached = stageNum
       await updateParticipant(supabase, campaign.id, p.username, {
@@ -530,15 +531,11 @@ async function runCampaign(
       ? 'defeat'
       : result.defeated.length > 0 ? 'partial' : 'victory'
 
-    await logStage(
-      supabase, campaign.id, stageNum,
-      result.enemyName, outcome,
-      STAGE_FLAVOR[stageIndex]
-    )
+    await logStage(supabase, campaign.id, stageNum, result.enemyName, outcome, STAGE_FLAVOR[stageIndex])
 
     if (result.survivors.length === 0) {
       await say(client, channel,
-        `💀 All adventurers have fallen. The campaign ends in defeat. The channel cooldown is spent for today.`
+        `💀 All adventurers have fallen. The campaign ends in defeat.`
       )
       await updateCampaign(supabase, campaign.id, {
         status: 'failed',
@@ -553,9 +550,7 @@ async function runCampaign(
     await delay(2000)
   }
 
-  // Full clear!
   const survivors = participants.filter(p => p.is_alive)
-  const fullClear = true
   const title = await drawTitle(supabase)
   const artifact = await drawArtifact(supabase)
   const artWinner = pickRandom(survivors)
@@ -565,30 +560,21 @@ async function runCampaign(
     completed_at: new Date().toISOString(),
   })
 
-  await writeRewards(
-    supabase, campaign.id, participants,
-    fullClear, title, artWinner.username, artifact
-  )
+  await writeRewards(supabase, campaign.id, participants, true, title, artWinner.username, artifact)
 
   await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel,
     `🏆 CAMPAIGN COMPLETE! ${survivors.map(p => p.username).join(' & ')} defeated ${campaign.boss_name}!`
   )
-  await say(client, channel,
-    `🎖️  Title earned: [${title}] — awarded to all survivors!`
-  )
-  await say(client, channel,
-    `🏺 Artifact drop: ${artifact} — claimed by ${artWinner.username}!`
-  )
+  await say(client, channel, `🎖️  Title earned: [${title}] — awarded to all survivors!`)
+  await say(client, channel, `🏺 Artifact drop: ${artifact} — claimed by ${artWinner.username}!`)
   await say(client, channel,
     `✨ Full clear bonus: +${CLEAR_BONUS_XP} XP and +${CLEAR_BONUS_GOLD} gold for all survivors!`
   )
 }
 
-// !campaign entry point
 // Track pending party join windows: channel → Set of usernames
 const pendingJoins = new Map<string, Set<string>>()
-const campaignLock = new Map<string, boolean>()
 
 export async function handleCampaignCommand(
   client: Client,
@@ -596,25 +582,14 @@ export async function handleCampaignCommand(
   channel: string,
   username: string
 ) {
-  // Prevent concurrent initiations
-  if (campaignLock.get(channel)) {
-    await say(client, channel,
-      `@${username} A campaign is already being set up. Hang tight!`
-    )
-    return
-  }
-
-  // Check daily cooldown via campaign_today view
-  const existing = await getTodaysCampaign(supabase, channel)
+  const existing = await getTodaysCampaign(supabase, username)
   if (existing) {
     await say(client, channel,
-      `@${username} The channel has already run a campaign today. ` +
-      `The next campaign can begin tomorrow. The fallen rest — for now.`
+      `@${username} You've already run a campaign today. Come back tomorrow!`
     )
     return
   }
 
-  // Check initiator has a living character
   const { data: initiatorChar, error: charError } = await supabase
     .from('characters')
     .select('hp')
@@ -639,10 +614,7 @@ export async function handleCampaignCommand(
     return
   }
 
-  campaignLock.set(channel, true)
-
   try {
-    // Draw boss up front so it's ready
     const boss = await drawBoss(supabase)
 
     await say(client, channel,
@@ -650,7 +622,6 @@ export async function handleCampaignCommand(
       `Type !solo to run alone or !joincamp to form a party (60 seconds to gather).`
     )
 
-    // Wait for mode choice from initiator
     const mode = await waitForModeChoice(client, channel, username)
 
     if (mode === 'solo') {
@@ -667,7 +638,6 @@ export async function handleCampaignCommand(
       await runCampaign(client, supabase, channel, campaign, participants)
 
     } else {
-      // Party mode — open join window
       const campaign = await createCampaign(supabase, channel, username, 'party', boss)
       await addParticipant(supabase, campaign.id, username)
 
@@ -676,14 +646,12 @@ export async function handleCampaignCommand(
 
       await say(client, channel,
         `🛡️  Party forming! Type !joincamp to join the campaign. ` +
-        `Window closes in 60 seconds. ` +
-        `${username} is already in.`
+        `Window closes in 60 seconds. ${username} is already in.`
       )
 
       await delay(JOIN_WINDOW_MS)
       pendingJoins.delete(channel)
 
-      // Add all joiners to DB
       for (const joiner of joiners) {
         if (joiner !== username) {
           await addParticipant(supabase, campaign.id, joiner)
@@ -701,12 +669,12 @@ export async function handleCampaignCommand(
       await runCampaign(client, supabase, channel, campaign, participants)
     }
 
-  } finally {
-    campaignLock.delete(channel)
+  } catch (err) {
+    console.error('[campaign] error:', err)
+    await say(client, channel, `@${username} Something went wrong starting the campaign.`)
   }
 }
 
-// !joincamp entry point
 export async function handleJoinCampCommand(
   client: Client,
   channel: string,
@@ -714,19 +682,17 @@ export async function handleJoinCampCommand(
 ) {
   const joiners = pendingJoins.get(channel)
   if (!joiners) {
-    await say(client, channel,
-      `@${username} There's no campaign forming right now.`
-    )
+    await say(client, channel, `@${username} There's no campaign forming right now.`)
     return
   }
 
   const { data: joinerChar } = await supabase
     .from('characters')
-    .select('hp, is_dead')
+    .select('hp')
     .eq('twitch_username', username.toLowerCase())
     .single()
 
-  if (!joinerChar || joinerChar.hp <= 0 || joinerChar.is_dead) {
+  if (!joinerChar || joinerChar.hp <= 0) {
     await say(client, channel,
       `@${username} You need a living character to join a campaign. Use !join to create one.`
     )
@@ -739,37 +705,5 @@ export async function handleJoinCampCommand(
   }
 
   joiners.add(username)
-  await say(client, channel,
-    `🛡️  ${username} joins the party! (${joiners.size} adventurers so far)`
-  )
-}
-
-function waitForModeChoice(
-  client: Client,
-  channel: string,
-  username: string
-): Promise<'solo' | 'party'> {
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      client.removeListener('message', handler)
-      // Default to solo after timeout
-      resolve('solo')
-    }, 30_000)
-
-    const handler = (
-      _chan: string,
-      tags: Record<string, unknown>,
-      message: string
-    ) => {
-      if (tags['display-name']?.toString().toLowerCase() !== username.toLowerCase()) return
-      const msg = message.trim().toLowerCase()
-      if (msg === '!solo' || msg === '!joincamp') {
-        clearTimeout(timeout)
-        client.removeListener('message', handler)
-        resolve(msg === '!solo' ? 'solo' : 'party')
-      }
-    }
-
-    client.on('message', handler)
-  })
+  await say(client, channel, `🛡️  ${username} joins the party! (${joiners.size} adventurers so far)`)
 }
