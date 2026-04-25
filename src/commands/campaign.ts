@@ -618,11 +618,15 @@ export async function handleCampaignCommand(
   }
 
   // Check initiator has a living character
-  const { data: initiatorChar } = await supabase
+  const { data: initiatorChar, error: charError } = await supabase
     .from('characters')
-    .select('hp, is_dead')
+    .select('hp')
     .eq('twitch_username', username.toLowerCase())
     .single()
+
+  console.log('[campaign] username:', username.toLowerCase())
+  console.log('[campaign] initiatorChar:', initiatorChar)
+  console.log('[campaign] charError:', charError)
 
   if (!initiatorChar) {
     await say(client, channel,
@@ -631,7 +635,7 @@ export async function handleCampaignCommand(
     return
   }
 
-  if (initiatorChar.hp <= 0 || initiatorChar.is_dead) {
+  if (initiatorChar.hp <= 0) {
     await say(client, channel,
       `@${username} Your character is dead. Use !join to start over before running a campaign.`
     )
