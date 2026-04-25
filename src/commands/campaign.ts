@@ -624,6 +624,7 @@ export async function handleCampaignCommand(
   username: string
 ) {
   const existing = await getTodaysCampaign(supabase, username)
+
   if (existing) {
     await say(client, channel,
       `@${username} You've already run a campaign today. Come back tomorrow!`
@@ -636,10 +637,6 @@ export async function handleCampaignCommand(
     .select('hp')
     .eq('twitch_username', username.toLowerCase())
     .single()
-
-  console.log('[campaign] username:', username.toLowerCase())
-  console.log('[campaign] initiatorChar:', initiatorChar)
-  console.log('[campaign] charError:', charError)
 
   if (!initiatorChar) {
     await say(client, channel,
@@ -669,6 +666,27 @@ export async function handleCampaignCommand(
       const campaign = await createCampaign(supabase, channel, username, 'solo', boss)
       await addParticipant(supabase, campaign.id, username)
       const participants = await getParticipants(supabase, campaign.id)
+
+      if (mode === 'solo') {
+        const campaign = await createCampaign(supabase, channel, username, 'solo', boss)
+        await addParticipant(supabase, campaign.id, username)
+        const participants = await getParticipants(supabase, campaign.id)
+
+        const { data: charLevel } = await supabase
+          .from('characters')
+          .select('level')
+          .eq('twitch_username', username)
+          .single()
+        const level = charLevel?.level ?? 1
+
+        await say(client, channel,
+          `🗡️  ${username} enters the Shadowdale Gauntlet alone. ` +
+          `Five stages await. The ${boss.boss_name} waits at the end. ` +
+          `⚠️ This campaign is scaled for Level ${level}.`
+        )
+        await delay(2000)
+        await runCampaign(client, supabase, channel, campaign, participants)
+      }
 
       await say(client, channel,
         `🗡️  ${username} enters the Shadowdale Gauntlet alone. ` +
@@ -701,12 +719,28 @@ export async function handleCampaignCommand(
 
       const participants = await getParticipants(supabase, campaign.id)
 
+      const levelResults = await Promise.all(
+        [...joiners].map(j =>
+          supabase
+            .from('characters')
+            .select('level')
+            .eq('twitch_username', j)
+            .single()
+            .then(({ data }) => data?.level ?? 1)
+        )
+      )
+      const minLevel = Math.min(...levelResults)
+      const maxLevel = Math.max(...levelResults)
+      const levelRange = minLevel === maxLevel
+        ? `Level ${minLevel}`
+        : `Levels ${minLevel}–${maxLevel}`
+
       await say(client, channel,
         `⚔️  The party is set: ${[...joiners].join(', ')}. ` +
-        `The Shadowdale Gauntlet begins. ${boss.boss_name} awaits at the end.`
+        `The Shadowdale Gauntlet begins. ${boss.boss_name} awaits at the end. ` +
+        `⚠️ This campaign is scaled for ${levelRange}.`
       )
       await delay(2000)
-
       await runCampaign(client, supabase, channel, campaign, participants)
     }
 

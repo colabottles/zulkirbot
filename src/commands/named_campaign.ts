@@ -2309,7 +2309,6 @@ async function runNamedCampaign(
 // Entry points
 // ------------------------------------------------------------
 
-const namedCampaignLock = new Map<string, boolean>()
 const namedPendingJoins = new Map<string, Set<string>>()
 
 export async function handleNamedCampaignCommand(
@@ -2319,34 +2318,49 @@ export async function handleNamedCampaignCommand(
   username: string,
   slug: string
 ) {
-  if (namedCampaignLock.get(channel)) {
-    await say(client, channel, `@${username} A campaign is already being set up. Hang tight!`)
-    return
-  }
+  const { data: existing } = await supabase
+    .from('campaigns')
+    .select('id')
+    .eq('initiated_by', username)
+    .gte('started_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
+    .limit(1)
+    .single()
 
-  const { data: existing } = await supabase.from('campaign_today').select('*').eq('channel', channel).limit(1).single()
   if (existing) {
-    await say(client, channel, `@${username} The channel has already run a campaign today. Try again tomorrow.`)
+    await say(client, channel, `@${username} You've already run a campaign today. Come back tomorrow.`)
     return
   }
 
-  const { data: initiatorChar } = await supabase.from('characters').select('hp, is_dead').eq('twitch_username', username).single()
+  const { data: initiatorChar } = await supabase
+    .from('characters')
+    .select('hp')
+    .eq('twitch_username', username)
+    .single()
+
   if (!initiatorChar) {
     await say(client, channel, `@${username} You need a character to run a campaign. Use !join to create one.`)
     return
   }
-  if (initiatorChar.hp <= 0 || initiatorChar.is_dead) {
+
+  if (initiatorChar.hp <= 0) {
     await say(client, channel, `@${username} Your character is dead. Use !join to start over before running a campaign.`)
     return
   }
 
-  const { data: campaignData } = await supabase.from('named_campaigns').select('*').eq('slug', slug).eq('is_active', true).single()
+  const { data: campaignData } = await supabase
+    .from('named_campaigns')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .single()
+
   if (!campaignData) {
     await say(client, channel, `@${username} Unknown campaign: "${slug}". Use !campaigns to see available campaigns.`)
     return
   }
 
   await ensureClearRecord(supabase, username)
+
   if (slug === 'the-lich-king-of-thay') {
     const ultimateUnlocked = await checkUltimateUnlock(supabase, username)
     if (!ultimateUnlocked) {
@@ -2367,18 +2381,24 @@ export async function handleNamedCampaignCommand(
     }
   }
 
-  namedCampaignLock.set(channel, true)
-
   try {
-    const { data: stagesData } = await supabase.from('named_campaign_stages').select('*').eq('campaign_slug', slug).order('stage', { ascending: true })
-    const { data: outcomesData } = await supabase.from('named_campaign_outcomes').select('*').eq('campaign_slug', slug)
+    const { data: stagesData } = await supabase
+      .from('named_campaign_stages')
+      .select('*')
+      .eq('campaign_slug', slug)
+      .order('stage', { ascending: true })
+
+    const { data: outcomesData } = await supabase
+      .from('named_campaign_outcomes')
+      .select('*')
+      .eq('campaign_slug', slug)
 
     const stages = (stagesData ?? []) as NamedCampaignStage[]
     const outcomes = (outcomesData ?? []) as NamedCampaignOutcome[]
 
     await say(client, channel,
       `@${username} calls for a named campaign: ${campaignData.name} (${campaignData.setting})! ` +
-      `Type !solo to run alone or !joincamp to form a party (60 seconds to gather).`
+      `Type !solo to run alone or !party to form a group (60 seconds to gather).`
     )
 
     const mode = await waitForModeChoice(client, channel, username, MODE_CHOICE_MS)
@@ -2388,9 +2408,12 @@ export async function handleNamedCampaignCommand(
     const { data: campaign, error } = await supabase
       .from('campaigns')
       .insert({
-        channel, initiated_by: username, mode,
+        channel,
+        initiated_by: username,
+        mode,
         status: mode === 'party' ? 'joining' : 'active',
-        stage: 1, boss_name: bossName,
+        stage: 1,
+        boss_name: bossName,
         boss_special: bossStage?.special_name ?? '',
         started_at: mode === 'solo' ? new Date().toISOString() : null,
         yvannis_stage: rollYvannisStage(),
@@ -2400,10 +2423,27 @@ export async function handleNamedCampaignCommand(
 
     if (error || !campaign) throw error
 
-    await supabase.from('campaign_participants').insert({ campaign_id: campaign.id, username, hp: 100, max_hp: 100 })
+    const { data: initiatorHp } = await supabase
+      .from('characters')
+      .select('hp, max_hp')
+      .eq('twitch_username', username)
+      .single()
+
+    await supabase.from('campaign_participants').insert({
+      campaign_id: campaign.id,
+      username,
+      hp: initiatorHp?.hp ?? 100,
+      max_hp: initiatorHp?.max_hp ?? 100,
+    })
 
     if (mode === 'solo') {
-      await say(client, channel, `${username} enters ${campaignData.setting} alone. ${bossName} waits at the end.`)
+      const level = initiatorHp ? (await supabase.from('characters').select('level').eq('twitch_username', username).single()).data?.level ?? 1 : 1
+
+      await say(client, channel,
+        `${username} enters ${campaignData.setting} alone. ` +
+        `${bossName} waits at the end. ⚠️ Scaled for Level ${level}.`
+      )
+
     } else {
       const joiners = new Set<string>([username])
       namedPendingJoins.set(channel, joiners)
@@ -2418,32 +2458,82 @@ export async function handleNamedCampaignCommand(
 
       for (const joiner of joiners) {
         if (joiner !== username) {
-          await supabase.from('campaign_participants').insert({ campaign_id: campaign.id, username: joiner, hp: 100, max_hp: 100 })
+          const { data: joinerHp } = await supabase
+            .from('characters')
+            .select('hp, max_hp')
+            .eq('twitch_username', joiner)
+            .single()
+
+          await supabase.from('campaign_participants').insert({
+            campaign_id: campaign.id,
+            username: joiner,
+            hp: joinerHp?.hp ?? 100,
+            max_hp: joinerHp?.max_hp ?? 100,
+          })
         }
       }
 
-      await say(client, channel, `The party is set: ${[...joiners].join(', ')}. Entering ${campaignData.setting}. ${bossName} awaits.`)
+      const levelResults = await Promise.all(
+        [...joiners].map(j =>
+          supabase
+            .from('characters')
+            .select('level')
+            .eq('twitch_username', j)
+            .single()
+            .then(({ data }) => data?.level ?? 1)
+        )
+      )
+      const minLevel = Math.min(...levelResults)
+      const maxLevel = Math.max(...levelResults)
+      const levelRange = minLevel === maxLevel
+        ? `Level ${minLevel}`
+        : `Levels ${minLevel}–${maxLevel}`
+
+      await say(client, channel,
+        `The party is set: ${[...joiners].join(', ')}. Entering ${campaignData.setting}. ` +
+        `${bossName} awaits. ⚠️ Scaled for ${levelRange}.`
+      )
     }
 
     await delay(2000)
 
-    const { data: participantsData } = await supabase.from('campaign_participants').select('*').eq('campaign_id', campaign.id)
+    const { data: participantsData } = await supabase
+      .from('campaign_participants')
+      .select('*')
+      .eq('campaign_id', campaign.id)
+
     const participants = (participantsData ?? []) as Participant[]
 
-    await runNamedCampaign(client, supabase, channel, campaign.id, campaignData as NamedCampaign, stages, outcomes, participants)
+    await runNamedCampaign(
+      client, supabase, channel,
+      campaign.id, campaignData as NamedCampaign,
+      stages, outcomes, participants
+    )
 
-  } finally {
-    namedCampaignLock.delete(channel)
+  } catch (err) {
+    console.error('[named_campaign] error:', err)
+    await say(client, channel, `@${username} Something went wrong starting the campaign.`)
   }
 }
 
-export async function handleNamedJoinCamp(client: Client, channel: string, username: string): Promise<boolean> {
+export async function handleNamedJoinCamp(
+  client: Client,
+  channel: string,
+  username: string
+): Promise<boolean> {
   const joiners = namedPendingJoins.get(channel)
   if (!joiners) return false
 
-  const { data: joinerChar } = await supabase.from('characters').select('hp, is_dead').eq('twitch_username', username).single()
-  if (!joinerChar || joinerChar.hp <= 0 || joinerChar.is_dead === true) {
-    await say(client, channel, `@${username} You need a living character to join a campaign. Use !join to create one.`)
+  const { data: joinerChar } = await supabase
+    .from('characters')
+    .select('hp')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!joinerChar || joinerChar.hp <= 0) {
+    await say(client, channel,
+      `@${username} You need a living character to join a campaign. Use !join to create one.`
+    )
     return false
   }
 
@@ -2457,15 +2547,28 @@ export async function handleNamedJoinCamp(client: Client, channel: string, usern
   return true
 }
 
-function waitForModeChoice(client: Client, channel: string, username: string, windowMs: number): Promise<'solo' | 'party'> {
+function waitForModeChoice(
+  client: Client,
+  channel: string,
+  username: string,
+  windowMs: number
+): Promise<'solo' | 'party'> {
   return new Promise((resolve) => {
-    const timeout = setTimeout(() => { client.removeListener('message', handler); resolve('solo') }, windowMs)
+    const timeout = setTimeout(() => {
+      client.removeListener('message', handler)
+      resolve('solo')
+    }, windowMs)
 
-    const handler = (_chan: string, tags: Record<string, unknown>, message: string) => {
-      if (tags['display-name']?.toString().toLowerCase() !== username.toLowerCase()) return
+    const handler = (
+      _chan: string,
+      tags: Record<string, unknown>,
+      message: string
+    ) => {
+      if (tags['username']?.toString().toLowerCase() !== username.toLowerCase()) return
       const msg = message.trim().toLowerCase()
-      if (msg === '!solo' || msg === '!joincamp') {
-        clearTimeout(timeout); client.removeListener('message', handler)
+      if (msg === '!solo' || msg === '!party') {
+        clearTimeout(timeout)
+        client.removeListener('message', handler)
         resolve(msg === '!solo' ? 'solo' : 'party')
       }
     }
