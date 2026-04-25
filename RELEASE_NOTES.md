@@ -4,12 +4,25 @@
 
 ## v1.8.1 — April 24, 2026
 
+### Bug Fixes
+
+- **`!campaign` character lookup** — `.select('hp, is_dead')` was referencing a
+  non-existent `is_dead` column, causing Supabase to return null for every character
+  lookup and telling all players they had no character. Fixed to `.select('hp')` only —
+  death is handled by row deletion, not a flag column.
+- **Campaign combat** — Combat no longer runs automatically. Players now type `!attack`
+  to take their turn. Each player is prompted in turn order with a 2-minute window to
+  act before auto-attack fires. Non-campaign players can still use `!attack` for solo
+  fights simultaneously without conflict.
+
 ### Documentation Fixes
 
-- Fixed broken Next links throughout the docs site — `hirelings.md` was in `combat/` instead of `tavern/`, and `campaigns/gauntlet.md` was missing entirely
+- Fixed broken Next links throughout the docs site — `hirelings.md` was in `combat/`
+  instead of `tavern/`, and `campaigns/gauntlet.md` was missing entirely
 - Fixed truncated `::: danger Permadeath` block in `greyhawk.md`
 - Fixed malformed stage table in the Mystara campaign page
-- Added missing doc pages: Introduction, The Gauntlet, Deck of Many Things, Flavor Commands, Broadcaster Commands
+- Added missing doc pages: Introduction, The Gauntlet, Deck of Many Things, Flavor
+  Commands, Broadcaster Commands
 
 ## v1.8.0 — April 23, 2026
 
