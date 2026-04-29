@@ -65,9 +65,9 @@ export const sellCommand: BotCommand = {
         totalGold += price
         if (DOUBLE_RARITIES.includes(item.rarity)) {
           const doubled = price === (SELL_PRICES[item.rarity] ?? 0) * 2
-          results.push(`${item.item_name} (${price}g${doubled ? ' 🎲 lucky!' : ''})`)
+          results.push(`${item.item_name} (${price}gp${doubled ? ' 🎲 lucky!' : ''})`)
         } else {
-          results.push(`${item.item_name} (${price}g)`)
+          results.push(`${item.item_name} (${price}gp)`)
         }
         await supabase.from('inventory').delete().eq('id', item.id)
       }
@@ -77,8 +77,8 @@ export const sellCommand: BotCommand = {
 
       client.say(
         channel,
-        `💰 @${username} sold ${sellable.length} items for ${totalGold}g total! ` +
-        `[${results.join(', ')}] | Gold: ${newGold}g`
+        `💰 @${username} sold ${sellable.length} items for ${totalGold}gp total! ` +
+        `[${results.join(', ')}] | Gold: ${newGold}gp`
       )
       return
     }
@@ -121,7 +121,7 @@ export const sellCommand: BotCommand = {
 
     client.say(
       channel,
-      `💰 @${username} sold their ${item.item_name} for ${price}g!${rollMsg} | Gold: ${newGold}g`
+      `💰 @${username} sold their ${item.item_name} for ${price}gp!${rollMsg} | Gold: ${newGold}gp`
     )
   }
 }

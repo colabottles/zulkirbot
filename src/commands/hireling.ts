@@ -258,7 +258,7 @@ export async function applyHirelingSpecial(
         const bonus = Math.floor(Math.random() * 6) + 1
         const { data: char } = await supabase.from('characters').select('gold').eq('twitch_username', username).single()
         if (char) await supabase.from('characters').update({ gold: char.gold + bonus }).eq('twitch_username', username)
-        return `${hireling.name} rifles through the corpse's pockets. Finds ${bonus}g. Keeps half. Gives you the other half.`
+        return `${hireling.name} rifles through the corpse's pockets. Finds ${bonus}gp. Keeps half. Gives you the other half.`
       }
       return null
     }
@@ -349,7 +349,7 @@ export const hirelingCommand: BotCommand = {
     // Cost check
     const cost = 2
     if (char.gold < cost) {
-      client.say(channel, `@${username} — you need ${cost}g to hire a companion. You have ${char.gold}g.`)
+      client.say(channel, `@${username} — you need ${cost}gp to hire a companion. You have ${char.gold}gp.`)
       return
     }
 
@@ -374,6 +374,6 @@ export const hirelingCommand: BotCommand = {
 
     activeHirelings.set(username, hireling)
 
-    client.say(channel, `🗡️ ${getHireMessage(archetype, name, requestedClass)} (-${cost}g)`)
+    client.say(channel, `🗡️ ${getHireMessage(archetype, name, requestedClass)} (-${cost}gp)`)
   }
 }

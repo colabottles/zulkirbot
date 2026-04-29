@@ -23,6 +23,7 @@
 import { Client } from 'tmi.js'
 import { supabase } from './../lib/supabase';
 import { SupabaseClient } from '@supabase/supabase-js'
+import { getDisplayName } from '../lib/displayName'
 import { summonYvannis, rollYvannisStage } from './cleric'
 import { d20 } from '../game/dice'
 
@@ -67,6 +68,7 @@ interface NamedCampaign {
 
 interface Participant {
   username: string
+  character_name: string | null  // ← add this
   hp: number
   max_hp: number
   is_alive: boolean
@@ -242,6 +244,26 @@ async function getChannelDifficultyMod(
 }
 
 // ------------------------------------------------------------
+// Fetch character names after participants are loaded
+// ------------------------------------------------------------
+
+async function enrichParticipantsWithNames(
+  supabase: SupabaseClient,
+  participants: Participant[]
+): Promise<void> {
+  await Promise.all(
+    participants.map(async p => {
+      const { data: char } = await supabase
+        .from('characters')
+        .select('character_name')
+        .eq('twitch_username', p.username)
+        .single()
+      p.character_name = char?.character_name ?? null
+    })
+  )
+}
+
+// ------------------------------------------------------------
 // Consequence checks
 // ------------------------------------------------------------
 
@@ -281,7 +303,7 @@ export async function checkConsequences(
       if (char && char.gold > 0) {
         const drain = Math.floor(char.gold * 0.30)
         await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username)
-        await say(client, channel, `@${username} — The Seal tightens its hold. ${drain}g slips into nothing.`)
+        await say(client, channel, `@${username} — The Seal tightens its hold. ${drain}gp slips into nothing.`)
         await supabase.from('player_consequence_flags').update({ seal_triggered: true }).eq('id', flag.id)
       }
     }
@@ -293,7 +315,7 @@ export async function checkConsequences(
         const hpCost = Math.floor(char.max_hp * 0.20)
         if (char.gold >= goldCost && goldCost > 0) {
           await supabase.from('characters').update({ gold: char.gold - goldCost }).eq('twitch_username', username)
-          await say(client, channel, `@${username} — "The genie courts remember the debt." ${goldCost}g lifts from your purse.`)
+          await say(client, channel, `@${username} — "The genie courts remember the debt." ${goldCost}gp lifts from your purse.`)
         } else {
           const newHp = Math.max(1, char.hp - hpCost)
           await supabase.from('characters').update({ hp: newHp, max_hp: char.max_hp - hpCost }).eq('twitch_username', username)
@@ -444,7 +466,7 @@ async function triggerMadness(client: Client, supabase: SupabaseClient, channel:
       const { data: char } = await supabase.from('characters').select('gold').eq('twitch_username', username).single()
       if (char && char.gold > 0) {
         await supabase.from('characters').update({ gold: 0 }).eq('twitch_username', username)
-        await say(client, channel, `@${username} has lost all ${char.gold}g to the madness.`)
+        await say(client, channel, `@${username} has lost all ${char.gold}gp to the madness.`)
       }
       break
     }
@@ -467,12 +489,12 @@ export async function triggerCelestialAudit(client: Client, supabase: SupabaseCl
   const harshFine = Math.floor(char.gold * 0.50)
   const lenientFine = Math.floor(char.gold * 0.40)
   const hpCost = Math.floor(char.max_hp * 0.20)
-  await client.say(channel, `@${username} — "The Court has reviewed your record. ${char.kill_count} registered actions of terminal force. The balance tax is assessed at ${baseFine}g. Type !pay to settle or !dispute to contest. You have 60 seconds."`)
+  await client.say(channel, `@${username} — "The Court has reviewed your record. ${char.kill_count} registered actions of terminal force. The balance tax is assessed at ${baseFine}gp. Type !pay to settle or !dispute to contest. You have 60 seconds."`)
   const response = await waitForAuditResponse(client, channel, username, 60_000)
   if (response === 'pay') {
     if (char.gold >= baseFine && baseFine > 0) {
       await supabase.from('characters').update({ gold: char.gold - baseFine }).eq('twitch_username', username)
-      await client.say(channel, `@${username} — "Payment received." ${baseFine}g deducted.`)
+      await client.say(channel, `@${username} — "Payment received." ${baseFine}gp deducted.`)
     } else {
       const newHp = Math.max(1, char.hp - hpCost)
       await supabase.from('characters').update({ hp: newHp, max_hp: char.max_hp - hpCost }).eq('twitch_username', username)
@@ -480,19 +502,19 @@ export async function triggerCelestialAudit(client: Client, supabase: SupabaseCl
     }
   } else if (response === 'dispute') {
     if (Math.random() < 0.50) {
-      await client.say(channel, `@${username} — "The Court finds merit in the objection. Fine waived — this cycle." Future audits will cost ${lenientFine}g.`)
+      await client.say(channel, `@${username} — "The Court finds merit in the objection. Fine waived — this cycle." Future audits will cost ${lenientFine}gp.`)
       await supabase.from('player_consequence_flags').update({ mandate_triggered: false }).eq('id', flagId)
       return
     } else {
       const actualFine = char.gold >= harshFine ? harshFine : char.gold
       await supabase.from('characters').update({ gold: char.gold - actualFine }).eq('twitch_username', username)
-      await client.say(channel, `@${username} — "Objection overruled. Fine increased." ${harshFine}g deducted.`)
+      await client.say(channel, `@${username} — "Objection overruled. Fine increased." ${harshFine}gp deducted.`)
     }
   } else {
     const contemptFine = Math.floor(char.gold * 0.45)
     const actualFine = char.gold >= contemptFine ? contemptFine : char.gold
     await supabase.from('characters').update({ gold: char.gold - actualFine }).eq('twitch_username', username)
-    await client.say(channel, `@${username} — "Non-responsive. Contempt assessed." ${contemptFine}g deducted.`)
+    await client.say(channel, `@${username} — "Non-responsive. Contempt assessed." ${contemptFine}gp deducted.`)
   }
   await supabase.from('player_consequence_flags').update({ mandate_triggered: true }).eq('id', flagId)
 }
@@ -528,14 +550,14 @@ async function triggerCelestialDebt(client: Client, supabase: SupabaseClient, ch
   if (!char) return
   const tithe = Math.floor(char.gold * 0.20)
   const hpCost = Math.floor(char.max_hp * 0.20)
-  await client.say(channel, `@${username} — "The Court calls in its debt. A tithe of ${tithe}g is requested." Type !pay to comply or ignore to have it taken automatically.`)
+  await client.say(channel, `@${username} — "The Court calls in its debt. A tithe of ${tithe}gp is requested." Type !pay to comply or ignore to have it taken automatically.`)
   const response = await waitForAuditResponse(client, channel, username, 60_000)
   if (response === 'pay' && char.gold >= tithe) {
     await supabase.from('characters').update({ gold: char.gold - tithe }).eq('twitch_username', username)
-    await client.say(channel, `@${username} — "Compliance noted." ${tithe}g tithed. +10% XP on your next 5 campaigns.`)
+    await client.say(channel, `@${username} — "Compliance noted." ${tithe}gp tithed. +10% XP on your next 5 campaigns.`)
   } else if (char.gold >= tithe && tithe > 0) {
     await supabase.from('characters').update({ gold: char.gold - tithe }).eq('twitch_username', username)
-    await client.say(channel, `@${username} — The tithe is collected. ${tithe}g removed.`)
+    await client.say(channel, `@${username} — The tithe is collected. ${tithe}gp removed.`)
   } else {
     const newHp = Math.max(1, char.hp - hpCost)
     await supabase.from('characters').update({ hp: newHp, max_hp: char.max_hp - hpCost }).eq('twitch_username', username)
@@ -566,7 +588,7 @@ async function triggerCycleBound(client: Client, supabase: SupabaseClient, chann
   const tithe = Math.floor(char.gold * 0.15)
   if (char.gold >= tithe && tithe > 0) {
     await supabase.from('characters').update({ gold: char.gold - tithe }).eq('twitch_username', username)
-    await say(client, channel, `@${username} — The Engine's ledger updates. Somewhere, a world dims. Your share: ${tithe}g. (${char.gold - tithe}g remaining)`)
+    await say(client, channel, `@${username} — The Engine's ledger updates. Somewhere, a world dims. Your share: ${tithe}gp. (${char.gold - tithe}gp remaining)`)
   } else {
     const hpCost = Math.floor(char.max_hp * 0.10)
     const newHp = Math.max(1, char.hp - hpCost)
@@ -592,7 +614,7 @@ async function triggerEngineForged(client: Client, supabase: SupabaseClient, cha
       await say(client, channel, `@${username} — The Engine hums. The architecture is unstable. -${drain} HP. (${newHp}/${char.max_hp})`)
     } else {
       const drain = Math.floor(char.gold * 0.12)
-      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — The Engine hums. Something slips through: -${drain}g. (${char.gold - drain}g remaining)`) }
+      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — The Engine hums. Something slips through: -${drain}gp. (${char.gold - drain}gp remaining)`) }
     }
   }
   await supabase.from('player_consequence_flags').update({ engine_triggered: true, engine_boon: isBoon }).eq('id', flagId)
@@ -615,7 +637,7 @@ async function triggerInfernalMarked(client: Client, supabase: SupabaseClient, c
   const tithe = Math.floor(char.gold * 0.15)
   if (char.gold >= tithe && tithe > 0) {
     await supabase.from('characters').update({ gold: char.gold - tithe }).eq('twitch_username', username)
-    await say(client, channel, `@${username} — The ledger of Dis updates. ${tithe}g vanishes. (${char.gold - tithe}g remaining)`)
+    await say(client, channel, `@${username} — The ledger of Dis updates. ${tithe}gp vanishes. (${char.gold - tithe}gp remaining)`)
   } else {
     const hpCost = Math.floor(char.max_hp * 0.08); const newHp = Math.max(1, char.hp - hpCost)
     await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
@@ -654,7 +676,7 @@ async function triggerGemBound(client: Client, supabase: SupabaseClient, channel
       await say(client, channel, `@${username} — The Gem pulses. The pressure costs you. -${drain} HP. (${newHp}/${char.max_hp})`)
     } else {
       const drain = Math.floor(char.gold * 0.15)
-      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — The Gem pulses. Keeping it hidden has costs. -${drain}g. (${char.gold - drain}g remaining)`) }
+      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — The Gem pulses. Keeping it hidden has costs. -${drain}gp. (${char.gold - drain}gp remaining)`) }
     }
   }
   await supabase.from('player_consequence_flags').update({ gem_triggered: true, gem_boon: isBoon }).eq('id', flagId)
@@ -704,7 +726,7 @@ async function triggerCurseShattered(client: Client, supabase: SupabaseClient, c
     await say(client, channel, `@${username} — The curse broke. Not cleanly. -${drain} HP. (${newHp}/${char.max_hp})`)
   } else {
     const drain = Math.floor(char.gold * 0.12)
-    if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — Darkon's collapse took things with it. -${drain}g. (${char.gold - drain}g remaining)`) }
+    if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — Darkon's collapse took things with it. -${drain}gp. (${char.gold - drain}gp remaining)`) }
   }
   await supabase.from('player_consequence_flags').update({ shatter_triggered: true }).eq('id', flagId)
 }
@@ -720,7 +742,7 @@ async function triggerDarklordEcho(client: Client, supabase: SupabaseClient, cha
   const goldDrain = Math.floor(char.gold * 0.20); const hpDrain = Math.floor(char.max_hp * 0.12)
   const newHp = Math.max(1, char.hp - hpDrain); const newGold = Math.max(0, char.gold - goldDrain)
   await supabase.from('characters').update({ hp: newHp, gold: newGold }).eq('twitch_username', username)
-  await say(client, channel, `@${username} — The domain feeds. -${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`)
+  await say(client, channel, `@${username} — The domain feeds. -${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`)
   await supabase.from('player_consequence_flags').update({ darklord_triggered: true }).eq('id', flagId)
 }
 
@@ -751,7 +773,7 @@ async function triggerCityBreaker(client: Client, supabase: SupabaseClient, chan
   const tithe = Math.floor(char.gold * 0.15)
   if (char.gold >= tithe && tithe > 0) {
     await supabase.from('characters').update({ gold: char.gold - tithe }).eq('twitch_username', username)
-    await say(client, channel, `@${username} — A templar's mark finds you. ${tithe}g collected. (${char.gold - tithe}g remaining)`)
+    await say(client, channel, `@${username} — A templar's mark finds you. ${tithe}gp collected. (${char.gold - tithe}gp remaining)`)
   } else {
     const hpCost = Math.floor(char.max_hp * 0.08); const newHp = Math.max(1, char.hp - hpCost)
     await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
@@ -780,7 +802,7 @@ async function triggerAthasianLord(client: Client, supabase: SupabaseClient, cha
       await say(client, channel, `@${username} — The ritual nexus answers. Today it takes instead. -${drain} HP. (${newHp}/${char.max_hp})`)
     } else {
       const drain = Math.floor(char.gold * 0.18)
-      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — Staying hidden has a cost. -${drain}g. (${char.gold - drain}g remaining)`) }
+      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — Staying hidden has a cost. -${drain}gp. (${char.gold - drain}gp remaining)`) }
     }
   }
   await supabase.from('player_consequence_flags').update({ athasian_triggered: true, athasian_boon: isBoon }).eq('id', flagId)
@@ -813,7 +835,7 @@ async function triggerWhisperBound(client: Client, supabase: SupabaseClient, cha
   const tithe = Math.floor(char.gold * 0.15)
   if (char.gold >= tithe && tithe > 0) {
     await supabase.from('characters').update({ gold: char.gold - tithe }).eq('twitch_username', username)
-    await say(client, channel, `@${username} — The voices in the flame are patient. Today they want ${tithe}g. (${char.gold - tithe}g remaining)`)
+    await say(client, channel, `@${username} — The voices in the flame are patient. Today they want ${tithe}gp. (${char.gold - tithe}gp remaining)`)
   } else {
     const hpCost = Math.floor(char.max_hp * 0.08); const newHp = Math.max(1, char.hp - hpCost)
     await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
@@ -837,7 +859,7 @@ async function triggerBelShalorsEye(client: Client, supabase: SupabaseClient, ch
       await say(client, channel, `@${username} — Bel Shalor's eye is on you. Something reaches through. -${drain} HP. (${newHp}/${char.max_hp})`)
     } else {
       const drain = Math.floor(char.gold * 0.14)
-      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — Bel Shalor's eye is on you. Being watched has a cost. -${drain}g. (${char.gold - drain}g remaining)`) }
+      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — Bel Shalor's eye is on you. Being watched has a cost. -${drain}gp. (${char.gold - drain}gp remaining)`) }
     }
   }
   await supabase.from('player_consequence_flags').update({ eye_triggered: true, eye_boon: isBoon }).eq('id', flagId)
@@ -870,7 +892,7 @@ async function triggerWarUnending(client: Client, supabase: SupabaseClient, chan
   const tithe = Math.floor(char.gold * 0.15)
   if (char.gold >= tithe && tithe > 0) {
     await supabase.from('characters').update({ gold: char.gold - tithe }).eq('twitch_username', username)
-    await say(client, channel, `@${username} — The war you failed to end reorganized. It found you again. ${tithe}g taken. (${char.gold - tithe}g remaining)`)
+    await say(client, channel, `@${username} — The war you failed to end reorganized. It found you again. ${tithe}gp taken. (${char.gold - tithe}gp remaining)`)
   } else {
     const hpCost = Math.floor(char.max_hp * 0.08); const newHp = Math.max(1, char.hp - hpCost)
     await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
@@ -894,7 +916,7 @@ async function triggerTyrantMarked(client: Client, supabase: SupabaseClient, cha
       await say(client, channel, `@${username} — The system you took still answers to you. Ruling through domination has costs. -${drain} HP. (${newHp}/${char.max_hp})`)
     } else {
       const drain = Math.floor(char.gold * 0.18)
-      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — Maintaining order is expensive. -${drain}g. (${char.gold - drain}g remaining)`) }
+      if (drain > 0) { await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', username); await say(client, channel, `@${username} — Maintaining order is expensive. -${drain}gp. (${char.gold - drain}gp remaining)`) }
     }
   }
   await supabase.from('player_consequence_flags').update({ tyrant_triggered: true, tyrant_boon: isBoon }).eq('id', flagId)
@@ -906,7 +928,7 @@ async function triggerChainsOfOrder(client: Client, supabase: SupabaseClient, ch
   const goldDrain = Math.floor(char.gold * 0.22); const hpDrain = Math.floor(char.max_hp * 0.14)
   const newHp = Math.max(1, char.hp - hpDrain); const newGold = Math.max(0, char.gold - goldDrain)
   await supabase.from('characters').update({ hp: newHp, gold: newGold }).eq('twitch_username', username)
-  await say(client, channel, `@${username} — The chains of order collect what is owed. You chose this. You called it peace. -${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`)
+  await say(client, channel, `@${username} — The chains of order collect what is owed. You chose this. You called it peace. -${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`)
   await supabase.from('player_consequence_flags').update({ chains_triggered: true }).eq('id', flagId)
 }
 
@@ -988,7 +1010,7 @@ async function triggerWebRemnant(
     await say(client, channel,
       `@${username} — The network Iuz built survived him. It still functions. ` +
       `It still collects. Today it collects from you. ` +
-      `${tithe}g taken. (${char.gold - tithe}g remaining)`
+      `${tithe}gp taken. (${char.gold - tithe}gp remaining)`
     )
   } else {
     const hpCost = Math.floor(char.max_hp * 0.08)
@@ -1065,7 +1087,7 @@ async function triggerSmilingTyrant(
         await say(client, channel,
           `@${username} — Iuz's network answers to you today. ` +
           `You are smiling. You did not notice when that started. ` +
-          `-${drain}g. (${char.gold - drain}g remaining)`
+          `-${drain}gp. (${char.gold - drain}gp remaining)`
         )
       }
     }
@@ -1108,7 +1130,7 @@ async function triggerOldOnesMark(
     `@${username} — Iuz's empire is the only stable thing left in the Flanaess. ` +
     `You live in it. You know exactly how it was built. ` +
     `That knowledge costs you, as it costs everyone who has it. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase
@@ -1206,7 +1228,7 @@ async function triggerBanesLedger(
     await say(client, channel,
       `@${username} — The ledger of Bane updates without warning. ` +
       `The system you left intact is still running. It still collects. ` +
-      `${tithe}g taken. (${char.gold - tithe}g remaining)`
+      `${tithe}gp taken. (${char.gold - tithe}gp remaining)`
     )
   } else {
     const hpCost = Math.floor(char.max_hp * 0.08)
@@ -1268,7 +1290,7 @@ async function triggerTyrantsMark(
         await say(client, channel,
           `@${username} — The Scepter answers to you today. ` +
           `Maintaining a divine mandate has operational costs. ` +
-          `-${drain}g. (${char.gold - drain}g remaining)`
+          `-${drain}gp. (${char.gold - drain}gp remaining)`
         )
       }
     }
@@ -1305,7 +1327,7 @@ async function triggerHandOfBane(
     `@${username} — Bane's system expanded as designed. ` +
     `You are in the ledger now. You were always going to be in the ledger. ` +
     `The mark collects what the mark collects. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase.from('player_consequence_flags').update({ bane_triggered: true }).eq('id', flagId)
@@ -1411,7 +1433,7 @@ async function triggerLichServant(
     await say(client, channel,
       `@${username} — the mark of the Lich King collects what the mark collects. ` +
       `He told you it would. He was not lying. He does not need to lie. ` +
-      `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+      `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
     )
   }
 
@@ -1453,7 +1475,7 @@ async function triggerUneasyPact(
       await say(client, channel,
         `@${username} — the pact with Zulkir Jax holds. Today it collects. ` +
         `The fine print was always going to say something like this. ` +
-        `-${drain}g. (${char.gold - drain}g remaining)`
+        `-${drain}gp. (${char.gold - drain}gp remaining)`
       )
     }
   }
@@ -1489,7 +1511,7 @@ async function triggerZulkirjaxTriumphant(
     `@${username} — Thay expanded as designed. The letters arrived as promised. ` +
     `You live in what Zulkir Jax built. You know exactly how it was built. ` +
     `You were there. That knowledge has a cost. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase.from('player_consequence_flags').update({ triumphant_triggered: true }).eq('id', flagId)
@@ -1561,7 +1583,7 @@ async function runNamedStage(
       const { data: stabilizeFlag } = await supabase.from('player_consequence_flags').select('hit_penalty').eq('username', player.username).eq('flag_type', 'corruption_stabilized').eq('is_active', true).single()
       if (stabilizeFlag) hitPenaltyActive = Math.random() < (stabilizeFlag.hit_penalty ?? 0.20)
 
-      if (hitPenaltyActive) { await say(client, channel, `@${player.username}'s attack wavers — the corruption interferes! Miss!`); await delay(1200); continue }
+      if (hitPenaltyActive) { await say(client, channel, `@${player.username} (${getDisplayName(player.username, player)})'s attack wavers — the corruption interferes! Miss!`); await delay(1200); continue }
 
       let manaclesPenalty = 0
       const { data: blightFlag } = await supabase.from('player_consequence_flags').select('blight_attack_penalty').eq('username', player.username).eq('flag_type', 'iron_manacles_blight').eq('is_active', true).single()
@@ -1571,7 +1593,7 @@ async function runNamedStage(
       const dmg = Math.max(1, rawDmg - manaclesPenalty)
       enemyHPs[targetIdx] = Math.max(0, enemyHPs[targetIdx] - dmg)
       const penaltyNote = manaclesPenalty > 0 ? ` (−${manaclesPenalty} from psionic blight)` : ''
-      await say(client, channel, `${player.username} hits ${stage.enemy_name} for ${dmg} damage!${penaltyNote} (${Math.max(0, enemyHPs[targetIdx])} HP remaining)`)
+      await say(client, channel, `@${player.username} (${getDisplayName(player.username, player)}) hits ${stage.enemy_name} for ${dmg} damage!${penaltyNote} (${Math.max(0, enemyHPs[targetIdx])} HP remaining)`)
       await delay(1200)
 
       if (enemyHPs[targetIdx] === 0) { await say(client, channel, `${stage.enemy_name} has fallen!`); await delay(1000) }
@@ -1586,21 +1608,21 @@ async function runNamedStage(
           await say(client, channel, `${stage.enemy_name} uses ${stage.special_name}! All party members take ${specialDmg} damage!`)
           for (const p of alive.filter(p => p.is_alive)) {
             p.hp = Math.max(0, p.hp - specialDmg)
-            await say(client, channel, `${p.username} — ${p.hp} HP remaining.`)
-            if (p.hp <= 0) { p.is_alive = false; await handleDeath(supabase, campaignId, p, stage.stage); await say(client, channel, `${p.username} has fallen! Permadeath — they are out of the campaign.`) }
+            await say(client, channel, `@${p.username} (${getDisplayName(p.username, p)}) — ${p.hp} HP remaining.`)
+            if (p.hp <= 0) { p.is_alive = false; await handleDeath(supabase, campaignId, p, stage.stage); await say(client, channel, `@${p.username} (${getDisplayName(p.username, p)}) has fallen! Permadeath — they are out of the campaign.`) }
           }
           specialFired = true; await delay(2000)
         } else if (stage.special_type === 'debuff') {
           const target = pickRandom(alive.filter(p => p.is_alive))
-          if (target) await say(client, channel, `${stage.enemy_name} uses ${stage.special_name}! ${target.username}'s next attack is suppressed!`)
+          if (target) await say(client, channel, `${stage.enemy_name} uses ${stage.special_name}! @${target.username} (${getDisplayName(target.username, target)})'s next attack is suppressed!`)
           specialFired = true; await delay(1500)
         } else if (stage.special_type === 'single') {
           const target = pickRandom(alive.filter(p => p.is_alive))
           if (target) {
             const specialDmg = Math.ceil((stage.special_damage ?? 25) * diffMod.dmgMod)
             target.hp = Math.max(0, target.hp - specialDmg)
-            await say(client, channel, `${stage.enemy_name} uses ${stage.special_name} on ${target.username} for ${specialDmg} damage! (${target.hp} HP remaining)`)
-            if (target.hp <= 0) { target.is_alive = false; await handleDeath(supabase, campaignId, target, stage.stage); await say(client, channel, `${target.username} has fallen! Permadeath — they are out of the campaign.`) }
+            await say(client, channel, `${stage.enemy_name} uses ${stage.special_name} on @${target.username} (${getDisplayName(target.username, target)}) for ${specialDmg} damage! (${target.hp} HP remaining)`)
+            if (target.hp <= 0) { target.is_alive = false; await handleDeath(supabase, campaignId, target, stage.stage); await say(client, channel, `@${target.username} (${getDisplayName(target.username, target)}) has fallen! Permadeath — they are out of the campaign.`) }
           }
           specialFired = true; await delay(1500)
         }
@@ -1609,9 +1631,9 @@ async function runNamedStage(
         if (!target) break
         const dmg = roll(dmgMin, dmgMax)
         target.hp = Math.max(0, target.hp - dmg)
-        await say(client, channel, `${stage.enemy_name} strikes ${target.username} for ${dmg} damage! (${target.hp} HP remaining)`)
+        await say(client, channel, `${stage.enemy_name} strikes @${target.username} (${getDisplayName(target.username, target)}) for ${dmg} damage! (${target.hp} HP remaining)`)
         await delay(1200)
-        if (target.hp <= 0) { target.is_alive = false; await handleDeath(supabase, campaignId, target, stage.stage); await say(client, channel, `${target.username} has fallen! Permadeath — they are out of the campaign.`); await delay(1000) }
+        if (target.hp <= 0) { target.is_alive = false; await handleDeath(supabase, campaignId, target, stage.stage); await say(client, channel, `@${target.username} (${getDisplayName(target.username, target)}) has fallen! Permadeath — they are out of the campaign.`); await delay(1000) }
       }
     }
 
@@ -1643,7 +1665,7 @@ async function restShrine(client: Client, supabase: SupabaseClient, channel: str
     const healed = Math.min(SHRINE_HEAL_HP, p.max_hp - p.hp)
     p.hp += healed
     await supabase.from('campaign_participants').update({ hp: p.hp }).eq('campaign_id', campaignId).eq('username', p.username)
-    await say(client, channel, `${p.username} recovers ${healed} HP at the shrine. (${p.hp}/${p.max_hp} HP)`)
+    await say(client, channel, `@${p.username} (${getDisplayName(p.username, p)}) recovers ${healed} HP at the shrine. (${p.hp}/${p.max_hp} HP)`)
     await delay(800)
   }
 }
@@ -1672,7 +1694,7 @@ async function runElementalSpawn(
     for (const player of participants.filter(p => p.is_alive)) {
       const dmg = roll(10, 22)
       spawnHp[0] = Math.max(0, spawnHp[0] - dmg)
-      await say(client, channel, `${player.username} strikes the ${spawnEnemy.name} for ${dmg} damage! (${spawnHp[0]} HP remaining)`)
+      await say(client, channel, `@${player.username} (${getDisplayName(player.username, player)}) strikes the ${spawnEnemy.name} for ${dmg} damage! (${spawnHp[0]} HP remaining)`)
       await delay(1000)
       if (spawnHp[0] <= 0) break
     }
@@ -1681,8 +1703,8 @@ async function runElementalSpawn(
       if (target) {
         const dmg = roll(spawnEnemy.damage_min, spawnEnemy.damage_max)
         target.hp = Math.max(0, target.hp - dmg)
-        await say(client, channel, `The ${spawnEnemy.name} strikes ${target.username} for ${dmg} damage! (${target.hp} HP remaining)`)
-        if (target.hp <= 0) { target.is_alive = false; await handleDeath(supabase, campaignId, target, 0); await say(client, channel, `${target.username} has fallen to the spawn! Permadeath.`) }
+        await say(client, channel, `The ${spawnEnemy.name} strikes @${target.username} (${getDisplayName(target.username, target)}) for ${dmg} damage! (${target.hp} HP remaining)`)
+        if (target.hp <= 0) { target.is_alive = false; await handleDeath(supabase, campaignId, target, 0); await say(client, channel, `@${target.username} (${getDisplayName(target.username, target)}) has fallen to the spawn! Permadeath.`) }
         await delay(1000)
       }
     }
@@ -1936,7 +1958,7 @@ async function runZulkirjaxFight(
     for (const player of alive.filter(p => p.is_alive)) {
       const rawDmg = roll(12, 28)
       zulkirjaxHp = Math.max(0, zulkirjaxHp - rawDmg)
-      await say(client, channel, `${player.username} strikes Zulkir Jax for ${rawDmg} damage! (${zulkirjaxHp} HP remaining)`)
+      await say(client, channel, `@${player.username} (${getDisplayName(player.username, player)}) strikes Zulkir Jax for ${rawDmg} damage! (${zulkirjaxHp} HP remaining)`)
       await delay(1200)
       if (zulkirjaxHp <= 0) break
     }
@@ -1956,9 +1978,9 @@ async function runZulkirjaxFight(
         if (p.hp <= 0) {
           p.is_alive = false
           await handleDeath(supabase, campaignId, p, 5)
-          await say(client, channel, `${p.username} is overwhelmed by the undead army! Permadeath.`)
+          await say(client, channel, `@${p.username} (${getDisplayName(p.username, p)}) is overwhelmed by the undead army! Permadeath.`)
         } else {
-          await say(client, channel, `${p.username} — ${p.hp} HP remaining.`)
+          await say(client, channel, `@${p.username} (${getDisplayName(p.username, p)}) — ${p.hp} HP remaining.`)
         }
       }
       await delay(2000)
@@ -1986,7 +2008,7 @@ async function runZulkirjaxFight(
       const target = pickRandom(alive.filter(p => p.is_alive))
       if (target) {
         target.hp = Math.max(0, target.hp - dmg)
-        await say(client, channel, `Zulkirjax strikes ${target.username} for ${dmg} damage! (${target.hp} HP remaining)`)
+        await say(client, channel, `Zulkirjax strikes @${target.username} (${getDisplayName(target.username, target)}) for ${dmg} damage! (${target.hp} HP remaining)`)
         await delay(1200)
 
         // Undead specials — 45% chance in phase 1, 55% in phase 2
@@ -2008,7 +2030,7 @@ async function runZulkirjaxFight(
         if (target.hp <= 0) {
           target.is_alive = false
           await handleDeath(supabase, campaignId, target, 5)
-          await say(client, channel, `${target.username} has fallen! Permadeath — they are out of the campaign.`)
+          await say(client, channel, `@${target.username} (${getDisplayName(target.username, target)}) has fallen! Permadeath — they are out of the campaign.`)
         }
       }
     } else {
@@ -2144,7 +2166,7 @@ async function runNamedCampaign(
       return
     }
 
-    await say(client, channel, `Stage ${stage.stage} — ${stage.stage_name} — cleared! Survivors: ${result.survivors.map(p => p.username).join(', ')}`)
+    await say(client, channel, `Stage ${stage.stage} — ${stage.stage_name} — cleared! Survivors: ${result.survivors.map(p => `@${p.username} (${getDisplayName(p.username, p)})`).join(', ')}`)
     await delay(2000)
   }
 
@@ -2157,7 +2179,7 @@ async function runNamedCampaign(
   const chosenOutcome = await runEndingVote(client, channel, survivors, outcomes)
 
   await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-  await say(client, channel, `${survivors.map(p => p.username).join(', ')} chose: ${chosenOutcome.outcome_label}`)
+  await say(client, channel, `${survivors.map(p => `@${p.username} (${getDisplayName(p.username, p)})`).join(', ')} chose: ${chosenOutcome.outcome_label}`)
   await delay(1500)
   await say(client, channel, chosenOutcome.flavor_text)
   await delay(3000)
@@ -2299,9 +2321,9 @@ async function runNamedCampaign(
   await supabase.from('campaigns').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', campaignId)
 
   await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-  await say(client, channel, `${campaignData.name} COMPLETE! ${survivors.map(p => p.username).join(' & ')} emerge victorious.`)
+  await say(client, channel, `${campaignData.name} COMPLETE! ${survivors.map(p => `@${p.username} (${getDisplayName(p.username, p)})`).join(' & ')} emerge victorious.`)
   if (titleEarned) await say(client, channel, `Title earned: [${titleEarned}] — awarded to qualifying survivors!`)
-  if (artifactName && artWinner) await say(client, channel, `Artifact: ${artifactName} — claimed by ${artWinner.username}!`)
+  if (artifactName && artWinner) await say(client, channel, `Artifact: ${artifactName} — claimed by @${artWinner.username} (${getDisplayName(artWinner.username, artWinner)})!`)
   await say(client, channel, `Full clear bonus applied. Check !status for updated XP and gold.`)
 }
 
@@ -2503,6 +2525,7 @@ export async function handleNamedCampaignCommand(
       .eq('campaign_id', campaign.id)
 
     const participants = (participantsData ?? []) as Participant[]
+    await enrichParticipantsWithNames(supabase, participants)
 
     await runNamedCampaign(
       client, supabase, channel,

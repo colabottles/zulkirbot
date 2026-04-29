@@ -224,7 +224,7 @@ async function triggerHommletInformant(
       await say(client, channel,
         `@${username} — The authorities who took custody of Lareth have questions. ` +
         `The questions require a journey to Verbobonc. The journey requires coin. ` +
-        `-${drain}g. (${char.gold - drain}g remaining)`
+        `-${drain}gp. (${char.gold - drain}gp remaining)`
       )
     }
   }
@@ -290,7 +290,7 @@ async function triggerHommletShadow(
   await say(client, channel,
     `@${username} — Lareth the Beautiful has not forgotten who let him walk out of that dungeon. ` +
     `He has not forgiven it either. The Master he serves has long reach. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase.from('player_consequence_flags').update({ hommlet_shadow_triggered: true }).eq('id', flagId)
@@ -410,7 +410,7 @@ async function triggerEyeShattered(
     await say(client, channel,
       `@${username} — Something filled the space where the Elder Elemental Eye was. ` +
       `Today it is not favorable. The scholars in Greyhawk City are still arguing about what it is. ` +
-      `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+      `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
     )
   }
 
@@ -443,7 +443,7 @@ async function triggerZuggtmoyPact(
   await say(client, channel,
     `@${username} — Zuggtmoy has not forgotten who opened her door. ` +
     `She does not forget anything. The Demon Queen of Fungi has long reach and no goodwill toward you specifically. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase.from('player_consequence_flags').update({ zuggtmoy_triggered: true }).eq('id', flagId)
@@ -583,7 +583,7 @@ async function triggerSlaverGold(
   await say(client, channel,
     `@${username} — The organization has a list of people who took their treasury. ` +
     `You are on the list. The list has been acted upon. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase.from('player_consequence_flags').update({ slaver_gold_triggered: true }).eq('id', flagId)
@@ -615,7 +615,7 @@ async function triggerSlaversRegrouped(
   await say(client, channel,
     `@${username} — The Slave Lords regrouped. The succession process worked. ` +
     `The organization filed a report on what happened in the aerie. Your name is in it. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase.from('player_consequence_flags').update({ slavers_regrouped_triggered: true }).eq('id', flagId)
@@ -661,7 +661,7 @@ async function triggerEclavdraSlain(
     await say(client, channel,
       `@${username} — House Eilservs has a long memory. ` +
       `The party killed one of its nobles. The house has sent a reminder that it noticed. ` +
-      `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+      `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
     )
   }
 
@@ -765,7 +765,7 @@ async function triggerGiantsEmboldened(
   await say(client, channel,
     `@${username} — The routes are finished. The raids have resumed with a different character. ` +
     `Eclavdra sent the brooch back. It was not a compliment. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase.from('player_consequence_flags').update({ giants_emboldened_triggered: true }).eq('id', flagId)
@@ -873,7 +873,7 @@ async function triggerLolthPact(
   await say(client, channel,
     `@${username} — The pact with Lolth includes a clause you noticed only after agreeing. ` +
     `The clause involves Iuz. The Demon Queen of Spiders collects what she is owed. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase.from('player_consequence_flags').update({ lolth_pact_triggered: true }).eq('id', flagId)
@@ -906,7 +906,7 @@ async function triggerLolthTriumphant(
     `@${username} — Lolth''s plan matured. The situation is the message. ` +
     `The world changed while you were in the Demonweb. ` +
     `The change is your fault in the particular way that inaction is fault. ` +
-    `-${hpDrain} HP, -${goldDrain}g. (${newHp}/${char.max_hp} HP | ${newGold}g remaining)`
+    `-${hpDrain} HP, -${goldDrain}gp. (${newHp}/${char.max_hp} HP | ${newGold}gp remaining)`
   )
 
   await supabase.from('player_consequence_flags').update({ lolth_triumphant_triggered: true }).eq('id', flagId)

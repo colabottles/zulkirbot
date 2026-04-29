@@ -28,6 +28,8 @@ export const givegoldCommand: BotCommand = {
       .eq('twitch_username', target)
       .single()
 
+    const characterName = char.character_name ?? target
+
     if (!char) {
       client.say(channel, `@${username} — ${target} doesn't have a character.`)
       return
@@ -40,7 +42,7 @@ export const givegoldCommand: BotCommand = {
 
     client.say(
       channel,
-      `💰 @${target} has been granted ${amount}g by the dungeon master! (Gold: ${char.gold + amount}g)`
+      `💰 @${target} (${characterName}) has been granted ${amount}gp by the dungeon master! (Gold: ${char.gold + amount}gp)`
     )
   }
 }

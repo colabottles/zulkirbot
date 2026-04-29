@@ -128,7 +128,7 @@ export async function runBrawl(channel: string, client: tmi.Client): Promise<voi
     client.say(
       channel,
       `🏆 @${winner} is the last one standing in the tavern brawl! ` +
-      `+${goldReward}g +${xpReward} XP! ` +
+      `+${goldReward}gp +${xpReward} XP! ` +
       `Everyone else is face-down on the floor. Use !rest to recover.`
     )
   }

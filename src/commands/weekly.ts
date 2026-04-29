@@ -25,6 +25,8 @@ export const weeklyCommand: BotCommand = {
       .eq('twitch_username', username)
       .single()
 
+    const characterName = char.character_name ?? username
+
     if (!char) {
       client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
@@ -49,12 +51,13 @@ export const weeklyCommand: BotCommand = {
       return
     }
 
-    const xp = Math.floor(Math.random() * 2000) + 1
+    const xp = Math.floor(Math.random() * 1000) + 1
     const newXp = char.xp + xp
     const { newLevel, newXpTotal } = calculateLevel(newXp)
     const leveledUp = newLevel > char.level
     const hpDie = CLASS_HP_DIE[char.class] ?? 6
     const levelsGained = newLevel - char.level
+    const tauntMsg = xp === 1 ? ` The gods mock you. 1 XP. Truly, a legend in the making.` : ''
     const hpRoll = Array.from({ length: levelsGained }, () => rollHp(hpDie)).reduce((a, b) => a + b, 0)
     const newMaxHp = char.max_hp + hpRoll
     const newHp = Math.min(char.hp + hpRoll, newMaxHp)
@@ -98,7 +101,7 @@ export const weeklyCommand: BotCommand = {
 
     client.say(
       channel,
-      `🎁 @${username} claims their weekly reward — +${xp} XP!${itemMsg}${levelMsg}`
+      `🎁 @${username} (${characterName}) claims their weekly reward — +${xp} XP!${tauntMsg}${itemMsg}${levelMsg}`
     )
   }
 }

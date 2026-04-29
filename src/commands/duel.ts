@@ -63,7 +63,9 @@ export const duelCommand: BotCommand = {
       return
     }
 
-    // Level range check ±2
+    const challengerName = challenger.character_name ?? username
+    const targetName = targetChar.character_name ?? target
+
     if (Math.abs(challenger.level - targetChar.level) > 2) {
       client.say(
         channel,
@@ -74,11 +76,10 @@ export const duelCommand: BotCommand = {
     }
 
     createChallenge(username, target, channel)
-
     client.say(
       channel,
-      `⚔️ @${username} (${formatClass(challenger.class)} Lv.${challenger.level}) challenges ` +
-      `@${target} (${formatClass(targetChar.class)} Lv.${targetChar.level}) to a duel! ` +
+      `⚔️ @${username} (${challengerName} — ${formatClass(challenger.class)} Lv.${challenger.level}) challenges ` +
+      `@${target} (${targetName} — ${formatClass(targetChar.class)} Lv.${targetChar.level}) to a duel! ` +
       `@${target} — type !accept to fight or !decline to back down. You have 3 minutes!`
     )
   }

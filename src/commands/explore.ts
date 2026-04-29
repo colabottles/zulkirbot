@@ -123,7 +123,7 @@ export const exploreCommand: BotCommand = {
 
       client.say(
         channel,
-        `🎁 @${username} discovers a hidden chest! Found a ${item.rarity.toUpperCase()} ${item.name} and ${gold}g!`
+        `🎁 @${username} discovers a hidden chest! Found a ${item.rarity.toUpperCase()} ${item.name} and ${gold}gp!`
       )
       return
     }
@@ -135,7 +135,7 @@ export const exploreCommand: BotCommand = {
         gold: char.gold + gold,
       }).eq('twitch_username', username)
 
-      client.say(channel, `💰 @${username} finds ${gold}g tucked away in a crevice.`)
+      client.say(channel, `💰 @${username} finds ${gold}gp tucked away in a crevice.`)
       return
     }
 

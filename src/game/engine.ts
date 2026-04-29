@@ -2,6 +2,7 @@ import { ActiveFight, Monster } from '../types'
 import { d20, d8 } from './dice'
 import { shouldDropLoot, rollLoot } from './loot'
 import { supabase } from '../lib/supabase'
+import { getDisplayName } from '../lib/displayName'
 import { getMonsterForLevel } from './monsters'
 import { CLASS_HP_DIE, rollHp } from '../lib/classes'
 import { trimGraveyard } from '../lib/graveyard'
@@ -55,6 +56,8 @@ export async function startFight(
     .eq('twitch_username', username)
     .single()
 
+  const displayName = getDisplayName(username, char ?? {})
+
   if (!char) {
     client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
     return
@@ -87,13 +90,13 @@ export async function startFight(
 
   if (!existingMonster) {
     client.say(channel,
-      `⚔️ @${username} encounters a ${monster.name}! ` +
+      `⚔️ @${username} (${displayName}) encounters a ${monster.name}! ` +
       `(HP: ${monster.hp} | ATK: ${monster.attack} | DEF: ${monster.defense}) ` +
       `Type !attack to attack!`
     )
   } else {
     client.say(channel,
-      `⚔️ @${username} — a ${monster.name} stands before you! ` +
+      `⚔️ @${username} (${displayName}) — a ${monster.name} stands before you! ` +
       `(HP: ${monster.hp} | ATK: ${monster.attack} | DEF: ${monster.defense}) ` +
       `Type !attack to fight!`
     )
@@ -114,6 +117,8 @@ export async function continueFight(
     .eq('twitch_username', username)
     .single()
 
+  const displayName = getDisplayName(username, char ?? {})
+
   const stats = char ? await getCharacterStats(char) : { attackBonus: 0, defenseBonus: 0, hpBonus: 0, damageBonus: 0 }
   const buff = getBuff(username)
 
@@ -127,28 +132,25 @@ export async function continueFight(
   // ── Paralysis check ──────────────────────────────────────────
   if (isParalyzed(username)) {
     tickParalysis(username)
-    client.say(channel, `🧊 @${username} is paralyzed and cannot move! Their turn is lost.`)
+    client.say(channel, `🧊 @${username} (${displayName}) is paralyzed and cannot move! Their turn is lost.`)
     const monsterRollP = d20()
     const monsterHitP = monsterRollP + fight.monster.attack > 12 + stats.defenseBonus
     if (monsterHitP) {
       fight.character_current_hp -= fight.monster.attack
-      client.say(channel,
-        `The ${fight.monster.name} strikes the helpless @${username} for ${fight.monster.attack} damage! ` +
-        `(HP: ${fight.character_current_hp}/${char?.max_hp})`
-      )
+      client.say(channel, `The ${fight.monster.name} strikes the helpless @${username} (${displayName}) for ${fight.monster.attack} damage! (HP: ${fight.character_current_hp}/${char?.max_hp})`)
       if (fight.character_current_hp <= 0) {
         if (deathwardedPlayers.has(username)) {
           deathwardedPlayers.delete(username)
           fight.character_current_hp = 1
           await supabase.from('characters').update({ hp: 1 }).eq('twitch_username', username)
-          client.say(channel, `🛡️ @${username}'s Death Ward triggers! They survive at 1 HP.`)
+          client.say(channel, `🛡️ @${username} (${displayName})'s Death Ward triggers! They survive at 1 HP.`)
           activeFights.delete(username)
         } else {
           await handleDeath(channel, username, fight, client)
         }
       }
     } else {
-      client.say(channel, `The ${fight.monster.name} swings at the paralyzed @${username} but misses!`)
+      client.say(channel, `The ${fight.monster.name} swings at the paralyzed @${username} (${displayName}) but misses!`)
     }
     return
   }
@@ -156,28 +158,25 @@ export async function continueFight(
   // ── Fear check ───────────────────────────────────────────────
   if (isFeared(username)) {
     tickFear(username)
-    client.say(channel, `😱 @${username} is overcome with fear and cannot act! Their turn is lost.`)
+    client.say(channel, `😱 @${username} (${displayName}) is overcome with fear and cannot act! Their turn is lost.`)
     const monsterRollF = d20()
     const monsterHitF = monsterRollF + fight.monster.attack > 12 + stats.defenseBonus
     if (monsterHitF) {
       fight.character_current_hp -= fight.monster.attack
-      client.say(channel,
-        `The ${fight.monster.name} presses the advantage on the fleeing @${username} for ${fight.monster.attack} damage! ` +
-        `(HP: ${fight.character_current_hp}/${char?.max_hp})`
-      )
+      client.say(channel, `The ${fight.monster.name} presses the advantage on the fleeing @${username} (${displayName}) for ${fight.monster.attack} damage! (HP: ${fight.character_current_hp}/${char?.max_hp})`)
       if (fight.character_current_hp <= 0) {
         if (deathwardedPlayers.has(username)) {
           deathwardedPlayers.delete(username)
           fight.character_current_hp = 1
           await supabase.from('characters').update({ hp: 1 }).eq('twitch_username', username)
-          client.say(channel, `🛡️ @${username}'s Death Ward triggers! They survive at 1 HP.`)
+          client.say(channel, `🛡️ @${username} (${displayName})'s Death Ward triggers! They survive at 1 HP.`)
           activeFights.delete(username)
         } else {
           await handleDeath(channel, username, fight, client)
         }
       }
     } else {
-      client.say(channel, `The ${fight.monster.name} can't catch the fleeing @${username}!`)
+      client.say(channel, `The ${fight.monster.name} can't catch the fleeing @${username} (${displayName})!`)
     }
     return
   }
@@ -274,7 +273,7 @@ export async function continueFight(
       if (died) {
         client.say(channel, `💀 ${getHirelingDeathMessage(hirelingForAbsorb)}`)
       } else {
-        client.say(channel, `🛡️ ${hirelingForAbsorb.name} takes the hit for @${username}!`)
+        client.say(channel, `🛡️ ${hirelingForAbsorb.name} takes the hit for @${username} (${displayName})!`)
       }
     } else {
       fight.character_current_hp -= monsterDamage
@@ -314,7 +313,7 @@ export async function continueFight(
       deathwardedPlayers.delete(username)
       fight.character_current_hp = 1
       await supabase.from('characters').update({ hp: 1 }).eq('twitch_username', username)
-      client.say(channel, `🛡️ @${username}'s Death Ward triggers! They survive at 1 HP. The ward is spent.`)
+      client.say(channel, `🛡️ @${username} (${displayName})'s Death Ward triggers! They survive at 1 HP. The ward is spent.`)
       activeFights.delete(username)
       breakConcentration(username)
       return
@@ -340,7 +339,7 @@ export async function continueFight(
 
   client.say(
     channel,
-    `⚔️ @${username} — ${hitMsg} ${monsterMsg} ` +
+    `⚔️ @${username} (${displayName}) — ${hitMsg} ${monsterMsg} ` +
     `[Your HP: ${fight.character_current_hp} | ${fight.monster.name} HP: ${fight.monster_current_hp}] ` +
     `Type !attack to continue or !flee to run away! 🐔`
   )
@@ -363,6 +362,8 @@ async function handleVictory(
     .single()
 
   if (!char) return
+
+  const displayName = getDisplayName(username, char)
 
   const heroesFeastActive = hasHeroesFeast(username)
   const xpMultiplier = heroesFeastActive ? 1.5 : 1
@@ -415,8 +416,8 @@ async function handleVictory(
 
   client.say(
     channel,
-    `🏆 @${username} defeated the ${fight.monster.name}! ` +
-    `+${fight.monster.xp_reward} XP | +${fight.monster.gold_reward}g${lootMsg}${levelMsg}${titleMsg}`
+    `🏆 @${username} (${displayName}) defeated the ${fight.monster.name}! ` +
+    `+${fight.monster.xp_reward} XP | +${fight.monster.gold_reward}gp${lootMsg}${levelMsg}${titleMsg}`
   )
 }
 
@@ -439,6 +440,7 @@ export async function handleDeath(
   await supabase.from('graveyard').insert({
     twitch_username: char.twitch_username,
     display_name: char.display_name,
+    character_name: char.character_name ?? null,
     class: char.class,
     level: char.level,
     xp: char.xp,
@@ -506,7 +508,7 @@ async function checkFightTimeout(
     await supabase.from('characters').update({ hp: playerHp }).eq('twitch_username', username)
     client.say(channel,
       `⚔️ Auto-combat: @${username} defeated the ${fight.monster.name} while AFK! ` +
-      `+${fight.monster.xp_reward} XP | +${fight.monster.gold_reward}g (HP: ${playerHp}/${char.max_hp})`
+      `+${fight.monster.xp_reward} XP | +${fight.monster.gold_reward}gp (HP: ${playerHp}/${char.max_hp})`
     )
     await supabase.from('characters').update({
       xp: char.xp + fight.monster.xp_reward,

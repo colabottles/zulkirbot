@@ -160,7 +160,7 @@ export const picklockCommand: BotCommand = {
 
       client.say(channel,
         `🔓 ${eligibleMsg} ` +
-        `The chest opens! Found a ${rarity.toUpperCase()} ${item.name} and ${gold}g!`
+        `The chest opens! Found a ${rarity.toUpperCase()} ${item.name} and ${gold}gp!`
       )
     } else {
       // Failure — trap springs or lock holds
@@ -257,7 +257,7 @@ export const disabletrapCommand: BotCommand = {
 
         client.say(channel,
           `🔧 ${eligibleMsg} Trap disabled! +${xpBonus} XP. ` +
-          `The chest beneath it holds a ${item.rarity.toUpperCase()} ${item.name} and ${gold}g!`
+          `The chest beneath it holds a ${item.rarity.toUpperCase()} ${item.name} and ${gold}gp!`
         )
       } else {
         client.say(channel,
@@ -410,7 +410,7 @@ export const searchdoorCommand: BotCommand = {
         : `@${username} leans against the wall and it swings open.`
 
       client.say(channel,
-        `🚪 ${eligibleMsg} A hidden passage! +${gold}g found inside.${lootMsg}`
+        `🚪 ${eligibleMsg} A hidden passage! +${gold}gp found inside.${lootMsg}`
       )
     } else {
       client.say(channel,

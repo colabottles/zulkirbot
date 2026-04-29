@@ -34,6 +34,7 @@ export const killCommand: BotCommand = {
     await supabase.from('graveyard').insert({
       twitch_username: char.twitch_username,
       display_name: char.display_name,
+      character_name: char.character_name ?? null,  // ← add this
       class: char.class,
       level: char.level,
       xp: char.xp,
@@ -43,9 +44,10 @@ export const killCommand: BotCommand = {
     await trimGraveyard()
     await supabase.from('characters').delete().eq('twitch_username', target)
 
+    const characterName = char.character_name ?? target
     client.say(
       channel,
-      `💀 The dungeon master strikes down @${target}! Their soul joins the graveyard.`
+      `💀 The dungeon master strikes down @${target} (${characterName})! Their soul joins the graveyard.`
     )
   }
 }

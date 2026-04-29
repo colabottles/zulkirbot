@@ -52,7 +52,7 @@ export const tavernCommand: BotCommand = {
       }
 
       if (char.gold < drink.price) {
-        client.say(channel, `@${username} — you can't afford that! You have ${char.gold}g and it costs ${drink.price}g.`)
+        client.say(channel, `@${username} — you can't afford that! You have ${char.gold}gp and it costs ${drink.price}gp.`)
         return
       }
 
@@ -107,7 +107,7 @@ export const tavernCommand: BotCommand = {
       }
 
       if (char.gold < meal.price) {
-        client.say(channel, `@${username} — you can't afford that! You have ${char.gold}g and it costs ${meal.price}g.`)
+        client.say(channel, `@${username} — you can't afford that! You have ${char.gold}gp and it costs ${meal.price}gp.`)
         return
       }
 

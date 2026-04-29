@@ -18,7 +18,10 @@ export const graveyardCommand: BotCommand = {
     }
 
     const list = fallen
-      .map((h: any) => `${h.display_name} (${h.class} Lv.${h.level}, ${h.xp} XP, slain by ${h.killed_by})`)
+      .map((h: any) => {
+        const name = h.character_name ?? h.display_name
+        return `${name} (${h.class} Lv.${h.level}, ${h.xp} XP, slain by ${h.killed_by})`
+      })
       .join(' | ')
 
     client.say(channel, `🪦 Heroes Graveyard: ${list}`)

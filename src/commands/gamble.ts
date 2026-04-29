@@ -49,7 +49,7 @@ export const gambleCommand: BotCommand = {
     }
 
     if (char.gold < amount) {
-      client.say(channel, `@${username} — you don't have enough gold! You have ${char.gold}g.`)
+      client.say(channel, `@${username} — you don't have enough gold! You have ${char.gold}gp.`)
       return
     }
 
@@ -66,15 +66,15 @@ export const gambleCommand: BotCommand = {
     if (exactMatch) {
       // Exact number match — 35:1 payout
       winnings = amount * 35
-      resultMsg = `🎰 The wheel lands on ${result} ${resultColor.toUpperCase()}! EXACT MATCH! @${username} wins ${winnings}g!`
+      resultMsg = `🎰 The wheel lands on ${result} ${resultColor.toUpperCase()}! EXACT MATCH! @${username} wins ${winnings}gp!`
     } else if (colorMatch) {
       // Color match — 1:1 payout
       winnings = amount
-      resultMsg = `🎰 The wheel lands on ${result} ${resultColor.toUpperCase()}! Color match! @${username} wins ${winnings}g!`
+      resultMsg = `🎰 The wheel lands on ${result} ${resultColor.toUpperCase()}! Color match! @${username} wins ${winnings}gp!`
     } else {
       // Loss
       winnings = -amount
-      resultMsg = `🎰 The wheel lands on ${result} ${resultColor.toUpperCase()}! @${username} loses ${amount}g!`
+      resultMsg = `🎰 The wheel lands on ${result} ${resultColor.toUpperCase()}! @${username} loses ${amount}gp!`
     }
 
     const newGold = char.gold + winnings
@@ -84,6 +84,6 @@ export const gambleCommand: BotCommand = {
       .update({ gold: newGold })
       .eq('twitch_username', username)
 
-    client.say(channel, `${resultMsg} (Gold: ${newGold}g)`)
+    client.say(channel, `${resultMsg} (Gold: ${newGold}gp)`)
   }
 }

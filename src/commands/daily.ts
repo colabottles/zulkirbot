@@ -14,6 +14,8 @@ export const dailyCommand: BotCommand = {
       .eq('twitch_username', username)
       .single()
 
+    const characterName = char.character_name ?? username
+
     if (!char) {
       client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
@@ -48,7 +50,7 @@ export const dailyCommand: BotCommand = {
 
     client.say(
       channel,
-      `🎁 @${username} claims their daily reward — ${gold}g! (Gold: ${char.gold + gold}g)`
+      `🎁 @${username} (${characterName}) claims their daily reward — ${gold}gp! (Gold: ${char.gold + gold}gp)`
     )
   }
 }

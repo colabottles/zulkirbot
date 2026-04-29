@@ -32,6 +32,7 @@ export const titlesCommand: BotCommand = {
     const activeMarker = (t: string) => t === char.active_title ? ' ★' : ''
     const list = titles.map((t: any) => `${t.title}${activeMarker(t.title)}`).join(' | ')
 
-    client.say(channel, `🏅 ${target}'s titles: ${list}`)
+    const characterName = char.character_name ?? target
+    client.say(channel, `🏅 ${characterName} (@${target})'s titles: ${list}`)
   }
 }

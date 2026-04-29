@@ -2,9 +2,67 @@
 
 ---
 
-## v1.8.1 — April 24, 2026
+## v1.9.0 — April 28, 2026
 
 ### Bug Fixes
+
+- Fixed `!campaign` failing for all players — is_dead column referenced in character lookup did not exist; death is handled by row deletion
+- Fixed campaign daily cooldown incorrectly blocking all players channel-wide; cooldown is now per-user
+- Fixed `!joincamp` colliding with mode selection — mode choice now uses `!solo` and `!party`
+- Fixed hardcoded 100 HP for campaign participants — players now enter campaigns at their actual current HP
+- Fixed artifacts from campaigns not persisting to player inventory
+- Fixed campaign titles not being saved to player_titles table
+- Fixed XP and gold from named campaigns not applying to characters
+- Fixed is_dead references in `named_campaign.ts` join handler
+
+## New Features
+
+### Character Names
+
+- Players can set a custom character name with `!setname [name]`
+- Character names appear alongside Twitch usernames in combat, campaign, duel, graveyard, leaderboard, inventory, titles, and reward messages
+- Character names are stored in the characters table and persist across sessions
+- Graveyard entries now store character name at time of death
+
+### Artifact Inventory Slots
+
+- 4 dedicated artifact equipment slots added (`equipped_artifact1` through `equipped_artifact4`)
+- Artifacts from campaigns are now inserted into inventory as artifact item type
+- `!equip` supports artifact items and finds the first open slot automatically
+- Artifact slots contribute hpBonus to character stats
+
+### Level-Scaled Campaign Enemies
+
+- Standard campaign enemies now scale based on average party level (levels 1–10)
+- Boss HP, damage, and player damage output all scale with average level
+- Level range is announced at campaign start for both solo and party modes
+
+### Campaign Improvements
+
+- Campaign combat is now player-driven — each participant must type `!attack` on their turn
+- Multiple players can now run campaigns simultaneously (per-channel lock removed)
+- Named campaigns also support simultaneous runs per user
+- Enemy target selection is now shuffled each round to distribute hits more evenly
+- 4-second delay added before each attack prompt to give players time to read
+- `!campaign` now announces level scaling at start
+- Named campaigns announce level range at start
+
+### Gold Display
+
+- All gold amounts now display as gp instead of g throughout all commands and messages
+
+### Weekly Reward
+
+- Weekly XP reward reduced from 2000 to 1000
+- Players who receive exactly 1 XP are taunted
+
+### Help Command
+
+- `!help` now returns a link to the ZulkirBot documentation instead of a command list
+
+## v1.8.1 — April 24, 2026
+
+### Bug Fixes v1.8.1
 
 - **`!campaign` character lookup** — `.select('hp, is_dead')` was referencing a
   non-existent `is_dead` column, causing Supabase to return null for every character

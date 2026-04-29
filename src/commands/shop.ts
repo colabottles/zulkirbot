@@ -31,10 +31,10 @@ export const shopCommand: BotCommand = {
       }
 
       const list = items
-        .map((i: any) => `${i.item_name} (${i.rarity}) — ${i.price}g`)
+        .map((i: any) => `${i.item_name} (${i.rarity}) — ${i.price}gp`)
         .join(' | ')
 
-      client.say(channel, `🏪 Shop (Gold: ${char.gold}g): ${list} — Use !shop buy [item name] to purchase`)
+      client.say(channel, `🏪 Shop (Gold: ${char.gold}gp): ${list} — Use !shop buy [item name] to purchase`)
       return
     }
 
@@ -62,7 +62,7 @@ export const shopCommand: BotCommand = {
       if (char.gold < shopItem.price) {
         client.say(
           channel,
-          `@${username} — you can't afford that! You have ${char.gold}g and it costs ${shopItem.price}g.`
+          `@${username} — you can't afford that! You have ${char.gold}gp and it costs ${shopItem.price}gp.`
         )
         return
       }
@@ -92,8 +92,8 @@ export const shopCommand: BotCommand = {
 
       client.say(
         channel,
-        `🏪 @${username} purchased ${shopItem.item_name} for ${shopItem.price}g! ` +
-        `(Gold remaining: ${char.gold - shopItem.price}g)`
+        `🏪 @${username} purchased ${shopItem.item_name} for ${shopItem.price}gp! ` +
+        `(Gold remaining: ${char.gold - shopItem.price}gp)`
       )
     }
   }

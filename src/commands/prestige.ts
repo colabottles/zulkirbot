@@ -39,7 +39,7 @@ export const prestigeCommand: BotCommand = {
     if (char.gold < PRESTIGE_COST) {
       client.say(
         channel,
-        `@${username} — you need ${PRESTIGE_COST}g to prestige. You only have ${char.gold}g.`
+        `@${username} — you need ${PRESTIGE_COST}gp to prestige. You only have ${char.gold}gp.`
       )
       return
     }
@@ -76,7 +76,7 @@ export const prestigeCommand: BotCommand = {
       `✨ @${username} has transcended mortal limits and achieved [${label}] prestige! ` +
       `They return to Level 1, forever changed. ` +
       `+${PRESTIGE_HP_BONUS} permanent max HP bonus! ` +
-      `All items and gold (minus ${PRESTIGE_COST}g) have been retained.`
+      `All items and gold (minus ${PRESTIGE_COST}gp) have been retained.`
     )
   }
 }

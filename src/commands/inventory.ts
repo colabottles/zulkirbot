@@ -8,7 +8,7 @@ export const inventoryCommand: BotCommand = {
   handler: async (channel, username, _args, client) => {
     const { data: char } = await supabase
       .from('characters')
-      .select('id')
+      .select('id, character_name')
       .eq('twitch_username', username)
       .single()
 
@@ -17,6 +17,8 @@ export const inventoryCommand: BotCommand = {
       return
     }
 
+    const characterName = char.character_name ?? username
+
     const { data: items } = await supabase
       .from('inventory')
       .select('*')
@@ -24,7 +26,7 @@ export const inventoryCommand: BotCommand = {
       .order('rarity', { ascending: false })
 
     if (!items || items.length === 0) {
-      client.say(channel, `@${username} — your inventory is empty. Go fight something!`)
+      client.say(channel, `@${username} (${characterName}) — your inventory is empty. Go fight something!`)
       return
     }
 
@@ -32,6 +34,6 @@ export const inventoryCommand: BotCommand = {
       .map((i: any) => `${i.item_name} (${i.rarity})${i.equipped ? ' [E]' : ''}`)
       .join(', ')
 
-    client.say(channel, `🎒 @${username}'s inventory: ${list}`)
+    client.say(channel, `🎒 @${username} (${characterName})'s inventory: ${list}`)
   }
 }

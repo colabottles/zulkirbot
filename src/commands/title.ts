@@ -16,6 +16,8 @@ export const titleCommand: BotCommand = {
       .eq('twitch_username', username)
       .single()
 
+    const characterName = char.character_name ?? username
+
     if (!char) {
       client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
@@ -49,6 +51,6 @@ export const titleCommand: BotCommand = {
       .update({ active_title: earned.title })
       .eq('twitch_username', username)
 
-    client.say(channel, `@${username} is now known as "${earned.title}"!`)
+    client.say(channel, `@${username} (${characterName}) is now known as "${earned.title}"!`)
   }
 }

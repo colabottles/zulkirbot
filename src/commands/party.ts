@@ -447,7 +447,7 @@ export const partyCommand: BotCommand = {
         const rewards = finalMembers
           .map(m => {
             const share = totalDamage > 0 ? m.damage_dealt / totalDamage : 1 / finalMembers.length
-            return `@${m.twitch_username} +${Math.floor(boss.xp_reward * share)} XP +${Math.floor(boss.gold_reward * share)}g`
+            return `@${m.twitch_username} +${Math.floor(boss.xp_reward * share)} XP +${Math.floor(boss.gold_reward * share)}gp`
           })
           .join(' | ')
 

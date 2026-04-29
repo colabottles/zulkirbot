@@ -17,7 +17,7 @@ export const fleeCommand: BotCommand = {
     // Guard: check character still exists (may have just died)
     const { data: char } = await supabase
       .from('characters')
-      .select('id, hp')
+      .select('id, hp, character_name')
       .eq('twitch_username', username)
       .single()
 
@@ -25,6 +25,8 @@ export const fleeCommand: BotCommand = {
       activeFights.delete(username) // clean up stale fight if still present
       return
     }
+
+    const characterName = char.character_name ?? username
 
     // Monster gets a parting shot
     const monsterRoll = d20()
@@ -39,7 +41,7 @@ export const fleeCommand: BotCommand = {
     // Monster kills them on the way out
     if (fight.character_current_hp <= 0) {
       await handleDeath(channel, username, fight, client)
-      client.say(channel, `🐔 @${username} tried to flee but was cut down by the ${fight.monster.name}! Cowardice has its price.`)
+      client.say(channel, `🐔 @${username} (${characterName}) tried to flee but was cut down by the ${fight.monster.name}! Cowardice has its price.`)
       return
     }
 
@@ -53,6 +55,6 @@ export const fleeCommand: BotCommand = {
       ? `The ${fight.monster.name} hit you for ${monsterDamage} damage on your way out!`
       : `The ${fight.monster.name} missed as you ran!`
 
-    client.say(channel, `🐔 @${username} flees from the ${fight.monster.name}! ${damageMsg} (HP: ${fight.character_current_hp}) Coward! 🐔`)
+    client.say(channel, `🐔 @${username} (${characterName}) flees from the ${fight.monster.name}! ${damageMsg} (HP: ${fight.character_current_hp}) Coward! 🐔`)
   }
 }

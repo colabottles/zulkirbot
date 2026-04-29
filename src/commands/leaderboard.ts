@@ -19,7 +19,10 @@ export const leaderboardCommand: BotCommand = {
     }
 
     const list = top
-      .map((c: any, i: number) => `${i + 1}. ${c.display_name} (${formatClass(c.class)} Lv.${c.level} — ${c.xp} XP)`)
+      .map((c: any, i: number) => {
+        const name = c.character_name ?? c.display_name
+        return `${i + 1}. ${name} (${formatClass(c.class)} Lv.${c.level} — ${c.xp} XP)`
+      })
       .join(' | ')
 
     client.say(channel, `🏆 Leaderboard: ${list}`)

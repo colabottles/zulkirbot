@@ -311,7 +311,7 @@ export async function handleClericCommand(
     const menu = available
       .map((s, i) => {
         const cost = calculateCost(gold, s.costPercent)
-        return `${i + 1}) ${s.label} — ${cost}g`
+        return `${i + 1}) ${s.label} — ${cost}gp`
       })
       .join(' | ')
 
@@ -353,7 +353,7 @@ export async function handleClericCommand(
   if (char.gold < cost) {
     await say(client, channel,
       `@${username} ${pickRandom(CANT_AFFORD_LINES)} ` +
-      `${chosen.label} costs ${cost}g. You have ${char.gold}g.`
+      `${chosen.label} costs ${cost}gp. You have ${char.gold}gp.`
     )
     return
   }
@@ -372,7 +372,7 @@ export async function handleClericCommand(
 
   await say(client, channel,
     `✨ @${username} — Brother Yvannis performs ${chosen.label}. ` +
-    `${resultMsg} (-${cost}g)`
+    `${resultMsg} (-${cost}gp)`
   )
   await delay(800)
   await say(client, channel,

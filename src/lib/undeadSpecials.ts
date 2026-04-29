@@ -114,7 +114,7 @@ export async function applyUndeadSpecial(
           .eq('twitch_username', username)
       }
       return {
-        message: `💸 GOLD DRAIN — the undead's curse siphons ${drain}g from @${username}!`,
+        message: `💸 GOLD DRAIN — the undead's curse siphons ${drain}gp from @${username}!`,
         hpDrain: 0,
         goldDrain: drain,
         xpDrain: 0,

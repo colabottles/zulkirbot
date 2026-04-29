@@ -10,11 +10,13 @@ import { Client } from 'tmi.js'
 import { supabase } from './../lib/supabase'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { summonYvannis, rollYvannisStage } from './cleric'
+import { getDisplayName } from '../lib/displayName'
 
 export const campaignAttackPending = new Map<string, () => void>()
 
 interface Participant {
   username: string
+  character_name: string | null  // ← add this
   hp: number
   max_hp: number
   is_alive: boolean
@@ -155,16 +157,7 @@ function waitForAttack(
   client: Client
 ): Promise<void> {
   return new Promise((resolve) => {
-    const timer = setTimeout(async () => {
-      campaignAttackPending.delete(username)
-      await say(client, channel,
-        `⏰ @${username} is absent — auto-attacking!`
-      )
-      resolve()
-    }, 2_000)
-
     campaignAttackPending.set(username, () => {
-      clearTimeout(timer)
       campaignAttackPending.delete(username)
       resolve()
     })
@@ -288,7 +281,22 @@ async function getParticipants(
     .from('campaign_participants')
     .select('*')
     .eq('campaign_id', campaignId)
-  return (data ?? []) as Participant[]
+
+  const participants = (data ?? []) as Participant[]
+
+  // Fetch character names
+  await Promise.all(
+    participants.map(async p => {
+      const { data: char } = await supabase
+        .from('characters')
+        .select('character_name')
+        .eq('twitch_username', p.username)
+        .single()
+      p.character_name = char?.character_name ?? null
+    })
+  )
+
+  return participants
 }
 
 async function updateParticipant(
@@ -355,6 +363,34 @@ async function writeRewards(
       artifact_earned: p.username === artifactWinner ? artifactName : null,
     })
 
+    if (p.username === artifactWinner && artifactName) {
+      const { data: char } = await supabase
+        .from('characters')
+        .select('id')
+        .eq('twitch_username', p.username)
+        .single()
+
+      if (char) {
+        await supabase.from('inventory').insert({
+          character_id: char.id,
+          item_name: artifactName,
+          item_type: 'artifact',
+          rarity: 'legendary',
+          stat_bonus: 0,
+          description: `Artifact earned from campaign ${campaignId}`,
+        })
+      }
+    }
+
+    if (fullClear && p.is_alive && titleEarned) {
+      await supabase
+        .from('player_titles')
+        .upsert(
+          { username: p.username, title: titleEarned, source: 'standard-campaign' },
+          { onConflict: 'username,title', ignoreDuplicates: true }
+        )
+    }
+
     const { data: char } = await supabase
       .from('characters')
       .select('xp, gold')
@@ -366,6 +402,8 @@ async function writeRewards(
         .from('characters')
         .update({ xp: char.xp + xp, gold: char.gold + gold })
         .eq('twitch_username', p.username)
+    } else {
+      console.warn(`[campaign] writeRewards: no character found for ${p.username}`)
     }
 
     if (fullClear && p.is_alive) {
@@ -405,9 +443,10 @@ async function runCombat(
       const targetIdx = enemyHPs.findIndex(hp => hp > 0)
 
       await say(client, channel,
-        `@${player.username} — type !attack to strike the ${enemyList[targetIdx].name}!`
+        `@${player.username} (${getDisplayName(player.username, player)}) — type !attack to strike the ${enemyList[targetIdx].name}!`
       )
 
+      await delay(4000)
       await waitForAttack(channel, player.username, client)
 
       if (!enemyHPs.some(hp => hp > 0)) break
@@ -417,7 +456,7 @@ async function runCombat(
       enemyHPs[targetIdx] = Math.max(0, enemyHPs[targetIdx] - dmg)
 
       await say(client, channel,
-        `🗡️  ${player.username} hits ${enemyList[targetIdx].name} for ${dmg} damage! ` +
+        `🗡️  @${player.username} (${getDisplayName(player.username, player)}) hits ${enemyList[targetIdx].name} for ${dmg} damage! ` +
         `(${enemyHPs[targetIdx]} HP remaining)`
       )
       await delay(1000)
@@ -441,7 +480,7 @@ async function runCombat(
         target.hp = Math.max(0, target.hp - specialDmg)
         await say(client, channel,
           `⚡ ${enemy.name} uses ${enemy.special}! ` +
-          `${target.username} takes ${specialDmg} damage! (${target.hp} HP)`
+          `@${target.username} (${getDisplayName(target.username, target)}) takes ${specialDmg} damage! (${target.hp} HP)`
         )
         specialFired = true
         await delay(1200)
@@ -449,7 +488,7 @@ async function runCombat(
         const dmg = roll(enemy.damage[0], enemy.damage[1])
         target.hp = Math.max(0, target.hp - dmg)
         await say(client, channel,
-          `🩸 ${enemy.name} strikes ${target.username} for ${dmg} damage! ` +
+          `🩸 ${enemy.name} strikes @${target.username} (${getDisplayName(target.username, target)}) for ${dmg} damage! ` +
           `(${target.hp} HP remaining)`
         )
         await delay(1000)
@@ -464,7 +503,7 @@ async function runCombat(
           stage_reached: stageIndex + 1,
         })
         await say(client, channel,
-          `💀 ${target.username} has fallen in battle! They are out of the campaign.`
+          `💀 @${target.username} (${getDisplayName(target.username, target)}) has fallen in battle! They are out of the campaign.`
         )
         await delay(1200)
       }
@@ -499,7 +538,7 @@ async function restShrine(
     p.hp += healed
     await updateParticipant(supabase, campaign.id, p.username, { hp: p.hp })
     await say(client, channel,
-      `💚 ${p.username} recovers ${healed} HP at the shrine. (${p.hp}/${p.max_hp} HP)`
+      `💚 @${p.username} (${getDisplayName(p.username, p)}) recovers ${healed} HP at the shrine. (${p.hp}/${p.max_hp} HP)`
     )
     await delay(800)
   }
@@ -590,7 +629,7 @@ async function runCampaign(
       return
     }
     await say(client, channel,
-      `✅ Stage ${stageNum} cleared! Survivors: ${result.survivors.map(p => p.username).join(', ')}`
+      `✅ Stage ${stageNum} cleared! Survivors: ${result.survivors.map(p => `@${p.username} (${getDisplayName(p.username, p)})`).join(', ')}`
     )
     await delay(2000)
   }
@@ -605,7 +644,7 @@ async function runCampaign(
   await writeRewards(supabase, campaign.id, participants, true, title, artWinner.username, artifact)
   await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel,
-    `🏆 CAMPAIGN COMPLETE! ${survivors.map(p => p.username).join(' & ')} defeated ${campaign.boss_name}!`
+    `🏆 CAMPAIGN COMPLETE! ${survivors.map(p => `@${p.username} (${getDisplayName(p.username, p)})`).join(' & ')} defeated ${campaign.boss_name}!`
   )
   await say(client, channel, `🎖️  Title earned: [${title}] — awarded to all survivors!`)
   await say(client, channel, `🏺 Artifact drop: ${artifact} — claimed by ${artWinner.username}!`)
@@ -632,7 +671,7 @@ export async function handleCampaignCommand(
     return
   }
 
-  const { data: initiatorChar, error: charError } = await supabase
+  const { data: initiatorChar } = await supabase
     .from('characters')
     .select('hp')
     .eq('twitch_username', username.toLowerCase())
@@ -666,31 +705,17 @@ export async function handleCampaignCommand(
       const campaign = await createCampaign(supabase, channel, username, 'solo', boss)
       await addParticipant(supabase, campaign.id, username)
       const participants = await getParticipants(supabase, campaign.id)
-
-      if (mode === 'solo') {
-        const campaign = await createCampaign(supabase, channel, username, 'solo', boss)
-        await addParticipant(supabase, campaign.id, username)
-        const participants = await getParticipants(supabase, campaign.id)
-
-        const { data: charLevel } = await supabase
-          .from('characters')
-          .select('level')
-          .eq('twitch_username', username)
-          .single()
-        const level = charLevel?.level ?? 1
-
-        await say(client, channel,
-          `🗡️  ${username} enters the Shadowdale Gauntlet alone. ` +
-          `Five stages await. The ${boss.boss_name} waits at the end. ` +
-          `⚠️ This campaign is scaled for Level ${level}.`
-        )
-        await delay(2000)
-        await runCampaign(client, supabase, channel, campaign, participants)
-      }
+      const { data: charLevel } = await supabase
+        .from('characters')
+        .select('level')
+        .eq('twitch_username', username)
+        .single()
+      const level = charLevel?.level ?? 1
 
       await say(client, channel,
         `🗡️  ${username} enters the Shadowdale Gauntlet alone. ` +
-        `Five stages await. The ${boss.boss_name} waits at the end.`
+        `Five stages await. The ${boss.boss_name} waits at the end. ` +
+        `⚠️ This campaign is scaled for Level ${level}.`
       )
       await delay(2000)
 

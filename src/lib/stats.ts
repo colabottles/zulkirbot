@@ -23,6 +23,10 @@ const SLOT_COLUMNS: Record<EquipmentSlot, string> = {
   ring1: 'equipped_ring1',
   ring2: 'equipped_ring2',
   trinket: 'equipped_trinket',
+  artifact1: 'equipped_artifact1',
+  artifact2: 'equipped_artifact2',
+  artifact3: 'equipped_artifact3',
+  artifact4: 'equipped_artifact4',
 }
 
 const SLOT_STAT: Record<EquipmentSlot, keyof CharacterStats> = {
@@ -40,6 +44,10 @@ const SLOT_STAT: Record<EquipmentSlot, keyof CharacterStats> = {
   ring1: 'attackBonus',
   ring2: 'damageBonus',
   trinket: 'hpBonus',
+  artifact1: 'hpBonus',
+  artifact2: 'hpBonus',
+  artifact3: 'hpBonus',
+  artifact4: 'hpBonus',
 }
 
 export async function getCharacterStats(char: any): Promise<CharacterStats> {
@@ -96,6 +104,7 @@ export function getSlotForItemType(itemType: string): EquipmentSlot | null {
     feet: 'feet',
     ring: 'ring1',
     trinket: 'trinket',
+    artifact: 'artifact1',
   }
   return map[itemType] ?? null
 }

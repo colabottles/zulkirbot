@@ -24,6 +24,10 @@ export interface Character {
   equipped_ring1: string | null
   equipped_ring2: string | null
   equipped_trinket: string | null
+  equipped_artifact1: string | null
+  equipped_artifact2: string | null
+  equipped_artifact3: string | null
+  equipped_artifact4: string | null
   created_at: string
 }
 
@@ -54,6 +58,7 @@ export type CharacterClass =
   | 'dragon_disciple'
   | 'arcane_trickster'
 
+// EquipmentSlot — add artifact slots
 export type EquipmentSlot =
   | 'weapon'
   | 'shield'
@@ -69,7 +74,12 @@ export type EquipmentSlot =
   | 'ring1'
   | 'ring2'
   | 'trinket'
+  | 'artifact1'
+  | 'artifact2'
+  | 'artifact3'
+  | 'artifact4'
 
+// ItemType — add artifact
 export type ItemType =
   | 'weapon'
   | 'shield'
@@ -86,6 +96,7 @@ export type ItemType =
   | 'trinket'
   | 'potion'
   | 'scroll'
+  | 'artifact'
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary'
 

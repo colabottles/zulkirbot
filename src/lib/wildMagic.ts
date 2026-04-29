@@ -49,7 +49,7 @@ export const WILD_MAGIC_TABLE: WildMagicEffect[] = [
         if (!data) return
         await supabase.from('characters').update({ gold: Math.max(0, data.gold - drain) }).eq('twitch_username', username)
       })
-      client.say(channel, `🎲 WILD SURGE! ${drain}g vanishes from @${username}'s pouch. Where did it go? Nowhere good.`)
+      client.say(channel, `🎲 WILD SURGE! ${drain}gp vanishes from @${username}'s pouch. Where did it go? Nowhere good.`)
     }
   },
   {
@@ -160,7 +160,7 @@ export const WILD_MAGIC_TABLE: WildMagicEffect[] = [
         if (!data) return
         await supabase.from('characters').update({ gold: data.gold + goldBonus }).eq('twitch_username', username)
       })
-      client.say(channel, `🎲 WILD SURGE! @${username} teleports randomly — and lands on a pile of ${goldBonus}g! Lucky direction.`)
+      client.say(channel, `🎲 WILD SURGE! @${username} teleports randomly — and lands on a pile of ${goldBonus}gp! Lucky direction.`)
     }
   },
   {
@@ -324,7 +324,7 @@ export const WILD_MAGIC_TABLE: WildMagicEffect[] = [
         if (!data) return
         await supabase.from('characters').update({ gold: data.gold + gold }).eq('twitch_username', username)
       })
-      client.say(channel, `🎲 WILD SURGE! @${username} senses all nearby treasure! ${gold}g materializes from the walls.`)
+      client.say(channel, `🎲 WILD SURGE! @${username} senses all nearby treasure! ${gold}gp materializes from the walls.`)
     }
   },
   {

@@ -352,7 +352,7 @@ export const scryCommand: BotCommand = {
     client.say(channel,
       `🔮 The crystal ball clouds, then clears. ` +
       `${char.display_name} — Level ${char.level} ${char.class}. ` +
-      `HP: ${char.hp}/${char.max_hp}. Gold: ${char.gold}g. ` +
+      `HP: ${char.hp}/${char.max_hp}. Gold: ${char.gold}gp. ` +
       `Kills: ${char.kill_count ?? 0}. ` +
       `The ball goes dark. It has seen enough.`
     )
@@ -757,7 +757,7 @@ export const beholderCommand: BotCommand = {
           await supabase.from('characters').update({ gold: char.gold - goldDrain }).eq('twitch_username', target)
           client.say(channel,
             `👁️ A BEHOLDER APPEARS! Telekinesis ray hits @${target}'s coin purse! ` +
-            `${goldDrain}g flies across the room and into the beholder's... it doesn't have hands. ` +
+            `${goldDrain}gp flies across the room and into the beholder's... it doesn't have hands. ` +
             `The gold is just gone.`
           )
         } else {
@@ -949,7 +949,7 @@ const DECK_OF_MANY_THINGS: DeckCard[] = [
       if (!char) return
       const lost = char.gold
       await supabase.from('characters').update({ gold: 0 }).eq('twitch_username', target)
-      client.say(channel, `🃏 THE RUIN — @${target}'s wealth crumbles to nothing. ${lost}g gone. All of it. The Ruin is thorough.`)
+      client.say(channel, `🃏 THE RUIN — @${target}'s wealth crumbles to nothing. ${lost}gp gone. All of it. The Ruin is thorough.`)
     }
   },
   {
@@ -986,7 +986,7 @@ const DECK_OF_MANY_THINGS: DeckCard[] = [
         if (char && char.gold > 0) {
           const drain = Math.floor(char.gold * 0.30)
           await supabase.from('characters').update({ gold: char.gold - drain }).eq('twitch_username', target)
-          client.say(channel, `🃏 THE ROGUE — @${target}'s ally turns on them. No one to duel. ${drain}g stolen in the betrayal instead.`)
+          client.say(channel, `🃏 THE ROGUE — @${target}'s ally turns on them. No one to duel. ${drain}gp stolen in the betrayal instead.`)
         }
         return
       }
@@ -1062,7 +1062,7 @@ const DECK_OF_MANY_THINGS: DeckCard[] = [
       await supabase.from('characters').update({ hp: newHp, gold: newGold }).eq('twitch_username', target)
       client.say(channel,
         `🃏 THE FLAMES — @${target} has made an enemy in the Nine Hells. ` +
-        `A devil's mark burns into them. -${hpDrain} HP, -${goldDrain}g. ` +
+        `A devil's mark burns into them. -${hpDrain} HP, -${goldDrain}gp. ` +
         `It will collect again.`
       )
     }

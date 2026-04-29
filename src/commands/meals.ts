@@ -5,7 +5,7 @@ export const mealsCommand: BotCommand = {
   name: 'meals',
   cooldownSeconds: 10,
   handler: async (channel, username, _args, client) => {
-    const meals = TAVERN_MEALS.map(m => `${m.name} (${m.price}g)`).join(' | ')
+    const meals = TAVERN_MEALS.map(m => `${m.name} (${m.price}gp)`).join(' | ')
     client.say(channel, `🍖 Meals: ${meals} — Use !tavern meal [name] to order!`)
   }
 }

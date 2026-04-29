@@ -63,6 +63,22 @@ export const equipCommand: BotCommand = {
       }
     }
 
+    // Handle artifacts — find open artifact slot
+    if (item.item_type === 'artifact') {
+      if (!char.equipped_artifact1) {
+        slot = 'artifact1'
+      } else if (!char.equipped_artifact2) {
+        slot = 'artifact2'
+      } else if (!char.equipped_artifact3) {
+        slot = 'artifact3'
+      } else if (!char.equipped_artifact4) {
+        slot = 'artifact4'
+      } else {
+        client.say(channel, `@${username} — all 4 artifact slots are full. Unequip one first.`)
+        return
+      }
+    }
+
     const slotColumn = getSlotColumn(slot)
 
     // Unequip current item in slot if any
@@ -100,6 +116,10 @@ export const equipCommand: BotCommand = {
       ring1: 'attack',
       ring2: 'damage',
       trinket: 'HP',
+      artifact1: 'HP',
+      artifact2: 'HP',
+      artifact3: 'HP',
+      artifact4: 'HP',
     }
 
     const statLabel = statLabels[slot] ?? 'stat'
