@@ -154,10 +154,17 @@ const pickRandom = <T>(arr: T[]): T =>
 function waitForAttack(
   channel: string,
   username: string,
-  client: Client
+  client: Client,
+  timeoutMs = 8_000   // ← total window including the delay(4000) before this call
 ): Promise<void> {
   return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      campaignAttackPending.delete(username)
+      resolve()
+    }, timeoutMs)
+
     campaignAttackPending.set(username, () => {
+      clearTimeout(timer)
       campaignAttackPending.delete(username)
       resolve()
     })
@@ -446,8 +453,8 @@ async function runCombat(
         `@${player.username} (${getDisplayName(player.username, player)}) — type !attack to strike the ${enemyList[targetIdx].name}!`
       )
 
-      await delay(4000)
-      await waitForAttack(channel, player.username, client)
+      // Remove the delay(4000) here — the waitForAttack timeout handles it
+      await waitForAttack(channel, player.username, client, 8_000)
 
       if (!enemyHPs.some(hp => hp > 0)) break
 
