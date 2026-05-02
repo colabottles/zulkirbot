@@ -163,6 +163,65 @@ export const THAY_SPAWN_POOL: ElementalSpawn[] = [
 ]
 
 // ------------------------------------------------------------
+// Campaign flavor pool
+// ------------------------------------------------------------
+
+const CAMPAIGN_FLAVOR: string[] = [
+  "🎲 The dice gods are watching. They're eating popcorn.",
+  "⚔️ Glory awaits! Or at least a decent consolation prize.",
+  "🐉 Somewhere, a dragon is laughing. Ignore it.",
+  "📜 The bards will sing of this. Probably off-key.",
+  "🍺 You should've had one more drink at the tavern.",
+  "🎭 The dungeon master smiles. That's never a good sign.",
+  "🦴 The skeletons ahead are just misunderstood. They're not.",
+  "🗡️ Fortune favors the bold. Stupidity favors the dead.",
+  "🌑 It's dark ahead. Your torch is already dying. Classic.",
+  "🧙 A nearby wizard mutters something unhelpful and wanders off.",
+  "💀 The last adventurers who came here left... eventually.",
+  "🐀 Something scurries in the dark. You choose not to investigate.",
+  "🎯 Your aim is true! Probably. We'll see.",
+  "🏰 The dungeon didn't build itself. Actually it did. That's bad.",
+  "⚗️ Whatever that smell is, don't touch it.",
+  "🛡️ Your shield is polished. Your courage is... present.",
+  "🔮 The oracle predicted this. She's currently unavailable for comment.",
+  "🎪 Welcome to the show. You're both the audience and the entertainment.",
+  "🦇 Bats. Why is it always bats.",
+  "🕯️ The candle flickers. Dramatically. On cue.",
+  "💎 Riches beyond imagination await! Imagination may vary.",
+  "🐛 Something that size shouldn't move that fast. And yet.",
+  "🧝 An elf would've scouted ahead. You are not an elf.",
+  "🔑 The door is locked. Of course it is.",
+  "🗺️ The map says there's treasure here. The map lied before.",
+  "🌿 The dungeon smells like old socks and ambition.",
+  "⚡ A trap clicks somewhere nearby. Probably fine.",
+  "🎵 You hum a battle hymn. It doesn't help. You keep humming.",
+  "🏹 An arrow grazes your ear. A warning shot. How polite.",
+  "🐻 Something growls in the passage. It sounds hungry.",
+  "🧪 Do NOT drink anything you find in here. I mean it.",
+  "💫 Stars swim before your eyes. That's adrenaline. Definitely adrenaline.",
+  "🦊 A fox watches from the shadows, judging your life choices.",
+  "🌊 The floor is wet. You didn't ask why. Smart.",
+  "🎲 Nat 20 energy only from here on. Manifesting it.",
+  "🪤 The floor is suspiciously clean in that one spot.",
+  "🦂 Desert campaigns have scorpions. Dungeon campaigns have worse.",
+  "🧱 The walls are closer than they were a minute ago. Or are they.",
+  "🐍 Snakes. Somebody always brings snakes.",
+  "🌙 The moon is full tonight. That's relevant somehow.",
+  "🔥 Somewhere ahead, something is on fire. Par for the course.",
+  "🪙 Gold is heavy. You'll happily find out how heavy.",
+  "👁️ You get the distinct feeling you're being watched. You are.",
+  "🦌 A deer passes through. Completely unafraid. Concerning.",
+  "🧟 The dead don't stay dead here. Keep moving.",
+  "🎠 This seemed more fun when you planned it at the tavern.",
+  "🪬 Your lucky charm is doing its best. Bless it.",
+  "🏺 An ancient urn sits on a pedestal. Don't touch it. You'll touch it.",
+  "🌫️ Fog rolls in. Visibility drops. Morale follows shortly after.",
+  "🎖️ Heroes are just survivors with better publicists.",
+]
+
+const pickFlavor = () => pickRandom(CAMPAIGN_FLAVOR)
+
+// ------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------
 
@@ -2092,6 +2151,7 @@ async function runNamedCampaign(
     }
 
     await supabase.from('campaigns').update({ stage: stage.stage }).eq('id', campaignId)
+    await say(client, channel, pickFlavor())
 
     // Convergence spawn
     let convergenceSpawned = false
@@ -2161,6 +2221,7 @@ async function runNamedCampaign(
     }
 
     if (result.survivors.length === 0) {
+      await say(client, channel, pickFlavor())
       await say(client, channel, `All adventurers have fallen in ${campaignData.name}. The daily cooldown is spent.`)
       await supabase.from('campaigns').update({ status: 'failed', completed_at: new Date().toISOString() }).eq('id', campaignId)
       return
@@ -2321,6 +2382,7 @@ async function runNamedCampaign(
   await supabase.from('campaigns').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', campaignId)
 
   await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+  await say(client, channel, pickFlavor())
   await say(client, channel, `${campaignData.name} COMPLETE! ${survivors.map(p => `@${p.username} (${getDisplayName(p.username, p)})`).join(' & ')} emerge victorious.`)
   if (titleEarned) await say(client, channel, `Title earned: [${titleEarned}] — awarded to qualifying survivors!`)
   if (artifactName && artWinner) await say(client, channel, `Artifact: ${artifactName} — claimed by @${artWinner.username} (${getDisplayName(artWinner.username, artWinner)})!`)
@@ -2465,6 +2527,7 @@ export async function handleNamedCampaignCommand(
         `${username} enters ${campaignData.setting} alone. ` +
         `${bossName} waits at the end. ⚠️ Scaled for Level ${level}.`
       )
+      await say(client, channel, pickFlavor())
 
     } else {
       const joiners = new Set<string>([username])
@@ -2515,6 +2578,7 @@ export async function handleNamedCampaignCommand(
         `The party is set: ${[...joiners].join(', ')}. Entering ${campaignData.setting}. ` +
         `${bossName} awaits. ⚠️ Scaled for ${levelRange}.`
       )
+      await say(client, channel, pickFlavor())
     }
 
     await delay(2000)

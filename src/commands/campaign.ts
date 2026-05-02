@@ -444,7 +444,7 @@ async function runCombat(
     await say(client, channel, `⚔️  — Round ${round} —`)
     await delay(1000)
 
-    for (const player of alive.filter(p => p.is_alive)) {
+    for (const player of [...alive.filter(p => p.is_alive)].sort(() => Math.random() - 0.5)) {
       if (!enemyHPs.some(hp => hp > 0)) break
 
       const targetIdx = enemyHPs.findIndex(hp => hp > 0)
@@ -674,6 +674,22 @@ export async function handleCampaignCommand(
   if (existing) {
     await say(client, channel,
       `@${username} You've already run a campaign today. Come back tomorrow!`
+    )
+    return
+  }
+
+  // Block solo if player is in an active party campaign
+  const { data: activeParty } = await supabase
+    .from('campaign_participants')
+    .select('campaign_id, campaigns!inner(status, mode)')
+    .eq('username', username)
+    .eq('campaigns.mode', 'party')
+    .in('campaigns.status', ['joining', 'active'])
+    .maybeSingle()
+
+  if (activeParty) {
+    await say(client, channel,
+      `@${username} You're already part of an active party campaign! Finish that one first.`
     )
     return
   }
