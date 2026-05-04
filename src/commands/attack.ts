@@ -15,7 +15,7 @@ export const attackCommand: BotCommand = {
     }
 
     if (!activeFights.has(username)) {
-      client.say(channel, `@${username} — you're not in a fight! Use !fight to find a monster.`)
+      client.say(channel, `@${username} — you're not in a fight! Use !battle to find a monster.`)
       return
     }
 
