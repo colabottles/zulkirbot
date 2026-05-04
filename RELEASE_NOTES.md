@@ -2,6 +2,12 @@
 
 ---
 
+## v2.0.1 — May 4, 2026
+
+### Changed
+
+- **Combat initiation** — `!battle` is now the sole command to start a combat encounter. `!fight` has been removed as a player-facing command to eliminate confusion between initiating combat and attacking during combat. The flow is now unambiguous: `!battle` to start, `!attack` to fight.
+
 ## v2.0.0 — May 4, 2026
 
 ### New Features
@@ -88,7 +94,7 @@
 - Fixed duplicate hidden door block in `!explore` — unreachable dead code removed.
 - Fixed player attack order in campaigns — now randomized each round instead of following join order.
 
-### Changed
+### Changed v2.0.0
 
 - `!status stats` added as a subcommand — note that `stats` was previously an alias for `!status` and remains so; the subcommand check fires first when `stats` is the first argument.
 - Player shop listings filtered from `!shop` — `!shop` now shows only bot-rotated stock. Player listings are shown via `!listings`.
