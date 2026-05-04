@@ -13,6 +13,7 @@ const STEVE_FRENCH_APPEARANCES = [
   `🦁 "He's not dangerous, he's just big-boned and misunderstood." Steve French proves this by sitting on a goblin. The goblin is fine. Mostly.`,
   `🦁 @neutralagent said he'd never leave Steve French behind and he meant it. Steve French pads in, surveys the dungeon, and claims it as his territory.`,
   `🦁 "Steve French is way more than just a mountain lion. He's my best friend." Steve French enters. The dungeon feels safer. And more dangerous. Simultaneously.`,
+  `🦁 Steve French appears. big stoned horny kitty with the munchies.`,
 ]
 
 const STEVE_FRENCH_ACTIONS = [
