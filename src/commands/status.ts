@@ -3,14 +3,33 @@ import { supabase } from '../lib/supabase'
 import { formatClass } from '../lib/format'
 import { formatPrestige } from './prestige'
 import { getDisplayName } from '../lib/displayName'
+import { getCharacterStats } from '../lib/stats'
 
 export const statusCommand: BotCommand = {
   name: 'status',
   aliases: ['char', 'character', 'stats'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
-    const target = (args[0]?.replace('@', '') ?? username).toLowerCase()
+    // !status stats — show combat bonuses
+    if (args[0]?.toLowerCase() === 'stats') {
+      const { data: char } = await supabase
+        .from('characters')
+        .select('*')
+        .eq('twitch_username', username)
+        .single()
 
+      if (!char) {
+        return
+      }
+
+      const stats = await getCharacterStats(char)
+      client.say(channel,
+        `📊 @${username} — ATK Bonus: +${stats.attackBonus} | DEF Bonus: +${stats.defenseBonus} | DMG Bonus: +${stats.damageBonus} | HP Bonus: +${stats.hpBonus}`
+      )
+      return
+    }
+
+    const target = (args[0]?.replace('@', '') ?? username).toLowerCase()
     const { data: char } = await supabase
       .from('characters')
       .select('*')

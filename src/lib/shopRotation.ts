@@ -4,12 +4,25 @@ import { ItemRarity, Item } from '../types'
 
 const SHOP_SIZE = 10
 const ALLOWED_RARITIES: ItemRarity[] = ['common', 'uncommon']
-
 const PRICE_MAP: Record<ItemRarity, number> = {
   common: 20,
   uncommon: 60,
-  rare: 0,   // not sold
-  legendary: 0,   // not sold
+  rare: 0,
+  legendary: 0,
+}
+
+let nextRotationAt: number | null = null
+let alertTimeout: ReturnType<typeof setTimeout> | null = null
+let shopClient: import('tmi.js').Client | null = null
+let shopChannel: string | null = null
+
+export function setShopClient(client: import('tmi.js').Client, channel: string): void {
+  shopClient = client
+  shopChannel = channel
+}
+
+export function getNextRotationAt(): number | null {
+  return nextRotationAt
 }
 
 export async function rotateShop(): Promise<void> {
@@ -27,7 +40,6 @@ export async function rotateShop(): Promise<void> {
   for (const item of shuffled) {
     const basePrice = PRICE_MAP[item.rarity as ItemRarity]
     const price = basePrice + Math.floor(Math.random() * 10) * 5
-
     await supabase.from('shop').insert({
       item_name: item.name,
       item_type: item.type,
@@ -38,6 +50,16 @@ export async function rotateShop(): Promise<void> {
       price,
     })
   }
+
+  // Track next rotation and schedule 3-minute warning
+  nextRotationAt = Date.now() + 60 * 60 * 1000
+
+  if (alertTimeout) clearTimeout(alertTimeout)
+  alertTimeout = setTimeout(() => {
+    if (shopClient && shopChannel) {
+      shopClient.say(shopChannel, `🛒 The shop refreshes in 3 minutes! Browse with !shop before the stock changes.`)
+    }
+  }, 57 * 60 * 1000)
 
   console.log(`[Shop] Rotated at ${new Date().toISOString()}`)
 }

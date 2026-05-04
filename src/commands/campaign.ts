@@ -600,7 +600,6 @@ async function runCampaign(
         await delay(1500)
       }
     }
-    await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
     await say(client, channel, `📜 Stage ${stageNum}/5 begins!`)
     await delay(1500)
     await updateCampaign(supabase, campaign.id, { stage: stageNum })
@@ -649,7 +648,6 @@ async function runCampaign(
     completed_at: new Date().toISOString(),
   })
   await writeRewards(supabase, campaign.id, participants, true, title, artWinner.username, artifact)
-  await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel,
     `🏆 CAMPAIGN COMPLETE! ${survivors.map(p => `@${p.username} (${getDisplayName(p.username, p)})`).join(' & ')} defeated ${campaign.boss_name}!`
   )

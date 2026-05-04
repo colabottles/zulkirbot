@@ -2,9 +2,139 @@
 
 ---
 
-## v1.9.0 — April 28, 2026
+## v2.0.0 — May 4, 2026
+
+### New Features
+
+#### Player Marketplace
+
+- **`!listsaleitem [item name] [price]`** — List an item for sale to other players. 10gp listing fee. Max 5 active listings per player. Listings expire after 24 hours and are automatically returned to inventory.
+- **`!pbuy [username] [item name]`** — Purchase an item from another player's listing. Gold transfers immediately; seller receives payment on purchase.
+- **`!removelisting [item name]`** — Remove your own listing and return the item to your inventory.
+- **`!listings`** — View all active player listings with item name, rarity, price, and seller.
+- Price caps enforced: items bought from the shop cannot be listed above purchase price. Items found or dropped cannot be listed above 80% of base rarity value (common 8gp, uncommon 24gp, rare 48gp, legendary 120gp).
+
+#### Auction House
+
+- **`!listauction [item name] [starting bid]`** — List an item for auction. One auction active at a time. Free to list. Item is removed from inventory immediately.
+- **`!bid [amount]`** — Place a bid on the active auction. Must exceed current bid by at least 1gp. Gold is deducted immediately. Outbid players are refunded instantly.
+- **`!auctions`** — View the current auction, item details, and high bid.
+- **`!endauction`** — Broadcaster only. Closes the auction, awards item to winner, pays seller. If no bids, item is returned to seller.
+
+#### Subscriber Giveaway Bonus
+
+- Subscribers now receive 2 entries when typing `!ddo` during a giveaway. Non-subscribers receive 1. Subscribers are notified of their bonus entry in chat.
+
+#### ZulkirJax — Wandering Menace
+
+- Zulkir Jax now appears randomly during regular play (1% chance per command). He does not appear during campaigns.
+- On appearance he taunts the triggering player, applies a random debuff (HP drain, max HP reduction, or flavor mark), and waits.
+- Players can type `!attack` to drive him off. He dodges, stares awkwardly, and leaves.
+- If no one attacks within 2 minutes he leaves on his own with a parting line.
+- Debuffs: `jax_cold` (-8 HP), `jax_doubt` (-10 max HP until next rest), `jax_unease`, `jax_paranoia`, `jax_marked` (flavor only).
+
+#### !stevefrench
+
+- NeutralAgent-only command. Summons Steve French, a mountain lion companion.
+- Steve French appears with flavor text drawn from Bubbles' quotes from Trailer Park Boys.
+- If NeutralAgent is in a fight, Steve French attacks the monster for 20–35 damage.
+- NeutralAgent recovers 15 HP from the comfort of having a mountain lion nearby.
+- 30 second cooldown.
+- Any other player attempting `!stevefrench` is told Steve French does not come when called by strangers.
+
+#### Rogue Skill Flow Overhaul
+
+- Rogue skill commands now require sequential steps — players can no longer skip directly to `!disabletrap` or `!opendoor`.
+- Trap events (`trapped_chest`, `trapped_corridor`) now auto-sense on `!explore` and require `!findtraps` before `!disabletrap` can be used.
+- Hidden door events now require `!searchdoor` to find the door before `!opendoor` can be used.
+- New command: **`!opendoor`** — opens a hidden door after `!searchdoor` succeeds. Awards gold and loot.
+- `PendingRogueEvent` now tracks `sensed` and `found` state flags.
+
+#### New Commands
+
+- **`!whois [username]`** — Look up another player's class and level.
+- **`!addentry [username]`** — Broadcaster only. Manually add a viewer to the active giveaway.
+- **`!status stats`** — View your combat bonuses: attack, defense, damage, and HP bonuses derived from equipped gear and class.
+- **`!battle`** — Alias for `!fight`. Starts a combat encounter.
+- **`!unequip all`** — Unequip all non-cursed items at once.
+
+#### Spam Reduction
+
+- Unknown commands now respond with a random sarcastic roast instead of silence (30 responses, personalized with username and command attempted).
+- Cooldown hits now silently drop instead of announcing wait time in chat.
+- Players without a character are now silently blocked at the router level instead of each command announcing it individually.
+- Hireling attack and absorb messages collapsed into the main `!attack` response line.
+- Victory hireling special message collapsed into the victory line.
+- All `━━━` divider lines removed from campaign output.
+- `!explore` messages condensed throughout — all outcomes shortened, empty results reduced to 3 short lines.
+
+#### Reminders & Warnings
+
+- First-command mute warning: the first time a player uses any command per stream session they are warned that Twitch will mute them for sending too many commands too fast.
+- Follow/whisper reminder fires every 30 minutes with a random message from a pool of 5, reminding viewers to follow ZulkirBot and send it a whisper to receive prize codes.
+
+#### Shop Warning
+
+- A 3-minute warning now fires in chat before the shop rotates, telling players to browse before stock changes.
+
+#### Campaign Flavor Text
+
+- 50-entry flavor text pool added to `named_campaign.ts`. Random flavor line fires after `!solo` or party set, before each stage, on campaign fail, and on campaign complete.
 
 ### Bug Fixes
+
+- Fixed `!campaign` auto-attack not firing after the player prompt window — `waitForAttack` now has a built-in timeout so combat resumes automatically if the player doesn't type `!attack`.
+- Fixed `!disabletrap` rewarding players who had not first used `!findtraps`.
+- Fixed duplicate hidden door block in `!explore` — unreachable dead code removed.
+- Fixed player attack order in campaigns — now randomized each round instead of following join order.
+
+### Changed
+
+- `!status stats` added as a subcommand — note that `stats` was previously an alias for `!status` and remains so; the subcommand check fires first when `stats` is the first argument.
+- Player shop listings filtered from `!shop` — `!shop` now shows only bot-rotated stock. Player listings are shown via `!listings`.
+- `!commands` removed from Moobot/Wizebot — was generating unnecessary chat noise.
+- Shop rotation announcement suppressed — the hourly rotation no longer announces in chat; only the 3-minute warning fires.
+
+### Database
+
+- New table: `auctions` — id, listed_by, item_name, item_type, rarity, stat_bonus, description, is_cursed, purchase_price, starting_bid, current_bid, current_bidder, is_active, created_at.
+- New columns on `shop`: `owner`, `listed_by`, `listed_at`, `expires_at`, `is_player_listing`.
+- New column on `inventory`: `purchase_price`.
+- New SQL function: `return_expired_listings()` — called every 15 minutes to return expired player shop listings to seller inventory.
+
+### Files
+
+- `src/lib/zulkirjax.ts` — ZulkirJax wandering menace system
+- `src/lib/campaignState.ts` — campaign active flag for ZulkirJax blocking
+- `src/lib/twitch.ts` — Twitch API subscriber check
+- `src/lib/shopRotation.ts` — 3-minute warning added, `setShopClient` added
+- `src/commands/stevefrench.ts` — Steve French command
+- `src/commands/whois.ts` — whois command
+- `src/commands/addentry.ts` — manual giveaway entry command
+- `src/commands/listsaleitem.ts` — player shop listing command
+- `src/commands/pbuy.ts` — player shop purchase command
+- `src/commands/removelisting.ts` — player shop removal command
+- `src/commands/listings.ts` — player shop view command
+- `src/commands/listauction.ts` — auction listing command
+- `src/commands/bid.ts` — auction bid command
+- `src/commands/endauction.ts` — auction close command
+- `src/commands/auctions.ts` — auction view command
+- `src/commands/rogue_commands.ts` — sequential skill gating, `opendoorCommand` added
+- `src/commands/explore.ts` — condensed messages, duplicate block removed, auto-sense added
+- `src/commands/status.ts` — `!status stats` subcommand added
+- `src/commands/unequip.ts` — `!unequip all` added
+- `src/commands/sell.ts` — `purchase_price` recorded on shop purchases
+- `src/commands/shop.ts` — player listings filtered from display, `purchase_price` recorded
+- `src/commands/ddo.ts` — subscriber double entry added
+- `src/commands/inventory.ts` — item stacking with count display
+- `src/game/engine.ts` — hireling messages collapsed, victory message collapsed
+- `src/router.ts` — character gate, cooldown silencing, ZulkirJax trigger, mute warning, unknown command roasts, campaign state check
+- `src/bot.ts` — follow/whisper reminders, shop client wiring, expired listing cleanup interval
+- `src/commands/index.ts` — all new commands registered
+
+## v1.9.0 — April 28, 2026
+
+### Bug Fixes v1.9.0
 
 - Fixed `!campaign` failing for all players — is_dead column referenced in character lookup did not exist; death is handled by row deletion
 - Fixed campaign daily cooldown incorrectly blocking all players channel-wide; cooldown is now per-user
@@ -15,7 +145,7 @@
 - Fixed XP and gold from named campaigns not applying to characters
 - Fixed is_dead references in `named_campaign.ts` join handler
 
-## New Features
+## New Features v1.9.0
 
 ### Character Names
 
@@ -381,7 +511,7 @@
   active on any living participant. Only one spawn per stage even with multiple marked
   players.
 
-### Changed
+### Changed v1.4.4
 
 - **`mystara_campaign.ts` renamed to `named_campaigns.ts`** — The file now serves as
   the single handler for all named campaigns. All future campaigns are seeded via

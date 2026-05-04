@@ -58,9 +58,10 @@ export function isGamePaused(): boolean {
   return state.gamePaused
 }
 
-export function addEntry(username: string): boolean {
+export function addEntry(username: string, double: boolean = false): boolean {
   if (state.entries.includes(username)) return false
   state.entries.push(username)
+  if (double) state.entries.push(username)
   return true
 }
 

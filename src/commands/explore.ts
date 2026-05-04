@@ -5,7 +5,7 @@ import { d100, d6 } from '../game/dice'
 import { rollLoot } from '../game/loot'
 import { getTrapForLevel, rollTrapDamage, DISARM_CLASSES, DISARM_CHANCE } from '../game/traps'
 import { trimGraveyard } from '../lib/graveyard'
-import { setPendingEvent } from './rogue_commands'
+import { setPendingEvent, pendingRogueEvents } from './rogue_commands'
 
 export const exploreCommand: BotCommand = {
   name: 'explore',
@@ -13,7 +13,7 @@ export const exploreCommand: BotCommand = {
   cooldownSeconds: 3,
   handler: async (channel, username, _args, client) => {
     if (activeFights.has(username)) {
-      client.say(channel, `@${username} — you're in a fight! Finish it first before exploring.`)
+      client.say(channel, `@${username} — finish your fight first.`)
       return
     }
 
@@ -23,10 +23,7 @@ export const exploreCommand: BotCommand = {
       .eq('twitch_username', username)
       .single()
 
-    if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
-      return
-    }
+    if (!char) return
 
     const roll = d100()
 
@@ -34,18 +31,12 @@ export const exploreCommand: BotCommand = {
     if (roll <= 10) {
       const trap = getTrapForLevel(char.level)
       const canDisarm = DISARM_CLASSES.includes(char.class)
-      const disarmRoll = d100()
 
-      // Disarm attempt for eligible classes
-      if (canDisarm && disarmRoll <= DISARM_CHANCE) {
-        client.say(
-          channel,
-          `🔧 @${username} spots and disarms a ${trap.name} before it can trigger. Handy skills!`
-        )
+      if (canDisarm && d100() <= DISARM_CHANCE) {
+        client.say(channel, `🔧 @${username} disarms a ${trap.name} before it triggers.`)
         return
       }
 
-      // Instant kill traps
       if (trap.type === 'instant_kill') {
         await supabase.from('graveyard').insert({
           twitch_username: char.twitch_username,
@@ -55,18 +46,12 @@ export const exploreCommand: BotCommand = {
           xp: char.xp,
           killed_by: trap.name,
         })
-
         await trimGraveyard()
         await supabase.from('characters').delete().eq('twitch_username', username)
-
-        client.say(
-          channel,
-          `💀 @${username} ${trap.deathMessage}! They are dead. Use !join to start over.`
-        )
+        client.say(channel, `💀 @${username} ${trap.deathMessage}! Use !join to start over.`)
         return
       }
 
-      // Regular trap damage
       const damage = rollTrapDamage(trap)
       const { data: freshChar } = await supabase
         .from('characters')
@@ -84,28 +69,18 @@ export const exploreCommand: BotCommand = {
           xp: char.xp,
           killed_by: trap.name,
         })
-
         await trimGraveyard()
         await supabase.from('characters').delete().eq('twitch_username', username)
-
-        client.say(
-          channel,
-          `💀 @${username} — ${trap.description} for ${damage} damage! ` +
-          `They have been slain by a ${trap.name}. Use !join to start over.`
-        )
+        client.say(channel, `💀 @${username} — ${trap.description} for ${damage} damage! Slain by a ${trap.name}. Use !join to start over.`)
         return
       }
 
       await supabase.from('characters').update({ hp: newHp }).eq('twitch_username', username)
-
-      client.say(
-        channel,
-        `🪤 @${username} — ${trap.description} for ${damage} damage! (HP: ${newHp}/${char.max_hp})`
-      )
+      client.say(channel, `🪤 @${username} — ${trap.description} for ${damage} damage! (HP: ${newHp}/${char.max_hp})`)
       return
     }
 
-    // 2% chance: treasure chest (rolls 11-12)
+    // 2% chance: treasure chest
     if (roll <= 12) {
       const item = rollLoot()
       const gold = d6() * 5
@@ -117,79 +92,57 @@ export const exploreCommand: BotCommand = {
         stat_bonus: item.stat_bonus,
         description: item.description,
       })
-      await supabase.from('characters').update({
-        gold: char.gold + gold,
-      }).eq('twitch_username', username)
-
-      client.say(
-        channel,
-        `🎁 @${username} discovers a hidden chest! Found a ${item.rarity.toUpperCase()} ${item.name} and ${gold}gp!`
-      )
+      await supabase.from('characters').update({ gold: char.gold + gold }).eq('twitch_username', username)
+      client.say(channel, `🎁 @${username} finds a hidden chest! ${item.rarity.toUpperCase()} ${item.name} and ${gold}gp!`)
       return
     }
 
-    // 18% chance: find some gold (rolls 13-30)
+    // 18% chance: gold
     if (roll <= 30) {
       const gold = d6() * 2
-      await supabase.from('characters').update({
-        gold: char.gold + gold,
-      }).eq('twitch_username', username)
-
-      client.say(channel, `💰 @${username} finds ${gold}gp tucked away in a crevice.`)
+      await supabase.from('characters').update({ gold: char.gold + gold }).eq('twitch_username', username)
+      client.say(channel, `💰 @${username} finds ${gold}gp.`)
       return
     }
 
-    // 3% chance: shrine (rolls 31-33)
+    // 3% chance: shrine
     if (roll <= 33) {
-      client.say(
-        channel,
-        `🛕 @${username} discovers an ancient shrine in the darkness! ` +
-        `Type !shrine to pray for the removal of a cursed item.`
-      )
+      client.say(channel, `🛕 @${username} finds an ancient shrine! Use !shrine to pray.`)
       return
     }
 
-    // 3% chance: locked chest (rolls 34-36)
+    // 3% chance: locked chest
     if (roll <= 36) {
       setPendingEvent(username, 'locked_chest')
-      client.say(channel,
-        `🔒 @${username} finds a sturdy locked chest half-buried in the rubble. ` +
-        `Use !picklock to attempt to open it. You have 3 minutes.`
-      )
+      client.say(channel, `🔒 @${username} finds a locked chest. Use !picklock to open it. (3 min)`)
       return
     }
 
-    // 2% chance: trapped chest (rolls 37-38)
+    // 2% chance: trapped chest
     if (roll <= 38) {
       setPendingEvent(username, 'trapped_chest')
-      client.say(channel,
-        `⚠️ @${username} spots a chest — and something glints unnaturally around its latch. ` +
-        `Use !findtraps to investigate or !disabletrap to attempt disarming it. You have 3 minutes.`
-      )
+      pendingRogueEvents.get(username)!.sensed = true
+      client.say(channel, `⚠️ @${username} spots a chest that feels off. Use !findtraps to investigate. (3 min)`)
       return
     }
 
-    // 2% chance: hidden door (rolls 39-40)
+    // 2% chance: hidden door
     if (roll <= 40) {
       setPendingEvent(username, 'hidden_door')
-      client.say(channel,
-        `🧱 @${username} — something about this section of wall looks wrong. ` +
-        `The stonework is slightly different. Use !searchdoor to investigate. You have 3 minutes.`
-      )
+      pendingRogueEvents.get(username)!.sensed = true
+      client.say(channel, `🧱 @${username} — this section of wall looks wrong. Use !searchdoor to investigate. (3 min)`)
       return
     }
 
-    // 2% chance: trapped corridor (rolls 41-42)
+    // 2% chance: trapped corridor
     if (roll <= 42) {
       setPendingEvent(username, 'trapped_corridor')
-      client.say(channel,
-        `🕸️ @${username} — the corridor ahead feels wrong. Something catches the torchlight at ankle height. ` +
-        `Use !findtraps to check or !disabletrap to deal with it. You have 3 minutes.`
-      )
+      pendingRogueEvents.get(username)!.sensed = true
+      client.say(channel, `🕸️ @${username} — the corridor ahead feels wrong. Use !findtraps to check it. (3 min)`)
       return
     }
 
-    // 14% chance: find a common item (rolls 43-56)
+    // 14% chance: common item
     if (roll <= 56) {
       const { rollLootByRarity } = await import('../game/loot')
       const item = rollLootByRarity('common')
@@ -201,14 +154,11 @@ export const exploreCommand: BotCommand = {
         stat_bonus: item.stat_bonus,
         description: item.description,
       })
-      client.say(
-        channel,
-        `🎒 @${username} finds a ${item.name} left behind by a previous adventurer!`
-      )
+      client.say(channel, `🎒 @${username} finds a ${item.name}!`)
       return
     }
 
-    // 10% chance: find a potion (rolls 56-66)
+    // 10% chance: potion
     if (roll <= 66) {
       await supabase.from('inventory').insert({
         character_id: char.id,
@@ -218,27 +168,24 @@ export const exploreCommand: BotCommand = {
         stat_bonus: 10,
         description: 'Restores 10 HP.',
       })
-      client.say(channel, `🧪 @${username} finds a dusty Health Potion tucked in a crevice!`)
+      client.say(channel, `🧪 @${username} finds a Health Potion!`)
       return
     }
 
     // ~0.25% chance: Deck of Many Things
     if (d100() <= 1 && d100() <= 25) {
       const { drawCard } = await import('./new_commands')
-      client.say(channel, `@${username} finds a worn deck of cards at the bottom of a chest...`)
+      client.say(channel, `@${username} finds a worn deck of cards...`)
       await drawCard(channel, username, client, supabase)
       return
     }
 
-    // 43% chance: nothing
+    // Nothing found
     const emptyMessages = [
-      `@${username} searches the area but finds nothing but dust and cobwebs.`,
-      `@${username} explores the shadows — nothing stirs.`,
-      `@${username} finds only old bones and broken weapons.`,
-      `@${username} turns up nothing. The dungeon keeps its secrets.`,
-      `@${username} searches carefully but comes up empty.`,
+      `@${username} — nothing here but dust.`,
+      `@${username} — the dungeon keeps its secrets.`,
+      `@${username} — nothing stirs.`,
     ]
-
     client.say(channel, emptyMessages[Math.floor(Math.random() * emptyMessages.length)])
   }
 }

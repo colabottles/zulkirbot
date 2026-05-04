@@ -17,7 +17,6 @@ export const tavernCommand: BotCommand = {
       .single()
 
     if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
     }
 

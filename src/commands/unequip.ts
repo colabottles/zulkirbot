@@ -12,14 +12,7 @@ export const unequipCommand: BotCommand = {
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     if (!args.length) {
-      client.say(channel, `@${username} — usage: !unequip [slot] (e.g. !unequip weapon)`)
-      return
-    }
-
-    const slot = args[0].toLowerCase() as EquipmentSlot
-
-    if (!VALID_SLOTS.includes(slot)) {
-      client.say(channel, `@${username} — invalid slot. Valid slots: ${VALID_SLOTS.join(', ')}`)
+      client.say(channel, `@${username} — usage: !unequip [slot] or !unequip all`)
       return
     }
 
@@ -30,7 +23,50 @@ export const unequipCommand: BotCommand = {
       .single()
 
     if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet!`)
+      return
+    }
+
+    // !unequip all
+    if (args[0].toLowerCase() === 'all') {
+      const updates: Record<string, null> = {}
+      const itemIds: string[] = []
+
+      for (const slot of VALID_SLOTS) {
+        const slotColumn = getSlotColumn(slot)
+        const itemId = char[slotColumn]
+        if (!itemId) continue
+
+        const { data: item } = await supabase
+          .from('inventory')
+          .select('*')
+          .eq('id', itemId)
+          .single()
+
+        if (item?.is_cursed && item?.curse_revealed) continue // skip cursed
+
+        updates[slotColumn] = null
+        itemIds.push(itemId)
+      }
+
+      if (itemIds.length === 0) {
+        client.say(channel, `@${username} — nothing to unequip (cursed items cannot be removed).`)
+        return
+      }
+
+      for (const id of itemIds) {
+        await supabase.from('inventory').update({ equipped: false }).eq('id', id)
+      }
+
+      await supabase.from('characters').update(updates).eq('twitch_username', username)
+
+      client.say(channel, `@${username} — all non-cursed items unequipped.`)
+      return
+    }
+
+    // Single slot
+    const slot = args[0].toLowerCase() as EquipmentSlot
+    if (!VALID_SLOTS.includes(slot)) {
+      client.say(channel, `@${username} — invalid slot. Valid slots: ${VALID_SLOTS.join(', ')}`)
       return
     }
 
@@ -54,23 +90,15 @@ export const unequipCommand: BotCommand = {
     }
 
     if (item?.is_cursed && item?.curse_revealed) {
-      client.say(
-        channel,
+      client.say(channel,
         `@${username} — the ${item.item_name} is CURSED and cannot be removed! ` +
         `Find a !shrine via !explore to have a chance at removing it.`
       )
       return
     }
 
-    await supabase
-      .from('inventory')
-      .update({ equipped: false })
-      .eq('id', itemId)
-
-    await supabase
-      .from('characters')
-      .update({ [slotColumn]: null })
-      .eq('twitch_username', username)
+    await supabase.from('inventory').update({ equipped: false }).eq('id', itemId)
+    await supabase.from('characters').update({ [slotColumn]: null }).eq('twitch_username', username)
 
     client.say(channel, `@${username} unequipped their ${slot}.`)
   }

@@ -13,7 +13,6 @@ export const inventoryCommand: BotCommand = {
       .single()
 
     if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
     }
 
@@ -30,8 +29,21 @@ export const inventoryCommand: BotCommand = {
       return
     }
 
-    const list = items
-      .map((i: any) => `${i.item_name} (${i.rarity})${i.equipped ? ' [E]' : ''}`)
+    // Stack duplicate items by name
+    const stacked = new Map<string, { rarity: string; count: number; equipped: boolean }>()
+    for (const item of items) {
+      const key = item.item_name
+      if (stacked.has(key)) {
+        stacked.get(key)!.count++
+      } else {
+        stacked.set(key, { rarity: item.rarity, count: 1, equipped: !!item.equipped })
+      }
+    }
+
+    const list = [...stacked.entries()]
+      .map(([name, { rarity, count, equipped }]) =>
+        `${name} (${rarity})${count > 1 ? ` x${count}` : ''}${equipped ? ' [E]' : ''}`
+      )
       .join(', ')
 
     client.say(channel, `🎒 @${username} (${characterName})'s inventory: ${list}`)

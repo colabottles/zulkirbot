@@ -48,7 +48,6 @@ export const duelCommand: BotCommand = {
       .single()
 
     if (!challenger) {
-      client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
     }
 

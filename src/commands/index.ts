@@ -21,7 +21,7 @@ import { exploreCommand } from './explore'
 import { restCommand } from './rest'
 import { shrineCommand } from './shrine'
 import { graveyardCommand } from './graveyard'
-import { picklockCommand, disabletrapCommand, findtrapsCommand, searchdoorCommand } from './rogue_commands'
+import { picklockCommand, disabletrapCommand, findtrapsCommand, searchdoorCommand, opendoorCommand } from './rogue_commands'
 
 // ── Items & Economy ──────────────────────────────────────────
 import { inventoryCommand } from './inventory'
@@ -34,6 +34,14 @@ import { sellCommand } from './sell'
 import { shopCommand } from './shop'
 import { bankCommand } from './bank'
 import { givegoldCommand } from './givegold'
+import { listsaleitemCommand } from './listsaleitem'
+import { pbuyCommand } from './pbuy'
+import { removelistingCommand } from './removelisting'
+import { listingsCommand } from './listings'
+import { listauctionCommand } from './listauction'
+import { bidCommand } from './bid'
+import { endauctionCommand } from './endauction'
+import { auctionsCommand } from './auctions'
 
 // ── Tavern ───────────────────────────────────────────────────
 import { tavernCommand } from './tavern'
@@ -55,6 +63,7 @@ import { strikeCommand } from './strike'
 import { pvpboardCommand } from './pvpboard'
 import { partyCommand } from './party'
 import { leaderboardCommand } from './leaderboard'
+import { whoisCommand } from './whois'
 
 // ── Progression ──────────────────────────────────────────────
 import { dailyCommand } from './daily'
@@ -70,6 +79,7 @@ import { stopGiveawayCommand } from './stopgiveaway'
 import { setcodeCommand } from './setcode'
 import { ddoCommand } from './ddo'
 import { drawCommand } from './draw'
+import { addentryCommand } from './addentry'
 
 // ── Broadcaster / Special ────────────────────────────────────
 import { killCommand } from './kill'
@@ -78,6 +88,7 @@ import { lagCommand } from './lag'
 import { hairdyeCommand } from './hairdye'
 import { pollCommand } from './poll'
 import { handlePollVote } from './poll'
+import { stevefrenchCommand } from './stevefrench'
 import {
   layonhandsCommand, inspirationCommand, feeblemindCommand, polymorphCommand,
   tashaCommand, scryCommand, deathwardCommand, heroesfeastCommand, criticalCommand,
@@ -111,6 +122,7 @@ export const allCommands: BotCommand[] = [
   disabletrapCommand,
   findtrapsCommand,
   searchdoorCommand,
+  opendoorCommand,
 
   // Items & Economy
   inventoryCommand,
@@ -123,6 +135,14 @@ export const allCommands: BotCommand[] = [
   shopCommand,
   bankCommand,
   givegoldCommand,
+  listsaleitemCommand,
+  pbuyCommand,
+  removelistingCommand,
+  listingsCommand,
+  listauctionCommand,
+  bidCommand,
+  endauctionCommand,
+  auctionsCommand,
 
   // Tavern
   tavernCommand,
@@ -148,6 +168,7 @@ export const allCommands: BotCommand[] = [
   pvpboardCommand,
   partyCommand,
   leaderboardCommand,
+  whoisCommand,
 
   // Progression
   dailyCommand,
@@ -163,6 +184,7 @@ export const allCommands: BotCommand[] = [
   setcodeCommand,
   ddoCommand,
   drawCommand,
+  addentryCommand,
 
   // Broadcaster / Special
   killCommand,
@@ -186,4 +208,5 @@ export const allCommands: BotCommand[] = [
   deckofmanyCommand,
   tarokkaCommand,
   pollCommand,
+  stevefrenchCommand
 ]

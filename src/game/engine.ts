@@ -241,30 +241,30 @@ export async function continueFight(
     fight.monster_current_hp -= playerDamage
   }
 
-  // ── Hireling attacks ─────────────────────────────────────────
+  // Hireling attacks
   const hireling = activeHirelings.get(username)
+  let hirelingMsg = ''
   if (hireling) {
     const hirelingDmg = rollHirelingDamage(hireling)
     fight.monster_current_hp -= hirelingDmg
     const quip = getHirelingQuip(hireling, fight.monster.name)
-    if (quip) {
-      client.say(channel, `🗡️ ${quip} (${hirelingDmg} damage)`)
-    } else {
-      client.say(channel, `🗡️ ${hireling.name} attacks the ${fight.monster.name} for ${hirelingDmg} damage!`)
-    }
+    hirelingMsg = quip
+      ? ` 🗡️ ${quip} (${hirelingDmg} dmg)`
+      : ` 🗡️ ${hireling.name} hits for ${hirelingDmg} dmg!`
   }
 
-  // ── Monster dies ─────────────────────────────────────────────
+  // Monster dies
   if (fight.monster_current_hp <= 0) {
     await handleVictory(channel, username, fight, client)
     return
   }
 
-  // ── Monster attacks back ─────────────────────────────────────
+  // Monster attacks back
   const monsterRoll = d20()
   const monsterHit = monsterRoll + fight.monster.attack > 12 + stats.defenseBonus
   let monsterDamage = 0
 
+  let hirelingAbsorbMsg = ''
   if (monsterHit) {
     monsterDamage = fight.monster.attack
     const hirelingForAbsorb = activeHirelings.get(username)
@@ -280,12 +280,12 @@ export async function continueFight(
     }
   }
 
-  // ── Concentration check ──────────────────────────────────────
+  // Concentration check
   if (monsterHit && monsterDamage > 0) {
     checkConcentrationOnHit(username, monsterDamage, channel, client)
   }
 
-  // ── Undead special ───────────────────────────────────────────
+  // Undead special
   if (monsterHit && fight.monster.is_undead && fight.monster.undead_specials && fight.monster.special_chance) {
     const special = await applyUndeadSpecial(
       username,
@@ -307,7 +307,7 @@ export async function continueFight(
     }
   }
 
-  // ── Character dies ───────────────────────────────────────────
+  // Character dies
   if (fight.character_current_hp <= 0) {
     if (deathwardedPlayers.has(username)) {
       deathwardedPlayers.delete(username)
@@ -322,7 +322,7 @@ export async function continueFight(
     return
   }
 
-  // ── Fight continues ──────────────────────────────────────────
+  // Fight continues
   const critMsg = hasCrit ? ' CRITICAL HIT!' : ''
   const fumbleMsg = hasFumble ? ' FUMBLE!' : ''
   const advMsg = hasAdvantage ? ' (advantage)' : hasDisadvantage ? ' (disadvantage)' : ''
@@ -339,9 +339,9 @@ export async function continueFight(
 
   client.say(
     channel,
-    `⚔️ @${username} (${displayName}) — ${hitMsg} ${monsterMsg} ` +
-    `[Your HP: ${fight.character_current_hp} | ${fight.monster.name} HP: ${fight.monster_current_hp}] ` +
-    `Type !attack to continue or !flee to run away! 🐔`
+    `⚔️ @${username} (${displayName}) — ${hitMsg}${hirelingMsg} ${monsterMsg}${hirelingAbsorbMsg} ` +
+    `[HP: ${fight.character_current_hp}/${char?.max_hp} | ${fight.monster.name}: ${fight.monster_current_hp} HP] ` +
+    `!attack to continue or !flee to run! 🐔`
   )
 }
 
@@ -409,15 +409,16 @@ async function handleVictory(
     : ''
 
   const hireling = activeHirelings.get(username)
+  let hirelingSpecialMsg = ''
   if (hireling) {
     const specialMsg = await applyHirelingSpecial(username, hireling, fight.monster.gold_reward)
-    if (specialMsg) client.say(channel, `✨ ${specialMsg}`)
+    if (specialMsg) hirelingSpecialMsg = ` ✨ ${specialMsg}`
   }
 
   client.say(
     channel,
     `🏆 @${username} (${displayName}) defeated the ${fight.monster.name}! ` +
-    `+${fight.monster.xp_reward} XP | +${fight.monster.gold_reward}gp${lootMsg}${levelMsg}${titleMsg}`
+    `+${fight.monster.xp_reward} XP | +${fight.monster.gold_reward}gp${lootMsg}${levelMsg}${titleMsg}${hirelingSpecialMsg}`
   )
 }
 

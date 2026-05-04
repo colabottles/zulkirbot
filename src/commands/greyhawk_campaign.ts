@@ -1169,7 +1169,6 @@ async function runStage(
   const dmgMin = Math.ceil(stage.enemy_damage_min * diffMod.dmgMod)
   const dmgMax = Math.ceil(stage.enemy_damage_max * diffMod.dmgMod)
 
-  await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel, `Stage ${stage.stage}/5 — ${stage.stage_name}`)
   await delay(1500)
   await say(client, channel, stage.flavor_intro)
@@ -1590,7 +1589,6 @@ async function runLolthFight(
   const dmgMin = Math.ceil(24 * diffMod.dmgMod)
   const dmgMax = Math.ceil(38 * diffMod.dmgMod)
 
-  await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel, `Stage 5/5 — The Demonweb Pits`)
   await delay(1500)
   await say(client, channel,
@@ -1814,13 +1812,11 @@ async function runGreyhawkCampaign(
 
   const survivors = participants.filter(p => p.is_alive)
 
-  await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel, `The final chamber stands before you. The moment of decision has arrived.`)
   await delay(3000)
 
   const chosenOutcome = await runEndingVote(client, channel, survivors, outcomes)
 
-  await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel, `${survivors.map(p => p.username).join(', ')} chose: ${chosenOutcome.outcome_label}`)
   await delay(1500)
   await say(client, channel, chosenOutcome.flavor_text)
@@ -1978,7 +1974,6 @@ async function runGreyhawkCampaign(
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('id', campaignId)
 
-  await say(client, channel, `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
   await say(client, channel,
     `${campaignData.name} COMPLETE! ${survivors.map(p => p.username).join(' & ')} emerge from the moathouse.`
   )

@@ -19,7 +19,6 @@ export const titleCommand: BotCommand = {
     const characterName = char.character_name ?? username
 
     if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
     }
 

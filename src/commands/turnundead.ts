@@ -69,7 +69,6 @@ export const turnundeadCommand: BotCommand = {
       .single()
 
     if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet!`)
       return
     }
 

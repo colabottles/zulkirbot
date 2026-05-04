@@ -40,17 +40,21 @@ export type RogueEvent =
 
 export interface PendingRogueEvent {
   event: RogueEvent
-  expiresAt: number // 3 minute window
+  expiresAt: number
+  sensed: boolean   // ← true after auto-sensetrap fires
+  found: boolean    // ← true after !findtraps succeeds
 }
-
-export const pendingRogueEvents = new Map<string, PendingRogueEvent>()
 
 export function setPendingEvent(username: string, event: RogueEvent): void {
   pendingRogueEvents.set(username, {
     event,
     expiresAt: Date.now() + 3 * 60 * 1000,
+    sensed: false,
+    found: false,
   })
 }
+
+export const pendingRogueEvents = new Map<string, PendingRogueEvent>()
 
 export function getPendingEvent(username: string): PendingRogueEvent | null {
   const pending = pendingRogueEvents.get(username)
@@ -112,7 +116,6 @@ export const picklockCommand: BotCommand = {
       .single()
 
     if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
     }
 
@@ -202,7 +205,6 @@ export const disabletrapCommand: BotCommand = {
       .single()
 
     if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
     }
 
@@ -298,7 +300,6 @@ export const findtrapsCommand: BotCommand = {
       .single()
 
     if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
     }
 
@@ -306,10 +307,15 @@ export const findtrapsCommand: BotCommand = {
 
     if (!pending || (pending.event !== 'trapped_chest' && pending.event !== 'trapped_corridor')) {
       if (!pending) {
-        client.say(channel, `@${username} — nothing suspicious here. Use !explore to search the dungeon.`)
+        client.say(channel, `@${username} — there's no trap here. Use !explore to find one.`)
       } else {
-        client.say(channel, `@${username} — that's not a trap situation. Try !picklock or !searchdoor instead.`)
+        client.say(channel, `@${username} — that's not a trap situation.`)
       }
+      return
+    }
+
+    if (!pending.found) {
+      client.say(channel, `@${username} — you haven't located the trap yet. Use !findtraps first.`)
       return
     }
 
@@ -318,12 +324,12 @@ export const findtrapsCommand: BotCommand = {
     const roll = d100()
 
     if (roll <= chance) {
-      // Success — reveal the trap, player can now use !disabletrap with bonus
-      // Keep the pending event but mark it as found (give disabletrap a bonus)
+      const pending = getPendingEvent(username)!
+      pending.found = true
       client.say(channel,
         `🔍 @${username} — ${isEligible ? 'a careful sweep reveals' : 'blind luck reveals'} ` +
         `a hidden ${pending.event === 'trapped_chest' ? 'pressure plate beneath the chest' : 'tripwire across the corridor'}. ` +
-        `Use !disabletrap to deal with it safely, or proceed at your own risk.`
+        `Use !disabletrap to deal with it safely.`
       )
     } else {
       // Failure — finds nothing, event stays pending (trap still there)
@@ -349,7 +355,6 @@ export const searchdoorCommand: BotCommand = {
       .single()
 
     if (!char) {
-      client.say(channel, `@${username} — you don't have a character yet! Use !join to create one.`)
       return
     }
 
@@ -405,12 +410,15 @@ export const searchdoorCommand: BotCommand = {
         lootMsg = ` An ${item.rarity.toUpperCase()} ${item.name} was left behind by whoever used this passage last.`
       }
 
+      const pending = getPendingEvent(username)!
+      pending.found = true
+
       const eligibleMsg = isEligible
         ? `@${username} runs a hand along the wall and finds the seam.`
-        : `@${username} leans against the wall and it swings open.`
+        : `@${username} leans against the wall — something shifts.`
 
       client.say(channel,
-        `🚪 ${eligibleMsg} A hidden passage! +${gold}gp found inside.${lootMsg}`
+        `🚪 ${eligibleMsg} There's a hidden passage here. Use !opendoor to open it. You have 3 minutes.`
       )
     } else {
       client.say(channel,
@@ -420,5 +428,79 @@ export const searchdoorCommand: BotCommand = {
         }`
       )
     }
+  }
+}
+
+// ------------------------------------------------------------
+// !opendoor
+// ------------------------------------------------------------
+
+export const opendoorCommand: BotCommand = {
+  name: 'opendoor',
+  cooldownSeconds: 5,
+  handler: async (channel, username, _args, client) => {
+    const { data: char } = await supabase
+      .from('characters')
+      .select('*')
+      .eq('twitch_username', username)
+      .single()
+
+    if (!char) {
+      return
+    }
+
+    const pending = getPendingEvent(username)
+
+    if (!pending || (pending.event !== 'hidden_door' && pending.event !== 'suspicious_wall')) {
+      client.say(channel, `@${username} — there's no door to open. Use !explore and then !searchdoor first.`)
+      return
+    }
+
+    if (!pending.found) {
+      client.say(channel, `@${username} — you haven't found the door yet. Use !searchdoor first.`)
+      return
+    }
+
+    clearPendingEvent(username)
+
+    const isEligible = SEARCHDOOR_CLASSES.includes(char.class)
+    const cacheRoll = d100()
+    const gold = d6() * 15
+
+    await supabase
+      .from('characters')
+      .update({ gold: char.gold + gold })
+      .eq('twitch_username', username)
+
+    let lootMsg = ''
+    if (cacheRoll <= 30) {
+      const item = rollLootByRarity('rare')
+      await supabase.from('inventory').insert({
+        character_id: char.id,
+        item_name: item.name,
+        item_type: item.type,
+        rarity: item.rarity,
+        stat_bonus: item.stat_bonus,
+        description: item.description,
+      })
+      lootMsg = ` A ${item.rarity.toUpperCase()} ${item.name} sits on a stone shelf.`
+    } else if (cacheRoll <= 70) {
+      const item = rollLootByRarity('uncommon')
+      await supabase.from('inventory').insert({
+        character_id: char.id,
+        item_name: item.name,
+        item_type: item.type,
+        rarity: item.rarity,
+        stat_bonus: item.stat_bonus,
+        description: item.description,
+      })
+      lootMsg = ` An ${item.rarity.toUpperCase()} ${item.name} was left behind by whoever used this passage last.`
+    }
+
+    const eligibleMsg = isEligible
+      ? `@${username} finds the mechanism and the passage swings open.`
+      : `@${username} pushes against the wall and it gives way.`
+
+    client.say(channel, `🚪 ${eligibleMsg} A hidden passage! +${gold}gp found inside.${lootMsg}`)
   }
 }
