@@ -1,5 +1,6 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
+import { formatRarity } from '../lib/rarity'
 
 const BANK_SLOTS = 50
 
@@ -37,7 +38,7 @@ export const bankCommand: BotCommand = {
         return
       }
 
-      const itemList = banked.map((i, idx) => `${idx + 1}. ${i.item_name} [${i.rarity}]`).join(', ')
+      const itemList = banked.map((i, idx) => `${idx + 1}. ${i.item_name} [${formatRarity(i.rarity)}]`).join(', ')
       client.say(channel, `🏦 @${username}'s vault (${banked.length}/${BANK_SLOTS}): ${itemList}`)
       return
     }

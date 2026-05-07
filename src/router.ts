@@ -19,6 +19,8 @@ const EXEMPT_COMMANDS = new Set([
 
 const warnedUsers = new Set<string>()
 const cooldowns = new Map<string, Map<string, number>>()
+// 1% chance to summon Zulkirjax during regular play
+let zulkirjaxSummoning = false
 
 export function registerCommands(
   client: tmi.Client,
@@ -62,16 +64,18 @@ export function registerCommands(
       return
     }
 
-    // 1% chance to summon Zulkirjax during regular play
-    if (!isZulkirjaxPresent() && !isCampaignActive() && Math.random() < 0.01) {
+    // In the summon check:
+    if (!isZulkirjaxPresent() && !zulkirjaxSummoning && !isCampaignActive() && Math.random() < 0.01) {
       const { data: charCheck } = await supabase
         .from('characters')
         .select('id')
         .eq('twitch_username', username)
         .single()
-
       if (charCheck) {
-        summonZulkirjax(client, channel, username) // intentionally not awaited — runs in background
+        zulkirjaxSummoning = true
+        summonZulkirjax(client, channel, username).finally(() => {
+          zulkirjaxSummoning = false
+        })
       }
     }
 
@@ -116,9 +120,10 @@ export function registerCommands(
     }
 
     // --- Normal command routing ---
-
     const cmd = commandMap.get(cmdName)
     if (!cmd) {
+      const SILENT_COMMANDS = new Set(['donate', 'vso', 'so', 'followage', 'uptime'])
+      if (SILENT_COMMANDS.has(cmdName)) return
       const UNKNOWN_CMD_RESPONSES = [
         `@${username} — "!${cmdName}"? Bold strategy, Cotton. The dungeon remains unimpressed. Let’s see if it pays off for them.`,
         `@${username} — the ancient Netherese scrolls contain no record of "!${cmdName}". Your character weeps softly.`,

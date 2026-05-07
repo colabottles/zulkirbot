@@ -15,6 +15,7 @@ import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
 import { d100, d6, d8, d20 } from '../game/dice'
 import { rollLootByRarity } from '../game/loot'
+import { formatRarity } from '../lib/rarity'
 
 // ------------------------------------------------------------
 // Eligible classes
@@ -163,7 +164,7 @@ export const picklockCommand: BotCommand = {
 
       client.say(channel,
         `🔓 ${eligibleMsg} ` +
-        `The chest opens! Found a ${rarity.toUpperCase()} ${item.name} and ${gold}gp!`
+        `The chest opens! Found a ${formatRarity(rarity)} ${item.name} and ${gold}gp!`
       )
     } else {
       // Failure — trap springs or lock holds
@@ -259,7 +260,7 @@ export const disabletrapCommand: BotCommand = {
 
         client.say(channel,
           `🔧 ${eligibleMsg} Trap disabled! +${xpBonus} XP. ` +
-          `The chest beneath it holds a ${item.rarity.toUpperCase()} ${item.name} and ${gold}gp!`
+          `The chest beneath it holds a ${formatRarity(item.rarity)} ${item.name} and ${gold}gp!`
         )
       } else {
         client.say(channel,
@@ -396,7 +397,7 @@ export const searchdoorCommand: BotCommand = {
           stat_bonus: item.stat_bonus,
           description: item.description,
         })
-        lootMsg = ` A ${item.rarity.toUpperCase()} ${item.name} sits on a stone shelf.`
+        lootMsg = ` A ${formatRarity(item.rarity)} ${item.name} sits on a stone shelf.`
       } else if (cacheRoll <= 70) {
         const item = rollLootByRarity('uncommon')
         await supabase.from('inventory').insert({
@@ -407,7 +408,7 @@ export const searchdoorCommand: BotCommand = {
           stat_bonus: item.stat_bonus,
           description: item.description,
         })
-        lootMsg = ` An ${item.rarity.toUpperCase()} ${item.name} was left behind by whoever used this passage last.`
+        lootMsg = ` An ${formatRarity(item.rarity)} ${item.name} was left behind by whoever used this passage last.`
       }
 
       const pending = getPendingEvent(username)!
@@ -483,7 +484,7 @@ export const opendoorCommand: BotCommand = {
         stat_bonus: item.stat_bonus,
         description: item.description,
       })
-      lootMsg = ` A ${item.rarity.toUpperCase()} ${item.name} sits on a stone shelf.`
+      lootMsg = ` A ${formatRarity(item.rarity)} ${item.name} sits on a stone shelf.`
     } else if (cacheRoll <= 70) {
       const item = rollLootByRarity('uncommon')
       await supabase.from('inventory').insert({
@@ -494,7 +495,7 @@ export const opendoorCommand: BotCommand = {
         stat_bonus: item.stat_bonus,
         description: item.description,
       })
-      lootMsg = ` An ${item.rarity.toUpperCase()} ${item.name} was left behind by whoever used this passage last.`
+      lootMsg = ` An ${formatRarity(item.rarity)} ${item.name} was left behind by whoever used this passage last.`
     }
 
     const eligibleMsg = isEligible

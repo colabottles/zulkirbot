@@ -98,7 +98,7 @@ export type ItemType =
   | 'scroll'
   | 'artifact'
 
-export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary'
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic'
 
 export interface Item {
   id: string

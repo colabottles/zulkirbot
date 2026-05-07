@@ -69,7 +69,9 @@ export const LOOT_TABLES: Item[] = [
 
 export function rollRarity(): string {
   const roll = d100()
+  if (roll <= 1) return 'mythic'
   if (roll <= 3) return 'legendary'
+  if (roll <= 8) return 'epic'
   if (roll <= 15) return 'rare'
   if (roll <= 40) return 'uncommon'
   return 'common'

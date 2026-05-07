@@ -5,10 +5,12 @@ const SELL_PRICES: Record<string, number> = {
   common: 10,
   uncommon: 30,
   rare: 60,
+  epic: 100,
   legendary: 150,
+  mythic: 200,
 }
 
-const DOUBLE_RARITIES = ['rare', 'legendary']
+const DOUBLE_RARITIES = ['rare', 'epic', 'legendary', 'mythic']
 
 function rollSellPrice(rarity: string): { price: number; rolled: number } {
   const base = SELL_PRICES[rarity] ?? 10

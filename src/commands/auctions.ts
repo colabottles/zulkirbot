@@ -1,5 +1,6 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
+import { formatRarity } from '../lib/rarity'
 
 export const auctionsCommand: BotCommand = {
   name: 'auctions',
@@ -21,7 +22,7 @@ export const auctionsCommand: BotCommand = {
       : `No bids yet — starting at ${auction.starting_bid}gp`
 
     client.say(channel,
-      `🔨 Current auction: ${auction.item_name} (${auction.rarity}) listed by @${auction.listed_by} | ` +
+      `🔨 Current auction: ${auction.item_name} (${formatRarity(auction.rarity)}) listed by @${auction.listed_by} | ` +
       `${bidderMsg} | Use !bid [amount] to bid!`
     )
   }

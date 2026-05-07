@@ -1,5 +1,6 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
+import { formatRarity } from '../lib/rarity'
 
 export const listauctionCommand: BotCommand = {
   name: 'listauction',
@@ -82,7 +83,7 @@ export const listauctionCommand: BotCommand = {
     })
 
     client.say(channel,
-      `🔨 @${username} has put ${item.item_name} (${item.rarity}) up for auction! ` +
+      `🔨 @${username} has put ${item.item_name} (${formatRarity(item.rarity)}) up for auction! ` +
       `Starting bid: ${startingBid}gp. Use !bid [amount] to place a bid. Use !auctions to see current bids.`
     )
   }

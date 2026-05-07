@@ -1,5 +1,6 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
+import { formatRarity } from '../lib/rarity'
 
 export const listingsCommand: BotCommand = {
   name: 'listings',
@@ -18,7 +19,7 @@ export const listingsCommand: BotCommand = {
     }
 
     const list = listings
-      .map(l => `${l.item_name} (${l.rarity}) — ${l.price}gp [${l.listed_by}]`)
+      .map(l => `${l.item_name} (${formatRarity(l.rarity)}) — ${l.price}gp [${l.listed_by}]`)
       .join(' | ')
 
     client.say(channel, `🏪 Player listings: ${list} — use !pbuy [username] [item name] to purchase`)

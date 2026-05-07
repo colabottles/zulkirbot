@@ -2,15 +2,77 @@
 
 ---
 
-## v2.0.1 — May 4, 2026
+## v2.1.0 — May 6, 2026
+
+### New Features
+
+#### Leaderboard Panel
+
+- **`leaderboard.html`** — Local OBS browser source panel displaying the top 10 players by XP in a parchment stat block aesthetic matching the stream goals overlay. Refreshes every 60 seconds automatically. Located in `panels/leaderboard.html`.
+- `!leaderboard` in chat now tells viewers that @zulkirjax will switch to the leaderboard scene shortly, instead of posting the full list.
+
+#### Inventory Whisper & Show
+
+- **`!inventory`** — Now whispers the full inventory list directly to the player instead of posting in chat. No cooldown.
+- **`!inventory show`** — Posts a condensed inventory summary to chat showing only Rare, Epic, Legendary, Mythic, and Artifact items alongside total item and equipped counts. 15 minute per-user cooldown. Cooldown remaining is whispered back to the player.
+
+#### Epic & Mythic Rarities
+
+- Two new rarity tiers added: **Epic** and **Mythic**.
+- Full rarity hierarchy: Common → Uncommon → Rare → Epic → Legendary → Mythic.
+- Epic and Mythic items drop exclusively from campaigns and special events.
+- Rarity indicators now use emoji + letter format throughout all chat messages: ⬜C, 🟩U, 🟦R, 🟪E, 🟧L, 🟥M.
+- Sell prices: Epic 100gp, Mythic 200gp. Both eligible for lucky double roll.
+- Player shop listing caps: Epic 80gp, Mythic 160gp.
+- Supabase `inventory` rarity constraint updated to include `epic` and `mythic`.
+
+### Bug Fixes
+
+- Fixed ZulkirJax appearing multiple times in a row — added module-level summoning lock in `router.ts` to prevent race condition.
+- Fixed Steve French dialog appearing 3x in a row — added `steveFrenchActive` lock in `stevefrench.ts`.
+- Fixed `!battle` already-in-fight message not naming the monster — now says "you're already in a fight with the [monster name]".
+- Fixed flavor commands page 404 in docs — sidebar link corrected from `/items/flavor` to `/tavern/flavor`.
 
 ### Changed
+
+- `!donate`, `!vso`, `!so`, `!followage`, `!uptime` now silently ignored instead of triggering the unknown command roast.
+- Rarity display unified across all chat messages via shared `formatRarity()` helper in `src/lib/rarity.ts`.
+
+### Files
+
+- `panels/leaderboard.html` — new leaderboard OBS panel
+- `src/lib/rarity.ts` — new shared rarity display helper
+- `src/commands/inventory.ts` — whisper default, show subcommand, cooldown
+- `src/commands/leaderboard.ts` — updated chat message
+- `src/commands/auctions.ts` — rarity display updated
+- `src/commands/bank.ts` — rarity display updated
+- `src/commands/bid.ts` — rarity display updated
+- `src/commands/endauction.ts` — rarity display updated
+- `src/commands/explore.ts` — rarity display updated
+- `src/commands/listauction.ts` — rarity display updated
+- `src/commands/listings.ts` — rarity display updated
+- `src/commands/listsaleitem.ts` — rarity display updated, epic/mythic price caps added
+- `src/commands/rogue_commands.ts` — rarity display updated
+- `src/commands/sell.ts` — epic/mythic sell prices added
+- `src/commands/shop.ts` — rarity display updated
+- `src/commands/weekly.ts` — rarity display updated
+- `src/commands/stevefrench.ts` — steveFrenchActive lock added
+- `src/commands/fight.ts` — already-in-fight message updated with monster name
+- `src/game/engine.ts` — rarity display updated
+- `src/game/loot.ts` — epic/mythic added to rollRarity
+- `src/types.ts` — ItemRarity extended with epic and mythic
+- `src/lib/zulkirjax.ts` — zulkirjaxSummoning lock added
+- `src/router.ts` — silent commands list updated
+
+## v2.0.1 — May 4, 2026
+
+### Changed v2.0.1
 
 - **Combat initiation** — `!battle` is now the sole command to start a combat encounter. `!fight` has been removed as a player-facing command to eliminate confusion between initiating combat and attacking during combat. The flow is now unambiguous: `!battle` to start, `!attack` to fight.
 
 ## v2.0.0 — May 4, 2026
 
-### New Features
+### New Features v2.0.1
 
 #### Player Marketplace
 
@@ -87,7 +149,7 @@
 
 - 50-entry flavor text pool added to `named_campaign.ts`. Random flavor line fires after `!solo` or party set, before each stage, on campaign fail, and on campaign complete.
 
-### Bug Fixes
+### Bug Fixes v2.0.1
 
 - Fixed `!campaign` auto-attack not firing after the player prompt window — `waitForAttack` now has a built-in timeout so combat resumes automatically if the player doesn't type `!attack`.
 - Fixed `!disabletrap` rewarding players who had not first used `!findtraps`.
@@ -108,7 +170,7 @@
 - New column on `inventory`: `purchase_price`.
 - New SQL function: `return_expired_listings()` — called every 15 minutes to return expired player shop listings to seller inventory.
 
-### Files
+### Files v2.0.1
 
 - `src/lib/zulkirjax.ts` — ZulkirJax wandering menace system
 - `src/lib/campaignState.ts` — campaign active flag for ZulkirJax blocking

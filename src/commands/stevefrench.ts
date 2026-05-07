@@ -1,6 +1,8 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
 
+let steveFrenchActive = false
+
 const ALLOWED_USER = 'neutralagent'
 
 const STEVE_FRENCH_APPEARANCES = [
@@ -57,6 +59,9 @@ export const stevefrenchCommand: BotCommand = {
       return
     }
 
+    if (steveFrenchActive) return
+    steveFrenchActive = true
+
     const { data: char } = await supabase
       .from('characters')
       .select('hp, max_hp')
@@ -101,5 +106,6 @@ export const stevefrenchCommand: BotCommand = {
     client.say(channel,
       `🦁 Being near Steve French is oddly reassuring. @neutralagent recovers ${hpBonus} HP. (${newHp}/${char.max_hp} HP)`
     )
+    steveFrenchActive = false
   }
 }

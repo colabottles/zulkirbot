@@ -1,20 +1,24 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
+import { formatRarity } from '../lib/rarity'
+import { sendWhisper } from '../lib/whisper'
+
+const HIGHLIGHT_RARITIES = new Set(['rare', 'epic', 'legendary', 'mythic', 'artifact'])
+
+const showCooldowns = new Map<string, number>()
+const SHOW_COOLDOWN_MS = 15 * 60 * 1000
 
 export const inventoryCommand: BotCommand = {
   name: 'inventory',
   aliases: ['inv', 'bag', 'items'],
-  cooldownSeconds: 5,
-  handler: async (channel, username, _args, client) => {
+  handler: async (channel, username, args, client) => {
     const { data: char } = await supabase
       .from('characters')
       .select('id, character_name')
       .eq('twitch_username', username)
       .single()
 
-    if (!char) {
-      return
-    }
+    if (!char) return
 
     const characterName = char.character_name ?? username
 
@@ -25,7 +29,7 @@ export const inventoryCommand: BotCommand = {
       .order('rarity', { ascending: false })
 
     if (!items || items.length === 0) {
-      client.say(channel, `@${username} (${characterName}) — your inventory is empty. Go fight something!`)
+      await sendWhisper(username, `Your inventory is empty. Go fight something!`)
       return
     }
 
@@ -40,12 +44,48 @@ export const inventoryCommand: BotCommand = {
       }
     }
 
-    const list = [...stacked.entries()]
+    // !inventory show — post highlights to chat with cooldown
+    if (args[0]?.toLowerCase() === 'show') {
+      const now = Date.now()
+      const lastUsed = showCooldowns.get(username) ?? 0
+      if (now - lastUsed < SHOW_COOLDOWN_MS) {
+        const remainingMins = Math.ceil((SHOW_COOLDOWN_MS - (now - lastUsed)) / 60000)
+        await sendWhisper(username, `You can show your inventory again in ${remainingMins} minute${remainingMins === 1 ? '' : 's'}.`)
+        return
+      }
+      showCooldowns.set(username, now)
+
+      const highlights = [...stacked.entries()]
+        .filter(([_, { rarity }]) => HIGHLIGHT_RARITIES.has(rarity))
+        .map(([name, { rarity, count, equipped }]) =>
+          `${name} ${formatRarity(rarity)}${count > 1 ? ` x${count}` : ''}${equipped ? '[E]' : ''}`
+        )
+
+      const totalItems = items.length
+      const equippedCount = items.filter(i => i.equipped).length
+
+      if (highlights.length === 0) {
+        client.say(channel,
+          `🎒 ${characterName}'s inventory: ${totalItems} items (${equippedCount} equipped) — no rare or better items.`
+        )
+      } else {
+        client.say(channel,
+          `🎒 ${characterName}'s inventory: ${totalItems} items (${equippedCount} equipped) | ` +
+          `Notable: ${highlights.join(', ')}`
+        )
+      }
+      return
+    }
+
+    // Default !inventory — whisper full list
+    const fullList = [...stacked.entries()]
       .map(([name, { rarity, count, equipped }]) =>
-        `${name} (${rarity})${count > 1 ? ` x${count}` : ''}${equipped ? ' [E]' : ''}`
+        `${name} ${formatRarity(rarity)}${count > 1 ? ` x${count}` : ''}${equipped ? '[E]' : ''}`
       )
       .join(', ')
 
-    client.say(channel, `🎒 @${username} (${characterName})'s inventory: ${list}`)
+    await sendWhisper(username,
+      `🎒 ${characterName}'s inventory (${items.length} items): ${fullList}`
+    )
   }
 }

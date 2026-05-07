@@ -11,6 +11,7 @@ import { trackKill } from '../lib/kills'
 import { BOSSES } from './bosses'
 import { getBuff, clearBuff } from '../lib/tavernBuffs'
 import { ragingPlayers } from '../commands/rage'
+import { formatRarity } from '../lib/rarity'
 import tmi from 'tmi.js'
 import {
   deathwardedPlayers,
@@ -46,7 +47,8 @@ export async function startFight(
   existingMonster?: Monster
 ): Promise<void> {
   if (activeFights.has(username) && !existingMonster) {
-    client.say(channel, `@${username} — you're already in a fight! Use !attack to continue.`)
+    const existingFight = activeFights.get(username)!
+    client.say(channel, `@${username} — you're already in a fight with the ${existingFight.monster.name}! Type !attack to strike or !flee to escape.`)
     return
   }
 
@@ -388,7 +390,7 @@ async function handleVictory(
       stat_bonus: item.stat_bonus,
       description: item.description,
     })
-    lootMsg = ` You find a ${item.rarity.toUpperCase()} ${item.name}!`
+    lootMsg = ` You find a ${formatRarity(item.rarity)} ${item.name}!`
   }
 
   const newTitles = await trackKill(char.id, username, fight.monster.name, isBoss)

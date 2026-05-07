@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { formatRarity } from './rarity'
 
 export interface WildMagicEffect {
   roll: number
@@ -228,7 +229,7 @@ export const WILD_MAGIC_TABLE: WildMagicEffect[] = [
       const { data: char } = await supabase.from('characters').select('id').eq('twitch_username', username).single()
       if (!char) return
       await supabase.from('inventory').insert({ character_id: char.id, item_name: item.name, item_type: item.type, rarity: item.rarity, stat_bonus: item.stat_bonus, description: item.description })
-      client.say(channel, `🎲 WILD SURGE! A ${item.rarity.toUpperCase()} ${item.name} materializes in @${username}'s hands! Wild magic provides.`)
+      client.say(channel, `🎲 WILD SURGE! A ${formatRarity(item.rarity)} ${item.name} materializes in @${username}'s hands! Wild magic provides.`)
     }
   },
   {

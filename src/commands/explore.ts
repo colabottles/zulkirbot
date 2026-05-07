@@ -6,6 +6,7 @@ import { rollLoot } from '../game/loot'
 import { getTrapForLevel, rollTrapDamage, DISARM_CLASSES, DISARM_CHANCE } from '../game/traps'
 import { trimGraveyard } from '../lib/graveyard'
 import { setPendingEvent, pendingRogueEvents } from './rogue_commands'
+import { formatRarity } from '../lib/rarity'
 
 export const exploreCommand: BotCommand = {
   name: 'explore',
@@ -93,7 +94,7 @@ export const exploreCommand: BotCommand = {
         description: item.description,
       })
       await supabase.from('characters').update({ gold: char.gold + gold }).eq('twitch_username', username)
-      client.say(channel, `🎁 @${username} finds a hidden chest! ${item.rarity.toUpperCase()} ${item.name} and ${gold}gp!`)
+      client.say(channel, `🎁 @${username} finds a hidden chest! ${formatRarity(item.rarity)} ${item.name} and ${gold}gp!`)
       return
     }
 

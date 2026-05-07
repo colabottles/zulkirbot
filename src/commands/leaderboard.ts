@@ -25,6 +25,6 @@ export const leaderboardCommand: BotCommand = {
       })
       .join(' | ')
 
-    client.say(channel, `🏆 Leaderboard: ${list}`)
+    client.say(channel, `🏆 @zulkirjax will teleport us to the leaderboard scene shortly! Please stand by.`)
   }
 }

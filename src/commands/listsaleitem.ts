@@ -1,11 +1,14 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
+import { formatRarity } from '../lib/rarity'
 
 const RARITY_BASE: Record<string, number> = {
   common: 10,
   uncommon: 30,
   rare: 60,
+  epic: 100,
   legendary: 150,
+  mythic: 200,
 }
 
 const LISTING_FEE = 10
@@ -117,7 +120,7 @@ export const listsaleitemCommand: BotCommand = {
     })
 
     client.say(channel,
-      `🏪 @${username} listed ${item.item_name} (${item.rarity}) for ${price}gp! ` +
+      `🏪 @${username} listed ${item.item_name} (${formatRarity(item.rarity)}) for ${price}gp! ` +
       `(-${LISTING_FEE}gp listing fee | expires in 24 hours)`
     )
   }

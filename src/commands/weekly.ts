@@ -4,6 +4,7 @@ import { d100 } from '../game/dice'
 import { rollLootByRarity } from '../game/loot'
 import { calculateLevel } from '../game/engine'
 import { CLASS_HP_DIE, rollHp } from '../lib/classes'
+import { formatRarity } from '../lib/rarity'
 
 function getLastMonday(): Date {
   const now = new Date()
@@ -80,7 +81,7 @@ export const weeklyCommand: BotCommand = {
         stat_bonus: item.stat_bonus,
         description: item.description,
       })
-      itemMsg = ` You also find a ${item.rarity.toUpperCase()} ${item.name} in your pack!`
+      itemMsg = ` You also find a ${formatRarity(item.rarity)} ${item.name} in your pack!`
     }
 
     await supabase

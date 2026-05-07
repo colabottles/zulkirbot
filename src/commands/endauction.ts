@@ -1,5 +1,6 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
+import { formatRarity } from '../lib/rarity'
 
 export const endauctionCommand: BotCommand = {
   name: 'endauction',
@@ -87,7 +88,7 @@ export const endauctionCommand: BotCommand = {
     await supabase.from('auctions').update({ is_active: false }).eq('id', auction.id)
 
     client.say(channel,
-      `🔨 AUCTION CLOSED! @${auction.current_bidder} wins ${auction.item_name} (${auction.rarity}) ` +
+      `🔨 AUCTION CLOSED! @${auction.current_bidder} wins ${auction.item_name} (${formatRarity(auction.rarity)}) ` +
       `for ${auction.current_bid}gp! @${auction.listed_by} receives ${auction.current_bid}gp.`
     )
   }
