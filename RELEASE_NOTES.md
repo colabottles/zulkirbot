@@ -2,6 +2,63 @@
 
 ---
 
+## v2.2.0 — May 7, 2026
+
+### Boss Invasion System
+
+#### Added
+
+- **`!invasion [boss_id]`** — Broadcaster-only command that triggers a channel-wide boss invasion event. Chat has a 2-minute join window followed by a 10-minute kill window to collectively defeat the boss.
+- **`!joinevent`** — Dual-purpose command: enlists a player during the join window, or attacks the boss during the fight phase. Damage is rolled using the player's class stats and gear via the existing `getCharacterStats` formula.
+- **`!invasion status`** — Displays current boss HP, participant count, and time remaining. Available to all viewers.
+- **`!invasion cancel`** — Broadcaster only. Cleanly aborts an active invasion.
+
+#### Boss Roster — 11 bosses across 3 tiers
+
+**Tier 1: Legendary** (base HP 380–420, scales +28–30 HP per participant)
+
+- Acererak, the Devourer of Souls
+- Vecna, the Undying King
+- Larloch, the Shadow King
+**Tier 2: Demigod** (base HP 580–700, scales +38–45 HP per participant)
+- Orcus, Prince of Undeath
+- Demogorgon, Prince of Demons
+- Tiamat, Queen of Evil Dragons
+- Yeenoghu, Beast of Butchery
+**Tier 3: True God** (base HP 900–1100, scales +55–65 HP per participant)
+- Asmodeus, Lord of the Nine Hells
+- Tharizdun, the Chained God
+- Bane, the Black Hand
+- Shar, Mistress of the Night
+
+#### Mechanics
+
+- Boss HP scales to participant count: `base_hp + (participants × hp_per_player)` — always a challenge regardless of viewer count.
+- Boss counterattacks fire at 25% chance per hit, dealing tier-scaled damage to all participants.
+- Counterattack HP reduction floors at 1 — invasions cannot cause permadeath.
+- Periodic HP updates post every 2 minutes during the fight phase.
+- If the boss is not killed within 10 minutes, the defeat message fires and the invasion ends.
+
+#### Rewards (all participants)
+
+- XP and gold scaled to boss tier.
+- Unique invasion title granted per boss (e.g. "Tomb Breaker", "Void Walker", "Hell's Defiant").
+- Per-player legendary item drop chance (7–25% depending on tier).
+
+#### Database
+
+- `player_titles` — existing table used for title grants (column: `username`).
+- `player_titles (username, title)` — unique index added.
+- `reduce_hp(_username, _amount)` — new Supabase RPC used for counterattack HP reduction across all participants.
+
+#### Files
+
+- `src/game/invasionBosses.ts` — boss roster and `getBossById` helper
+- `src/game/invasion.ts` — full invasion engine (join window, fight phase, victory, defeat, cancel, status)
+- `src/commands/invasionCommand.ts` — `invasionCommand` and `joinEventCommand`
+
+---
+
 ## v2.1.1 — May 6, 2026
 
 ### Bug Fixes
@@ -9,7 +66,7 @@
 - Fixed Zulkir Jax messages interleaving with command responses — `summonZulkirjax` is now awaited in `router.ts` so the full Zulkirjax sequence completes before any command executes. The triggering command is swallowed when Zulkirjax appears.
 - Fixed misplaced closing brace in `router.ts` that was cutting off the message handler scope, causing linter errors for `username` and `channel`.
 
-## v2.1.0 — May 6, 2026
+## v2.1.0
 
 ### New Features
 
@@ -45,7 +102,7 @@
 - `!donate`, `!vso`, `!so`, `!followage`, `!uptime` now silently ignored instead of triggering the unknown command roast.
 - Rarity display unified across all chat messages via shared `formatRarity()` helper in `src/lib/rarity.ts`.
 
-### Files
+### Files v2.1.0
 
 - `panels/leaderboard.html` — new leaderboard OBS panel
 - `src/lib/rarity.ts` — new shared rarity display helper
@@ -77,9 +134,9 @@
 
 - **Combat initiation** — `!battle` is now the sole command to start a combat encounter. `!fight` has been removed as a player-facing command to eliminate confusion between initiating combat and attacking during combat. The flow is now unambiguous: `!battle` to start, `!attack` to fight.
 
-## v2.0.0 — May 4, 2026
+## v2.0.0
 
-### New Features v2.0.1
+### New Features v2.0.0
 
 #### Player Marketplace
 
@@ -156,7 +213,7 @@
 
 - 50-entry flavor text pool added to `named_campaign.ts`. Random flavor line fires after `!solo` or party set, before each stage, on campaign fail, and on campaign complete.
 
-### Bug Fixes v2.0.1
+### Bug Fixes v2.0.0
 
 - Fixed `!campaign` auto-attack not firing after the player prompt window — `waitForAttack` now has a built-in timeout so combat resumes automatically if the player doesn't type `!attack`.
 - Fixed `!disabletrap` rewarding players who had not first used `!findtraps`.
@@ -170,14 +227,14 @@
 - `!commands` removed from Moobot/Wizebot — was generating unnecessary chat noise.
 - Shop rotation announcement suppressed — the hourly rotation no longer announces in chat; only the 3-minute warning fires.
 
-### Database
+### Database v2.0.0
 
 - New table: `auctions` — id, listed_by, item_name, item_type, rarity, stat_bonus, description, is_cursed, purchase_price, starting_bid, current_bid, current_bidder, is_active, created_at.
 - New columns on `shop`: `owner`, `listed_by`, `listed_at`, `expires_at`, `is_player_listing`.
 - New column on `inventory`: `purchase_price`.
 - New SQL function: `return_expired_listings()` — called every 15 minutes to return expired player shop listings to seller inventory.
 
-### Files v2.0.1
+### Files v2.0.0
 
 - `src/lib/zulkirjax.ts` — ZulkirJax wandering menace system
 - `src/lib/campaignState.ts` — campaign active flag for ZulkirJax blocking
@@ -523,7 +580,7 @@
 - `src/router.ts` — feeblemind, polymorph, tasha locks added
 - `src/game/loot.ts` — scrolls included in `rollLootByRarity`
 
-## v1.5.1 — April 19, 2026
+## v1.5.1
 
 ### Added v1.5.1
 
