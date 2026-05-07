@@ -139,3 +139,12 @@ dist
 
 # Twitch Bot Specific
 src/lib/codes.ts
+
+# Misc
+./src/panel/leaderboard.html
+src/panel/leaderboard.html
+panel/leaderboard.html
+src/panel/leaderboard.html
+*/panel/leaderboard.html
+**/panel/leaderboard.html
+*/panel
