@@ -2,6 +2,13 @@
 
 ---
 
+## v2.1.1 — May 6, 2026
+
+### Bug Fixes
+
+- Fixed Zulkir Jax messages interleaving with command responses — `summonZulkirjax` is now awaited in `router.ts` so the full Zulkirjax sequence completes before any command executes. The triggering command is swallowed when Zulkirjax appears.
+- Fixed misplaced closing brace in `router.ts` that was cutting off the message handler scope, causing linter errors for `username` and `channel`.
+
 ## v2.1.0 — May 6, 2026
 
 ### New Features
@@ -26,7 +33,7 @@
 - Player shop listing caps: Epic 80gp, Mythic 160gp.
 - Supabase `inventory` rarity constraint updated to include `epic` and `mythic`.
 
-### Bug Fixes
+### Bug Fixes v2.1.0
 
 - Fixed ZulkirJax appearing multiple times in a row — added module-level summoning lock in `router.ts` to prevent race condition.
 - Fixed Steve French dialog appearing 3x in a row — added `steveFrenchActive` lock in `stevefrench.ts`.

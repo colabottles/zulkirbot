@@ -73,11 +73,11 @@ export function registerCommands(
         .single()
       if (charCheck) {
         zulkirjaxSummoning = true
-        summonZulkirjax(client, channel, username).finally(() => {
-          zulkirjaxSummoning = false
-        })
+        await summonZulkirjax(client, channel, username)
+        zulkirjaxSummoning = false
+        return
+        }
       }
-    }
 
     // Consequence check fires on every command before routing
     await checkConsequences(client, supabase, channel, username)
