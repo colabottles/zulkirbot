@@ -4,9 +4,23 @@ import { formatRarity } from '../lib/rarity'
 import { sendWhisper } from '../lib/whisper'
 
 const HIGHLIGHT_RARITIES = new Set(['rare', 'epic', 'legendary', 'mythic', 'artifact'])
-
 const showCooldowns = new Map<string, number>()
 const SHOW_COOLDOWN_MS = 15 * 60 * 1000
+
+// Attempt whisper — fall back to a condensed chat message if it fails
+async function whisperOrChat(
+  channel: string,
+  username: string,
+  message: string,
+  client: import('tmi.js').Client
+): Promise<void> {
+  const sent = await sendWhisper(username, message)
+  if (!sent) {
+    // Truncate to avoid chat spam — cap at 400 chars
+    const truncated = message.length > 400 ? message.slice(0, 397) + '...' : message
+    client.say(channel, `@${username} ${truncated}`)
+  }
+}
 
 export const inventoryCommand: BotCommand = {
   name: 'inventory',
@@ -29,7 +43,7 @@ export const inventoryCommand: BotCommand = {
       .order('rarity', { ascending: false })
 
     if (!items || items.length === 0) {
-      await sendWhisper(username, `Your inventory is empty. Go fight something!`)
+      await whisperOrChat(channel, username, `Your inventory is empty. Go fight something!`, client)
       return
     }
 
@@ -50,9 +64,13 @@ export const inventoryCommand: BotCommand = {
       const lastUsed = showCooldowns.get(username) ?? 0
       if (now - lastUsed < SHOW_COOLDOWN_MS) {
         const remainingMins = Math.ceil((SHOW_COOLDOWN_MS - (now - lastUsed)) / 60000)
-        await sendWhisper(username, `You can show your inventory again in ${remainingMins} minute${remainingMins === 1 ? '' : 's'}.`)
+        await whisperOrChat(channel, username,
+          `You can show your inventory again in ${remainingMins} minute${remainingMins === 1 ? '' : 's'}.`,
+          client
+        )
         return
       }
+
       showCooldowns.set(username, now)
 
       const highlights = [...stacked.entries()]
@@ -77,15 +95,18 @@ export const inventoryCommand: BotCommand = {
       return
     }
 
-    // Default !inventory — whisper full list
+    // Default !inventory — attempt whisper, fall back to chat
     const fullList = [...stacked.entries()]
       .map(([name, { rarity, count, equipped }]) =>
         `${name} ${formatRarity(rarity)}${count > 1 ? ` x${count}` : ''}${equipped ? '[E]' : ''}`
       )
       .join(', ')
 
-    await sendWhisper(username,
-      `🎒 ${characterName}'s inventory (${items.length} items): ${fullList}`
+    await whisperOrChat(
+      channel,
+      username,
+      `🎒 ${characterName}'s inventory (${items.length} items): ${fullList}`,
+      client
     )
   }
 }
