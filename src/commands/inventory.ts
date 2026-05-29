@@ -110,6 +110,6 @@ export const inventoryCommand: BotCommand = {
       `🎒 ${characterName}'s inventory (${items.length} items): ${fullList}`,
       client
     )
-    client.say(channel, `🎒 ${characterName}'s full inventory → ${PANEL_BASE_URL}/panel/inventory.html?user=${username}`)
+    client.say(channel, `🎒 ${characterName}'s full inventory → ${PANEL_BASE_URL}/inventory.html?user=${username}`)
   }
 }
