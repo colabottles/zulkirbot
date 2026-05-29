@@ -18,7 +18,7 @@ const OFFENSIVE_SCROLL_DAMAGE: Record<string, number> = {
 
 export const useCommand: BotCommand = {
   name: 'use',
-  aliases: ['consume'],
+  aliases: ['u'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     if (!args.length) {

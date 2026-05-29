@@ -6,6 +6,7 @@ const BANK_SLOTS = 50
 
 export const bankCommand: BotCommand = {
   name: 'bank',
+  aliases: ['bk'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     if (!args.length) {

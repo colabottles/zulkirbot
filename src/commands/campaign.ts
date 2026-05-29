@@ -62,14 +62,18 @@ const SHRINE_HEAL_HP = 20
 
 const STAGE_XP = [50, 100, 150, 200, 300]
 const STAGE_GOLD = [20, 40, 60, 80, 120]
-const CLEAR_BONUS_XP = 250
-const CLEAR_BONUS_GOLD = 100
+const CLEAR_BONUS_XP = 500
+const CLEAR_BONUS_GOLD = 250
 
 const ELITE_POWERS = [
   'Iron Bulwark',
   'Warlord\'s Fury',
   'Cursed Ground',
   'Battle Trance',
+  'Arcane Shield',
+  'Berserker\'s Rage',
+  'Shadow Veil',
+  'Soul Siphon',
 ]
 
 function getScaledEnemies(avgLevel: number): Record<number, StageEnemy | StageEnemy[]> {
@@ -82,7 +86,7 @@ function getScaledEnemies(avgLevel: number): Record<number, StageEnemy | StageEn
     },
     1: [
       {
-        name: 'Hobgoblin Scout',
+        name: 'Kobold Scout',
         hp: 20 + s * 5,
         damage: [3 + s, 7 + s * 2] as [number, number],
       },
@@ -126,11 +130,15 @@ function getPlayerDamageRange(avgLevel: number): [number, number] {
 }
 
 const STAGE_FLAVOR: Record<number, string> = {
-  0: '⚔️  A rabble of goblins blocks the road ahead, emboldened by darkness.',
+  0: '⚔️ A rabble of goblins blocks the road ahead, emboldened by darkness.',
   1: '🏹 You round a bend and walk straight into a hobgoblin ambush!',
-  2: '🛡️  A heavily armed orc patrol bars the passage, their captain sneering.',
-  3: '💀 An Elite Shadowguard steps from the darkness. This one is different.',
-  4: '',
+  2: '🛡️ A heavily armed orc patrol bars the passage, their captain sneering.',
+  3: '💀 As you walkdown the corridor, you bump into a band of irate kobolds.',
+  4: '🧌 An Elite Shadowguard steps from the darkness. This one is different.',
+  5: '👹 The air grows cold as the fearsome boss emerges to challenge you!',
+  6: '🪄 Jax materializes before you, eyes blazing. "You dare challenge me?"',
+  7: '⚡ Jax unleashes a devastating storm of arcane energy. Hold on tight!',
+  8: '🔥 The battle rages on as you face the ultimate challenge!'
 }
 
 const SHRINE_FLAVOR = [
@@ -138,6 +146,10 @@ const SHRINE_FLAVOR = [
   '🕯️  Ancient stonework pulses with faint warmth. The shrine grants you a moment\'s reprieve.',
   '🕯️  A forgotten altar still holds power. You rest a moment and feel the ache lessen.',
   '🕯️  The shrine\'s flame flickers as you approach, steadying as if in recognition.',
+  '🕯️  You find a quiet corner with a faded shrine. Taking a moment to rest, you feel renewed.',
+  '🕯️  A soft glow emanates from a cracked shrine. You take a moment to rest, and your wounds knit together.',
+  '🕯️  The shrine\'s light dances across the walls. You pause to rest, and your strength returns.',
+  '🕯️  You discover a hidden shrine tucked away in an alcove. Resting there, you feel the pain ebb away.',
 ]
 
 const roll = (min: number, max: number) =>
@@ -198,17 +210,6 @@ function waitForModeChoice(
 
     client.on('message', handler)
   })
-}
-
-async function getTodaysCampaign(supabase: SupabaseClient, username: string) {
-  const { data } = await supabase
-    .from('campaigns')
-    .select('*')
-    .eq('initiated_by', username)
-    .gte('started_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
-    .limit(1)
-    .single()
-  return data
 }
 
 async function drawBoss(supabase: SupabaseClient): Promise<BossPoolEntry> {
@@ -667,14 +668,6 @@ export async function handleCampaignCommand(
   channel: string,
   username: string
 ) {
-  const existing = await getTodaysCampaign(supabase, username)
-
-  if (existing) {
-    await say(client, channel,
-      `@${username} You've already run a campaign today. Come back tomorrow!`
-    )
-    return
-  }
 
   // Block solo if player is in an active party campaign
   const { data: activeParty } = await supabase

@@ -33,12 +33,23 @@ export const titleCommand: BotCommand = {
 
     const titleName = args.join(' ')
 
-    const { data: earned } = await supabase
+    // Check kill titles first
+    const { data: killTitle } = await supabase
       .from('titles')
       .select('title')
       .eq('character_id', char.id)
       .ilike('title', `%${titleName}%`)
       .single()
+
+    // Fall back to campaign/invasion titles
+    const { data: playerTitle } = !killTitle ? await supabase
+      .from('player_titles')
+      .select('title')
+      .eq('username', username)
+      .ilike('title', `%${titleName}%`)
+      .single() : { data: null }
+
+    const earned = killTitle ?? playerTitle
 
     if (!earned) {
       client.say(channel, `@${username} — you haven't earned that title yet.`)

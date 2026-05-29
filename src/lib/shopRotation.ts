@@ -8,7 +8,9 @@ const PRICE_MAP: Record<ItemRarity, number> = {
   common: 20,
   uncommon: 60,
   rare: 0,
+  epic: 0,
   legendary: 0,
+  mythic: 0,
 }
 
 let nextRotationAt: number | null = null

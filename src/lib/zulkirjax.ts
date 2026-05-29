@@ -39,9 +39,9 @@ const TAUNT_LINES = [
 ]
 
 const DEBUFFS = [
-  { key: 'jax_unease', message: `@{username} feels a creeping unease. Something is watching. -5 to all rolls until the feeling passes.` },
+  { key: 'jax_unease', message: `@{username} feels a creeping unease. Something is watching. The dungeon feels different. Wrong.` },
   { key: 'jax_doubt', message: `@{username} is filled with sudden self-doubt. Was that the right move? Is any move the right move? -10 max HP until next rest.` },
-  { key: 'jax_paranoia', message: `@{username} becomes paranoid. Every shadow looks like a phylactery. Every sound is a lich. -5 to defense until next fight.` },
+  { key: 'jax_paranoia', message: `@{username} becomes paranoid. Every shadow looks like a phylactery. Every sound is a lich. The feeling lingers.` },
   { key: 'jax_marked', message: `@{username} has been marked. Not cursed. Just... noted. The ledger has been updated. Something will come of this.` },
   { key: 'jax_cold', message: `@{username} feels a deep cold settle into their bones. The kind that doesn't go away. -8 HP.` },
 ]

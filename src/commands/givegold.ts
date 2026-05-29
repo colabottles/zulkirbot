@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 export const givegoldCommand: BotCommand = {
   name: 'givegold',
+  aliases: ['gg'],
   handler: async (channel, username, args, client) => {
     if (username !== process.env.TWITCH_CHANNEL) {
       client.say(channel, `@${username} — you don't have permission to use that command.`)

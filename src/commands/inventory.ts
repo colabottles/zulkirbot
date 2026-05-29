@@ -25,7 +25,7 @@ async function whisperOrChat(
 
 export const inventoryCommand: BotCommand = {
   name: 'inventory',
-  aliases: ['inv', 'bag', 'items'],
+  aliases: ['i', 'bag', 'items'],
   handler: async (channel, username, args, client) => {
     const { data: char } = await supabase
       .from('characters')

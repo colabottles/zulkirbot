@@ -4,7 +4,7 @@ import { formatRarity } from '../lib/rarity'
 
 export const shopCommand: BotCommand = {
   name: 'shop',
-  aliases: ['store', 'buy'],
+  aliases: ['s'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     const { data: char } = await supabase

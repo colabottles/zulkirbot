@@ -4,7 +4,7 @@ import { activeFights } from '../game/engine'
 
 export const potionCommand: BotCommand = {
   name: 'potion',
-  aliases: ['drink', 'heal', 'quaff'],
+  aliases: ['p'],
   cooldownSeconds: 5,
   handler: async (channel, username, _args, client) => {
     const { data: char } = await supabase

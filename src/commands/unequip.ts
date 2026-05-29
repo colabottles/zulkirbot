@@ -9,6 +9,7 @@ const VALID_SLOTS: EquipmentSlot[] = [
 
 export const unequipCommand: BotCommand = {
   name: 'unequip',
+  aliases: ['une'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     if (!args.length) {

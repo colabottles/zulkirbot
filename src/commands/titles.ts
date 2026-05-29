@@ -18,21 +18,34 @@ export const titlesCommand: BotCommand = {
       return
     }
 
-    const { data: titles } = await supabase
+    // Fetch kill-based titles
+    const { data: killTitles } = await supabase
       .from('titles')
       .select('title')
       .eq('character_id', char.id)
       .order('earned_at', { ascending: true })
 
-    if (!titles || titles.length === 0) {
+    // Fetch campaign/invasion titles
+    const { data: playerTitles } = await supabase
+      .from('player_titles')
+      .select('title')
+      .eq('username', target)
+      .order('created_at', { ascending: true })
+
+    const allTitles = [
+      ...(killTitles ?? []),
+      ...(playerTitles ?? []),
+    ]
+
+    if (allTitles.length === 0) {
       client.say(channel, `@${target} hasn't earned any titles yet. Go slay some monsters!`)
       return
     }
 
     const activeMarker = (t: string) => t === char.active_title ? ' ★' : ''
-    const list = titles.map((t: any) => `${t.title}${activeMarker(t.title)}`).join(' | ')
-
+    const list = allTitles.map((t: any) => `${t.title}${activeMarker(t.title)}`).join(' | ')
     const characterName = char.character_name ?? target
+
     client.say(channel, `🏅 ${characterName} (@${target})'s titles: ${list}`)
   }
 }

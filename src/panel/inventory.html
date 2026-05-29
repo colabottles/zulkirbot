@@ -317,7 +317,16 @@
 
     function renderItemRow(item) {
       const icon = TYPE_ICON[item.item_type] ?? '📦'
-      const bonus = item.stat_bonus && item.stat_bonus !== 0 ? `+${item.stat_bonus}` : ''
+      const STAT_LABEL = {
+        weapon: 'dmg', shield: 'def', armor: 'def', helmet: 'def',
+        cloak: 'def', neck: 'HP', eyes: 'atk', waist: 'HP',
+        arms: 'atk', hands: 'dmg', feet: 'def', ring: 'atk',
+        trinket: 'HP', artifact: 'HP', potion: 'HP', scroll: '',
+      }
+      const statLabel = STAT_LABEL[item.item_type] ?? ''
+      const bonus = item.stat_bonus && item.stat_bonus !== 0
+        ? `+${item.stat_bonus}${statLabel ? ' ' + statLabel : ''}`
+        : ''
       const countBadge = item.count > 1 ? `<span class="item-count">x${item.count}</span>` : ''
       const equippedClass = item.equipped ? ' item-row--equipped' : ''
 

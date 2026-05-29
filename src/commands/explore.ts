@@ -10,7 +10,7 @@ import { formatRarity } from '../lib/rarity'
 
 export const exploreCommand: BotCommand = {
   name: 'explore',
-  aliases: ['search', 'scout'],
+  aliases: ['x'],
   cooldownSeconds: 3,
   handler: async (channel, username, _args, client) => {
     if (activeFights.has(username)) {

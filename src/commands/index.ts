@@ -72,6 +72,7 @@ import { prestigeCommand } from './prestige'
 import { titlesCommand } from './titles'
 import { titleCommand } from './title'
 import { xptableCommand } from './xptable'
+import { killcountCommand } from './killcount'
 
 // ── Giveaway ─────────────────────────────────────────────────
 import { startGiveawayCommand } from './startgiveaway'
@@ -89,6 +90,7 @@ import { hairdyeCommand } from './hairdye'
 import { pollCommand } from './poll'
 import { handlePollVote } from './poll'
 import { stevefrenchCommand } from './stevefrench'
+import { burgerCommand } from './burger'
 import {
   layonhandsCommand, inspirationCommand, feeblemindCommand, polymorphCommand,
   tashaCommand, scryCommand, deathwardCommand, heroesfeastCommand, criticalCommand,
@@ -177,6 +179,7 @@ export const allCommands: BotCommand[] = [
   titlesCommand,
   titleCommand,
   xptableCommand,
+  killcountCommand,
 
   // Giveaway
   startGiveawayCommand,
@@ -208,5 +211,6 @@ export const allCommands: BotCommand[] = [
   deckofmanyCommand,
   tarokkaCommand,
   pollCommand,
-  stevefrenchCommand
+  stevefrenchCommand,
+  burgerCommand,
 ]

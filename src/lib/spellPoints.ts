@@ -15,7 +15,7 @@ export const DIVINE_PREP_CLASSES = [
 
 export const ARCANE_FAILURE_CLASSES = [
   'wizard', 'sorcerer', 'warlock', 'wild_mage', 'bard',
-  'blightcaster', 'dragon_lord', 'dragon_disciple', 'arcane_trickster', 'stormsinger',
+  'blightcaster', 'dragon_lord', 'dragon_disciple', 'arcane_trickster', 'stormsinger', 'acolyte_of_the_skin'
 ]
 
 export function getMaxSpellPoints(charClass: string, charLevel: number): number {

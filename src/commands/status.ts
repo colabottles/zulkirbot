@@ -7,7 +7,7 @@ import { getCharacterStats } from '../lib/stats'
 
 export const statusCommand: BotCommand = {
   name: 'status',
-  aliases: ['char', 'character', 'stats'],
+  aliases: ['st', 'stats'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     // !status stats — show combat bonuses

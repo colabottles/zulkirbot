@@ -108,6 +108,7 @@ function getSuccessChance(charClass: string, command: string): number {
 
 export const picklockCommand: BotCommand = {
   name: 'picklock',
+  aliases: ['pl'],
   cooldownSeconds: 5,
   handler: async (channel, username, _args, client) => {
     const { data: char } = await supabase
@@ -197,6 +198,7 @@ export const picklockCommand: BotCommand = {
 
 export const disabletrapCommand: BotCommand = {
   name: 'disabletrap',
+  aliases: ['dt'],
   cooldownSeconds: 5,
   handler: async (channel, username, _args, client) => {
     const { data: char } = await supabase
@@ -217,6 +219,11 @@ export const disabletrapCommand: BotCommand = {
       } else {
         client.say(channel, `@${username} — that's not a trap situation. Try !picklock, !findtraps, or !searchdoor.`)
       }
+      return
+    }
+
+    if (!pending.found) {
+      client.say(channel, `@${username} — you haven't located the trap yet. Use !findtraps first.`)
       return
     }
 
@@ -292,6 +299,7 @@ export const disabletrapCommand: BotCommand = {
 
 export const findtrapsCommand: BotCommand = {
   name: 'findtraps',
+  aliases: ['ft'],
   cooldownSeconds: 5,
   handler: async (channel, username, _args, client) => {
     const { data: char } = await supabase
@@ -300,9 +308,7 @@ export const findtrapsCommand: BotCommand = {
       .eq('twitch_username', username)
       .single()
 
-    if (!char) {
-      return
-    }
+    if (!char) return
 
     const pending = getPendingEvent(username)
 
@@ -315,17 +321,11 @@ export const findtrapsCommand: BotCommand = {
       return
     }
 
-    if (!pending.found) {
-      client.say(channel, `@${username} — you haven't located the trap yet. Use !findtraps first.`)
-      return
-    }
-
     const isEligible = FINDTRAPS_CLASSES.includes(char.class)
     const chance = getSuccessChance(char.class, 'findtraps')
     const roll = d100()
 
     if (roll <= chance) {
-      const pending = getPendingEvent(username)!
       pending.found = true
       client.say(channel,
         `🔍 @${username} — ${isEligible ? 'a careful sweep reveals' : 'blind luck reveals'} ` +
@@ -333,7 +333,6 @@ export const findtrapsCommand: BotCommand = {
         `Use !disabletrap to deal with it safely.`
       )
     } else {
-      // Failure — finds nothing, event stays pending (trap still there)
       client.say(channel,
         `🔍 @${username} — ${isEligible ? 'nothing obvious jumps out, but something feels off.' : 'finds nothing. Seems fine.'}`
       )
@@ -347,6 +346,7 @@ export const findtrapsCommand: BotCommand = {
 
 export const searchdoorCommand: BotCommand = {
   name: 'searchdoor',
+  aliases: ['sd'],
   cooldownSeconds: 5,
   handler: async (channel, username, _args, client) => {
     const { data: char } = await supabase
@@ -369,8 +369,6 @@ export const searchdoorCommand: BotCommand = {
       }
       return
     }
-
-    clearPendingEvent(username)
 
     const isEligible = SEARCHDOOR_CLASSES.includes(char.class)
     const chance = getSuccessChance(char.class, 'searchdoor')
@@ -411,8 +409,8 @@ export const searchdoorCommand: BotCommand = {
         lootMsg = ` An ${formatRarity(item.rarity)} ${item.name} was left behind by whoever used this passage last.`
       }
 
-      const pending = getPendingEvent(username)!
-      pending.found = true
+      const activePending = getPendingEvent(username)!
+      activePending.found = true
 
       const eligibleMsg = isEligible
         ? `@${username} runs a hand along the wall and finds the seam.`
@@ -438,6 +436,7 @@ export const searchdoorCommand: BotCommand = {
 
 export const opendoorCommand: BotCommand = {
   name: 'opendoor',
+  aliases: ['od'],
   cooldownSeconds: 5,
   handler: async (channel, username, _args, client) => {
     const { data: char } = await supabase

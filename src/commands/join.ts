@@ -7,7 +7,7 @@ const CLASSES: CharacterClass[] = ['alchemist', 'artificer', 'barbarian', 'bard'
 
 export const joinCommand: BotCommand = {
   name: 'join',
-  aliases: ['register', 'create'],
+  aliases: ['j'],
   handler: async (channel, username, args, client) => {
     const requestedClass = args[0]?.toLowerCase() as CharacterClass
     const chosenClass = CLASSES.includes(requestedClass)

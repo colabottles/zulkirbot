@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 export const dropCommand: BotCommand = {
   name: 'drop',
+  aliases: ['d'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     if (!args.length) {

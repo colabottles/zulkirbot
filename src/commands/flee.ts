@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 
 export const fleeCommand: BotCommand = {
   name: 'flee',
-  aliases: ['run', 'escape'],
+  aliases: ['f', 'esc'],
   cooldownSeconds: 3,
   handler: async (channel, username, _args, client) => {
     const fight = activeFights.get(username)

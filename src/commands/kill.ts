@@ -5,6 +5,7 @@ import { trimGraveyard } from '../lib/graveyard'
 
 export const killCommand: BotCommand = {
   name: 'kill',
+  aliases: ['k'],
   handler: async (channel, username, args, client) => {
     if (username !== process.env.TWITCH_CHANNEL) {
       client.say(channel, `@${username} — you don't have permission to use that command.`)

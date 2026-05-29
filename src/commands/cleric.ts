@@ -77,6 +77,7 @@ const NOTHING_TO_DO_LINES = [
   'I\'d help but there\'s nothing to help with. Which is fine. Refreshing, even.',
   'No disease, no curse, full health. You\'re doing better than most. It\'s fine.',
   'Nothing afflicts you. Yvannis is pleased. And slightly suspicious. It\'s fine.',
+  'You look like you could use a drink, not a miracle. Yvannis is sure you\'ll be fine.',
 ]
 
 const CANT_AFFORD_LINES = [
@@ -84,12 +85,15 @@ const CANT_AFFORD_LINES = [
   'I\'m a man of faith, not charity. Come back with more gold. It\'s fine.',
   'The divine has overhead costs. You can\'t afford this. It\'s... less fine.',
   'Not enough gold. Yvannis is sorry. It will be fine. Eventually.',
+  'You don\'t have enough gold. This is awkward. It\'s fine. Just... come back later.',
 ]
 
 const ALREADY_SERVED_LINES = [
   'Brother Yvannis has already helped you today. Generously. It\'s fine. Move along.',
   'One miracle per customer. That\'s the rule. It\'s fine.',
   'You\'ve had your turn. Yvannis must attend to others. It\'s fine.',
+  'I\'m sure you understand. It\'s only fair. It\'s fine.',
+  'Patience is a virtue. You\'ll get your chance next time. It\'s fine.',
 ]
 
 const pickRandom = <T>(arr: T[]): T =>

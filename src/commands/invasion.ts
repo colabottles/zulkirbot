@@ -13,7 +13,7 @@ import {
 
 export const invasionCommand: BotCommand = {
   name: 'invasion',
-  aliases: [],
+  aliases: ['iv', 'raid'],
   cooldownSeconds: 0,
   handler: async (channel, username, args, client) => {
     const isBroadcaster =

@@ -32,6 +32,7 @@ import {
   applyHirelingSpecial,
 } from '../commands/hireling'
 import { checkConcentrationOnHit, breakConcentration } from '../commands/spells'
+import { steveBuff } from '../commands/burger'
 
 export const activeFights = new Map<string, ActiveFight>()
 const FIGHT_TIMEOUT_MS = 20 * 60 * 1000
@@ -129,6 +130,12 @@ export async function continueFight(
     if (buff.effect === 'defense') stats.defenseBonus += buff.bonus
     if (buff.effect === 'damage') stats.damageBonus += buff.bonus
     clearBuff(username)
+  }
+
+  if (steveBuff.active) {
+    stats.attackBonus += steveBuff.attackBonus
+    stats.defenseBonus += steveBuff.defenseBonus
+    stats.damageBonus += steveBuff.damageBonus
   }
 
   // ── Paralysis check ──────────────────────────────────────────

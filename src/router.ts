@@ -19,8 +19,9 @@ const EXEMPT_COMMANDS = new Set([
 
 const warnedUsers = new Set<string>()
 const cooldowns = new Map<string, Map<string, number>>()
-// 1% chance to summon Zulkirjax during regular play
-let zulkirjaxSummoning = false
+const ZULKIRJAX_COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
+let lastZulkirjaxSummon = 0
+let zulkirjaxSummoning = false // 0.2% chance to summon Zulkirjax during regular play
 
 export function registerCommands(
   client: tmi.Client,
@@ -65,7 +66,14 @@ export function registerCommands(
     }
 
     // In the summon check:
-    if (!isZulkirjaxPresent() && !zulkirjaxSummoning && !isCampaignActive() && Math.random() < 0.01) {
+    const now = Date.now()
+    if (
+      !isZulkirjaxPresent() &&
+      !zulkirjaxSummoning &&
+      !isCampaignActive() &&
+      now - lastZulkirjaxSummon > ZULKIRJAX_COOLDOWN_MS &&
+      Math.random() < 0.002
+    ) {
       const { data: charCheck } = await supabase
         .from('characters')
         .select('id')
@@ -73,11 +81,12 @@ export function registerCommands(
         .single()
       if (charCheck) {
         zulkirjaxSummoning = true
+        lastZulkirjaxSummon = Date.now()
         await summonZulkirjax(client, channel, username)
         zulkirjaxSummoning = false
         return
-        }
       }
+    }
 
     // Consequence check fires on every command before routing
     await checkConsequences(client, supabase, channel, username)
@@ -96,7 +105,7 @@ export function registerCommands(
       return
     }
 
-    if (cmdName === 'campaign') {
+    if (cmdName === 'campaign' || cmdName === 'c') {
       const slug = args[0]?.toLowerCase()
       if (slug && GREYHAWK_SLUGS.has(slug)) {
         await handleGreyhawkCampaignCommand(client, supabase, channel, username, slug)
@@ -108,7 +117,7 @@ export function registerCommands(
       return
     }
 
-    if (cmdName === 'joincamp') {
+    if (cmdName === 'joincamp' || cmdName === 'jc') {
       const handledByGreyhawk = await handleGreyhawkJoinCamp(client, channel, username)
       if (!handledByGreyhawk) {
         const handledByNamed = await handleNamedJoinCamp(client, channel, username)

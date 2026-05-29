@@ -4,6 +4,7 @@ import { getSlotColumn, getSlotForItemType } from '../lib/stats'
 
 export const equipCommand: BotCommand = {
   name: 'equip',
+  aliases: ['e'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     if (!args.length) {
@@ -31,7 +32,18 @@ export const equipCommand: BotCommand = {
       .ilike('item_name', `%${itemName}%`)
 
     if (!items || items.length === 0) {
-      client.say(channel, `@${username} — you don't have that item in your inventory.`)
+      // Check if the item exists but is already marked equipped
+      const { data: allItems } = await supabase
+        .from('inventory')
+        .select('item_name, equipped')
+        .eq('character_id', char.id)
+        .ilike('item_name', `%${itemName}%`)
+
+      if (allItems && allItems.length > 0) {
+        client.say(channel, `@${username} — that item is already equipped or in a broken state. Try !unequip first.`)
+      } else {
+        client.say(channel, `@${username} — you don't have that item in your inventory.`)
+      }
       return
     }
 

@@ -8,6 +8,7 @@ import { maybeStartBrawl } from '../lib/tavernSession'
 
 export const tavernCommand: BotCommand = {
   name: 'tavern',
+  aliases: ['t'],
   cooldownSeconds: 5,
   handler: async (channel, username, args, client) => {
     const { data: char } = await supabase

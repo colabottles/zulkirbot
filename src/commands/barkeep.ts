@@ -3,27 +3,16 @@ import { supabase } from '../lib/supabase'
 import { hasTavernVisit } from '../lib/tavernSession'
 
 const BARKEEP_NAMES = [
-  'DilemmaEnder',
-  'Tavern Tails',
   'JackDrag0n',
-  'Ysukai',
-  'NeutralAgent',
-  'Brakkart',
   'Tuf_RPG',
   'codiene42',
   'guppyczar',
   'Noobahlolic',
   'Nachowench',
-  'Bobhorn Leghorn',
-  'NomadDog',
-  'ARTofPAW',
-  'UngermaxTV',
-  'KingKozma',
-  'Zulkir Jax',
 ]
 
 const BARKEEP_LINES: string[] = [
-  // Flavour
+  // Flavor
   `"Another round? You look like you've seen better days, friend."`,
   `"I've seen a hundred adventurers walk through that door. Half of them walked back out."`,
   `"Keep your voice down. The walls have ears in this town."`,
