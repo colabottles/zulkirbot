@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory — ZulkirBot</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0e0c0a;
+      --surface: #1a1510;
+      --surface-alt: #211c15;
+      --border: #3a2e20;
+      --border-light: #4a3c28;
+      --text: #e8dcc8;
+      --text-muted: #8a7660;
+      --red: #8b1a00;
+      --red-bright: #c0392b;
+      --uncommon: #3a7a3a;
+      --common: #8a7660;
+      --rare: #2a4a9a;
+      --legendary: #9a7010;
+    }
+
+    html,
+    body {
+      min-height: 100vh;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .site-header__logo {
+      font-size: 1.1rem;
+      font-variant: small-caps;
+      color: var(--red-bright);
+      letter-spacing: 0.05em;
+    }
+
+    .site-header__sep {
+      color: var(--border-light);
+    }
+
+    .site-header__page {
+      font-size: 1.1rem;
+      font-variant: small-caps;
+      color: var(--text-muted);
+    }
+
+    .char-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .char-header__name {
+      font-size: 2rem;
+      font-weight: 700;
+      font-variant: small-caps;
+      color: var(--red-bright);
+      line-height: 1.1;
+      margin-bottom: 0.35rem;
+    }
+
+    .char-header__meta {
+      font-size: 0.85rem;
+      font-style: italic;
+      color: var(--text-muted);
+    }
+
+    .rule {
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--red), var(--red-bright), var(--red));
+      border: none;
+      margin: 1.25rem 0;
+    }
+
+    .rule-thin {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-light), transparent);
+      border: none;
+      margin: 0.6rem 0;
+      opacity: 0.6;
+    }
+
+    .section-heading {
+      font-variant: small-caps;
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.75rem;
+    }
+
+    .inv-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .item-list {
+      list-style: none;
+    }
+
+    .item-row {
+      display: grid;
+      grid-template-columns: 2rem 1fr auto;
+      align-items: center;
+      gap: 0 0.75rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 4px;
+      transition: background 0.1s;
+    }
+
+    .item-row:hover {
+      background: var(--surface-alt);
+    }
+
+    .item-row--equipped {
+      background: var(--surface);
+      border-left: 2px solid var(--red);
+      padding-left: calc(0.75rem - 2px);
+    }
+
+    .item-row--equipped:hover {
+      background: var(--surface-alt);
+    }
+
+    .item-icon {
+      font-size: 1.1rem;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .item-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-meta {
+      font-size: 0.75rem;
+      font-style: italic;
+      text-transform: capitalize;
+    }
+
+    .item-bonus {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--uncommon);
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .item-count {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-style: normal;
+      background: var(--surface-alt);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      padding: 0 5px;
+      border-radius: 3px;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+
+    .rarity-common {
+      color: var(--common);
+    }
+
+    .rarity-uncommon {
+      color: var(--uncommon);
+    }
+
+    .rarity-rare {
+      color: var(--rare);
+    }
+
+    .rarity-legendary {
+      color: var(--legendary);
+      font-style: normal;
+      font-weight: 700;
+    }
+
+    .state {
+      padding: 3rem 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .state--error {
+      color: var(--red-bright);
+      font-style: normal;
+    }
+
+    .empty-note {
+      font-style: italic;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 0.4rem 0.75rem;
+    }
+
+    .page-footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      font-style: italic;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    @media (max-width: 480px) {
+      .char-header__name {
+        font-size: 1.5rem;
+      }
+
+      .item-row {
+        grid-template-columns: 1.75rem 1fr auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="page">
+
+    <header class="site-header">
+      <span class="site-header__logo">ZulkirBot</span>
+      <span class="site-header__sep">›</span>
+      <span class="site-header__page">Inventory</span>
+    </header>
+
+    <main id="main-content">
+      <div class="state" aria-live="polite" aria-busy="true">Consulting the ledger…</div>
+    </main>
+
+    <footer class="page-footer" id="page-footer" hidden>
+      <span id="last-updated"></span>
+    </footer>
+
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://kqfrurckgaawlcrqjxqd.supabase.co'
+    const SUPABASE_ANON_KEY = 'sb_publishable_pwPgfFOjP0rLBm_Zvb4YUA_uCJPYvWq'
+
+    const HEADERS = {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    }
+
+    const TYPE_ICON = {
+      weapon: '⚔️', shield: '🛡️', armor: '🥋', helmet: '⛑️',
+      cloak: '🧥', neck: '📿', eyes: '🥽', waist: '🎗️',
+      arms: '💪', hands: '🧤', feet: '👢', ring: '💍',
+      trinket: '🔮', potion: '🧪', scroll: '📜',
+    }
+
+    function getUsername() {
+      return new URLSearchParams(window.location.search).get('user') || ''
+    }
+
+    function formatClass(cls) {
+      return cls.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    }
+
+    function showError(msg) {
+      document.getElementById('main-content').innerHTML =
+        `<div class="state state--error" role="alert">${msg}</div>`
+    }
+
+    function stackItems(items) {
+      const map = new Map()
+      for (const item of items) {
+        const key = item.item_name + '|' + item.rarity + '|' + item.item_type + '|' + item.equipped
+        if (map.has(key)) {
+          map.get(key).count++
+        } else {
+          map.set(key, { ...item, count: 1 })
+        }
+      }
+      return [...map.values()]
+    }
+
+    function renderItemRow(item) {
+      const icon = TYPE_ICON[item.item_type] ?? '📦'
+      const bonus = item.stat_bonus && item.stat_bonus !== 0 ? `+${item.stat_bonus}` : ''
+      const countBadge = item.count > 1 ? `<span class="item-count">x${item.count}</span>` : ''
+      const equippedClass = item.equipped ? ' item-row--equipped' : ''
+
+      return `
+        <li class="item-row${equippedClass}">
+          <span class="item-icon" aria-hidden="true">${icon}</span>
+          <div>
+            <div class="item-name">${item.item_name}${countBadge}</div>
+            <div class="item-meta rarity-${item.rarity}">${item.item_type} · ${item.rarity}</div>
+          </div>
+          <div class="item-bonus">${bonus}</div>
+        </li>
+      `
+    }
+
+    function renderPage(char, items) {
+      const displayName = char.character_name ?? char.display_name
+      const equipped = stackItems(items.filter(i => i.equipped))
+      const bag = stackItems(items.filter(i => !i.equipped))
+
+      const equippedHTML = equipped.length === 0
+        ? '<p class="empty-note">Nothing equipped.</p>'
+        : `<ul class="item-list" role="list">${equipped.map(renderItemRow).join('<hr class="rule-thin">')}</ul>`
+
+      const bagHTML = bag.length === 0
+        ? '<p class="empty-note">Bag is empty.</p>'
+        : `<ul class="item-list" role="list">${bag.map(renderItemRow).join('<hr class="rule-thin">')}</ul>`
+
+      document.getElementById('main-content').innerHTML = `
+        <div class="char-header">
+          <h1 class="char-header__name">${displayName}</h1>
+          <p class="char-header__meta">
+            ${formatClass(char.class)} · Lv.${char.level} · ${char.hp}/${char.max_hp} HP · ${char.gold}g
+          </p>
+        </div>
+
+        <hr class="rule">
+
+        <section class="inv-section" aria-labelledby="equipped-heading">
+          <h2 class="section-heading" id="equipped-heading">Equipped</h2>
+          ${equippedHTML}
+        </section>
+
+        <hr class="rule-thin">
+
+        <section class="inv-section" aria-labelledby="bag-heading">
+          <h2 class="section-heading" id="bag-heading">Bag</h2>
+          ${bagHTML}
+        </section>
+      `
+
+      document.title = `${displayName}'s Inventory — ZulkirBot`
+
+      const footer = document.getElementById('page-footer')
+      footer.hidden = false
+      document.getElementById('last-updated').textContent =
+        `${items.length} item${items.length !== 1 ? 's' : ''} · updated ${new Date().toLocaleTimeString()}`
+    }
+
+    async function fetchInventory() {
+      const username = getUsername()
+
+      if (!username) {
+        showError('No user specified. Add <code>?user=username</code> to the URL.')
+        return
+      }
+
+      try {
+        const charRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/characters?select=*&twitch_username=eq.${encodeURIComponent(username.toLowerCase())}&limit=1`,
+          { headers: HEADERS }
+        )
+        if (!charRes.ok) throw new Error('character')
+        const chars = await charRes.json()
+
+        if (!chars || chars.length === 0) {
+          showError(`No character found for "${username}". Have they used !join?`)
+          return
+        }
+
+        const char = chars[0]
+
+        const invRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/inventory?select=*&character_id=eq.${char.id}&order=equipped.desc,rarity.desc`,
+          { headers: HEADERS }
+        )
+        if (!invRes.ok) throw new Error('inventory')
+        const items = await invRes.json()
+
+        renderPage(char, items ?? [])
+      } catch (err) {
+        showError('Failed to load inventory. Please try again.')
+        console.error(err)
+      }
+    }
+
+    fetchInventory()
+  </script>
+</body>
+</html>
