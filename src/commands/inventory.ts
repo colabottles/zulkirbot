@@ -6,6 +6,7 @@ import { sendWhisper } from '../lib/whisper'
 const HIGHLIGHT_RARITIES = new Set(['rare', 'epic', 'legendary', 'mythic', 'artifact'])
 const showCooldowns = new Map<string, number>()
 const SHOW_COOLDOWN_MS = 15 * 60 * 1000
+const PANEL_BASE_URL = 'https://zulkirbot.netlify.app'
 
 // Attempt whisper — fall back to a condensed chat message if it fails
 async function whisperOrChat(
@@ -102,11 +103,13 @@ export const inventoryCommand: BotCommand = {
       )
       .join(', ')
 
+    // Whisper the full list, then post the link to chat
     await whisperOrChat(
       channel,
       username,
       `🎒 ${characterName}'s inventory (${items.length} items): ${fullList}`,
       client
     )
+    client.say(channel, `🎒 ${characterName}'s full inventory → ${PANEL_BASE_URL}/panel/inventory.html?user=${username}`)
   }
 }
