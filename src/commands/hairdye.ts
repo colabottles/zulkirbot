@@ -16,6 +16,7 @@ const HAIRDYE_MESSAGES = [
   `New hair dye: Existential Taupe. Limited time only. Your feedback about the lag has been noted and filed under hair dye.`,
   `The roadmap has been updated. Q1: hair dye. Q2: hair dye. Q3: surprise hair dye. Q4: holiday hair dye bundle.`,
   `You have received Smoldering Apathy, a rare hair dye. This is the endgame. This was always the endgame.`,
+  `The developers have spoken. The next content update will be a hair dye. It is called Dull Bronze. It is very dull.`,
 ]
 
 export const hairdyeCommand: BotCommand = {

@@ -129,6 +129,7 @@ export async function continueFight(
     if (buff.effect === 'attack') stats.attackBonus += buff.bonus
     if (buff.effect === 'defense') stats.defenseBonus += buff.bonus
     if (buff.effect === 'damage') stats.damageBonus += buff.bonus
+    if (buff.effect === 'hp') stats.hpBonus += buff.bonus
     clearBuff(username)
   }
 

@@ -3,11 +3,6 @@ import { supabase } from '../lib/supabase'
 import { hasTavernVisit } from '../lib/tavernSession'
 
 const BARKEEP_NAMES = [
-  'JackDrag0n',
-  'Tuf_RPG',
-  'codiene42',
-  'guppyczar',
-  'Noobahlolic',
   'Nachowench',
 ]
 
