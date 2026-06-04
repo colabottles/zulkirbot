@@ -96,20 +96,7 @@ export const inventoryCommand: BotCommand = {
       return
     }
 
-    // Default !inventory — attempt whisper, fall back to chat
-    const fullList = [...stacked.entries()]
-      .map(([name, { rarity, count, equipped }]) =>
-        `${name} ${formatRarity(rarity)}${count > 1 ? ` x${count}` : ''}${equipped ? '[E]' : ''}`
-      )
-      .join(', ')
-
-    // Whisper the full list, then post the link to chat
-    await whisperOrChat(
-      channel,
-      username,
-      `🎒 ${characterName}'s inventory (${items.length} items): ${fullList}`,
-      client
-    )
+    // Post the link to chat
     client.say(channel, `🎒 ${characterName}'s full inventory → ${PANEL_BASE_URL}/inventory.html?user=${username}`)
   }
 }

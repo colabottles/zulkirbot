@@ -1,7 +1,7 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
 import { activeFights } from '../game/engine'
-import { getChallenge, removeChallenge, startDuel, isInDuel } from '../lib/duels'
+import { getChallenge, removeChallenge, runDuel, isInDuel } from '../lib/duels'
 import { d100 } from '../game/dice'
 
 export const acceptCommand: BotCommand = {
@@ -40,31 +40,27 @@ export const acceptCommand: BotCommand = {
 
     removeChallenge(username)
 
-    // Roll for initiative
     const challengerRoll = d100()
     const targetRoll = d100()
     const firstTurn = challengerRoll >= targetRoll
       ? challenge.challenger
       : username
 
-    const secondTurn = firstTurn === challenge.challenger
-      ? username
-      : challenge.challenger
+    client.say(
+      channel,
+      `⚔️ The duel begins! ` +
+      `@${challenge.challenger} rolled ${challengerRoll} | @${username} rolled ${targetRoll}. ` +
+      `@${firstTurn} goes first — fight!`
+    )
 
-    startDuel(
+    await runDuel(
       challenge.challenger,
       username,
       channel,
       challengerChar.hp,
       targetChar.hp,
-      firstTurn
-    )
-
-    client.say(
-      channel,
-      `⚔️ The duel begins! ` +
-      `@${challenge.challenger} rolled ${challengerRoll} | @${username} rolled ${targetRoll}. ` +
-      `@${firstTurn} goes first! Type !strike to attack. @${secondTurn} — hold your ground!`
+      firstTurn,
+      client
     )
   }
 }

@@ -2,6 +2,38 @@
 
 ---
 
+## v2.3.0 — June 4, 2026
+
+### Duel Automation
+
+- Duels now resolve automatically after `!accept` — no `!strike` needed.
+- Initiative is rolled as before; the bot then runs each round with a short delay between hits so chat can follow the action.
+- Round-by-round results post to chat with both players' current HP.
+- Win/loss resolution, XP award, level-up check, and `duel_stats` updates are unchanged.
+- `!strike` removed as a player command.
+
+### Inventory & Leaderboard Overlays
+
+- `!inventory` no longer whispers the item list or posts it to chat. It now posts a direct link to the player's inventory page at `zulkirbot.netlify.app/inventory.html?user=username`.
+- `!inventory show` removed.
+- `!leaderboard` now posts a link to `zulkirbot.netlify.app/leaderboard.html` instead of telling chat that the scene is switching.
+- `leaderboard.html` added to the Netlify site — top 10 players by XP, matching the inventory page design.
+
+### Files v2.3.0
+
+- `src/lib/duels.ts` — `currentTurn` and `last_action` removed from `ActiveDuel`; `startDuel` replaced with `runDuel` which owns the full automated fight loop; `upsertDuelStat` moved here from `strike.ts`
+- `src/commands/accept.ts` — calls `runDuel` after initiative roll instead of `startDuel`
+- `src/commands/strike.ts` — removed
+- `src/commands/inventory.ts` — item list and whisper fallback removed; posts link only; `!inventory show` removed
+- `src/commands/leaderboard.ts` — posts overlay link instead of scene-switch message
+- `public/leaderboard.html` — new leaderboard overlay page
+
+## v2.2.1 - June 1, 2026
+
+### Changes
+
+Added and edited shortcut keys and aliases.
+
 ## v2.2.0 — May 7, 2026
 
 ### Boss Invasion System
