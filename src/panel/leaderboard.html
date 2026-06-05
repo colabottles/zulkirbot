@@ -24,16 +24,16 @@
       --border: #3a2e20;
       --border-light: #4a3c28;
       --text: #e8dcc8;
-      --text-muted: #8a7660;
+      --text-muted: #a89880;        /* was #8a7660 — lifted for contrast */
       --red: #8b1a00;
-      --red-bright: #c0392b;
-      --uncommon: #3a7a3a;
-      --common: #8a7660;
-      --rare: #2a4a9a;
-      --legendary: #9a7010;
-      --gold-1: #c0a020;
-      --gold-2: #8a8a8a;
-      --gold-3: #8a5a30;
+      --red-bright: #e04030;        /* was #c0392b — lifted for contrast on dark bg */
+      --uncommon: #5aaa5a;          /* was #3a7a3a — lifted for contrast */
+      --common: #a89880;            /* was #8a7660 */
+      --rare: #6080d0;              /* was #2a4a9a — lifted for contrast */
+      --legendary: #c8a030;         /* was #9a7010 — lifted for contrast */
+      --gold-1: #d4aa22;            /* was #c0a020 — lifted */
+      --gold-2: #b0b0b0;            /* was #8a8a8a — lifted */
+      --gold-3: #c07840;            /* was #8a5a30 — lifted */
     }
 
     html,
@@ -142,7 +142,7 @@
       font-size: 1rem;
       font-weight: 700;
       text-align: center;
-      color: var(--text-muted);
+      color: var(--text-muted);     /* now #a89880 — passes 4.5:1 on --bg */
     }
 
     .board-rank--first {
@@ -166,17 +166,18 @@
       text-overflow: ellipsis;
     }
 
+
     .board-meta {
       font-size: 0.75rem;
       font-style: italic;
-      color: var(--text-muted);
+      color: var(--text-muted);     /* now #a89880 — passes 4.5:1 on --bg */
       text-transform: capitalize;
     }
 
     .board-xp {
       font-size: 0.85rem;
       font-weight: 700;
-      color: var(--uncommon);
+      color: var(--uncommon);       /* now #5aaa5a — passes 4.5:1 on --bg */
       white-space: nowrap;
       text-align: right;
     }
@@ -186,6 +187,18 @@
       color: var(--text-muted);
       text-align: right;
       font-style: italic;
+    }
+
+    .board-row {
+      display: grid;
+      grid-template-columns: 2.5rem 1fr auto;
+      align-items: center;
+      gap: 0 0.75rem;
+      padding: 0.7rem 0.75rem;
+      border-radius: 4px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
     }
 
     .state {
@@ -286,7 +299,7 @@
         return
       }
 
-      const rows = entries.map(renderRow).join('<hr class="rule-thin">')
+      const rows = entries.map(renderRow).join('')
 
       document.getElementById('main-content').innerHTML = `
         <hr class="rule">
@@ -319,7 +332,5 @@
 
     fetchLeaderboard()
   </script>
-
 </body>
-
 </html>
