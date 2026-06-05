@@ -141,5 +141,4 @@ dist
 src/lib/codes.ts
 
 # Misc
-src/panel/leaderboard.html
 src/panel/parchment.png

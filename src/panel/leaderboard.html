@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard — ZulkirBot</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0e0c0a;
+      --surface: #1a1510;
+      --surface-alt: #211c15;
+      --border: #3a2e20;
+      --border-light: #4a3c28;
+      --text: #e8dcc8;
+      --text-muted: #8a7660;
+      --red: #8b1a00;
+      --red-bright: #c0392b;
+      --uncommon: #3a7a3a;
+      --common: #8a7660;
+      --rare: #2a4a9a;
+      --legendary: #9a7010;
+      --gold-1: #c0a020;
+      --gold-2: #8a8a8a;
+      --gold-3: #8a5a30;
+    }
+
+    html,
+    body {
+      min-height: 100vh;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .site-header__logo {
+      font-size: 1.1rem;
+      font-variant: small-caps;
+      color: var(--red-bright);
+      letter-spacing: 0.05em;
+    }
+
+    .site-header__sep {
+      color: var(--border-light);
+    }
+
+    .site-header__page {
+      font-size: 1.1rem;
+      font-variant: small-caps;
+      color: var(--text-muted);
+    }
+
+    .rule {
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--red), var(--red-bright), var(--red));
+      border: none;
+      margin: 1.25rem 0;
+    }
+
+    .rule-thin {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-light), transparent);
+      border: none;
+      margin: 0.6rem 0;
+      opacity: 0.6;
+    }
+
+    .section-heading {
+      font-variant: small-caps;
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.75rem;
+    }
+
+    .board-list {
+      list-style: none;
+    }
+
+    .board-row {
+      display: grid;
+      grid-template-columns: 2.5rem 1fr auto;
+      align-items: center;
+      gap: 0 0.75rem;
+      padding: 0.7rem 0.75rem;
+      border-radius: 4px;
+      background: var(--surface);
+      transition: background 0.1s;
+    }
+
+    .board-row:hover {
+      background: var(--surface-alt);
+    }
+
+    .board-row--first {
+      border-left: 2px solid var(--gold-1);
+      padding-left: calc(0.75rem - 2px);
+    }
+
+    .board-row--second {
+      border-left: 2px solid var(--gold-2);
+      padding-left: calc(0.75rem - 2px);
+    }
+
+    .board-row--third {
+      border-left: 2px solid var(--gold-3);
+      padding-left: calc(0.75rem - 2px);
+    }
+
+    .board-rank {
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .board-rank--first {
+      color: var(--gold-1);
+    }
+
+    .board-rank--second {
+      color: var(--gold-2);
+    }
+
+    .board-rank--third {
+      color: var(--gold-3);
+    }
+
+    .board-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .board-meta {
+      font-size: 0.75rem;
+      font-style: italic;
+      color: var(--text-muted);
+      text-transform: capitalize;
+    }
+
+    .board-xp {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--uncommon);
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .board-level {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: right;
+      font-style: italic;
+    }
+
+    .state {
+      padding: 3rem 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .state--error {
+      color: var(--red-bright);
+      font-style: normal;
+    }
+
+    .page-footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      font-style: italic;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    @media (max-width: 480px) {
+      .board-row {
+        grid-template-columns: 2rem 1fr auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="page">
+
+    <header class="site-header">
+      <span class="site-header__logo">ZulkirBot</span>
+      <span class="site-header__sep">›</span>
+      <span class="site-header__page">Leaderboard</span>
+    </header>
+
+    <main id="main-content">
+      <div class="state" aria-live="polite" aria-busy="true">Consulting the ledger…</div>
+    </main>
+
+    <footer class="page-footer" id="page-footer" hidden>
+      <span id="last-updated"></span>
+    </footer>
+
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://kqfrurckgaawlcrqjxqd.supabase.co'
+    const SUPABASE_ANON_KEY = 'sb_publishable_pwPgfFOjP0rLBm_Zvb4YUA_uCJPYvWq'
+
+    const HEADERS = {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    }
+
+    const RANK_MEDAL = ['🥇', '🥈', '🥉']
+    const RANK_CLASS = ['first', 'second', 'third']
+
+    function formatClass(cls) {
+      return cls.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    }
+
+    function showError(msg) {
+      document.getElementById('main-content').innerHTML =
+        `<div class="state state--error" role="alert">${msg}</div>`
+    }
+
+    function renderRow(char, index) {
+      const name = char.character_name ?? char.display_name
+      const rankClass = RANK_CLASS[index] ? ` board-row--${RANK_CLASS[index]}` : ''
+      const rankLabel = RANK_MEDAL[index] ?? `${index + 1}.`
+      const rankColorClass = RANK_CLASS[index] ? ` board-rank--${RANK_CLASS[index]}` : ''
+
+      return `
+        <li class="board-row${rankClass}">
+          <span class="board-rank${rankColorClass}" aria-label="Rank ${index + 1}">${rankLabel}</span>
+          <div>
+            <div class="board-name">${name}</div>
+            <div class="board-meta">${formatClass(char.class)} · Lv.${char.level}</div>
+          </div>
+          <div>
+            <div class="board-xp">${char.xp.toLocaleString()} XP</div>
+          </div>
+        </li>
+      `
+    }
+
+    function renderPage(entries) {
+      if (entries.length === 0) {
+        document.getElementById('main-content').innerHTML =
+          `<div class="state">No adventurers yet. Use !join to be the first.</div>`
+        return
+      }
+
+      const rows = entries.map(renderRow).join('<hr class="rule-thin">')
+
+      document.getElementById('main-content').innerHTML = `
+        <hr class="rule">
+        <section aria-labelledby="lb-heading">
+          <h2 class="section-heading" id="lb-heading">Top Adventurers</h2>
+          <ul class="board-list" role="list">${rows}</ul>
+        </section>
+      `
+
+      const footer = document.getElementById('page-footer')
+      footer.hidden = false
+      document.getElementById('last-updated').textContent =
+        `${entries.length} adventurer${entries.length !== 1 ? 's' : ''} · updated ${new Date().toLocaleTimeString()}`
+    }
+
+    async function fetchLeaderboard() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/characters?select=display_name,character_name,class,level,xp&order=xp.desc&limit=10`,
+          { headers: HEADERS }
+        )
+        if (!res.ok) throw new Error('leaderboard')
+        const data = await res.json()
+        renderPage(data ?? [])
+      } catch (err) {
+        showError('Failed to load leaderboard. Please try again.')
+        console.error(err)
+      }
+    }
+
+    fetchLeaderboard()
+  </script>
+
+</body>
+
+</html>
