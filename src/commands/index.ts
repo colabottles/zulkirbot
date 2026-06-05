@@ -59,7 +59,6 @@ import { spellsCommand, castCommand, learnspellCommand, prayforspellsCommand, sc
 import { duelCommand } from './duel'
 import { acceptCommand } from './accept'
 import { declineCommand } from './decline'
-import { strikeCommand } from './strike'
 import { pvpboardCommand } from './pvpboard'
 import { partyCommand } from './party'
 import { leaderboardCommand } from './leaderboard'
@@ -166,7 +165,6 @@ export const allCommands: BotCommand[] = [
   duelCommand,
   acceptCommand,
   declineCommand,
-  strikeCommand,
   pvpboardCommand,
   partyCommand,
   leaderboardCommand,
