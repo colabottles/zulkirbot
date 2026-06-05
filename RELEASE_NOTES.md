@@ -2,7 +2,37 @@
 
 ---
 
-## v2.3.0 — June 4, 2026
+## v2.4.0 — June 4, 2026
+
+### Gladiator Arena
+
+- **`!arena`** — Broadcaster-only command that opens a 60-second join window for a gladiator arena event.
+- **`!enterarena`** — Any player with a living character can enter during the join window.
+- Once the window closes the arena runs automatically — no commands needed from players beyond `!attack` on their turn.
+- Waves scale to participant count: 1–2 players get 4 waves, 3–4 players get 5 waves, 5+ players get 6 waves.
+- All waves and enemies scale to average party level using the same formula as `!campaign`.
+- No permadeath — fallen players are set to 0 HP at arena end. Use `!rest` to recover.
+- Survivors earn XP and gold scaled to the number of waves cleared.
+
+#### Arena Enemy Roster
+
+Six waves of arena-exclusive enemies — distinct from the regular monster pool, campaign enemies, and invasion bosses:
+
+| Wave | Enemy | Special |
+| --- | --- | --- |
+| 1 | Giant Hyena Pack | — |
+| 2 | Retiarius Gladiator | Net Throw |
+| 3 | Manticore | Tail Spike Volley |
+| 4 | Darkmantle Swarm | Darkness Pulse |
+| 5 | The Arena Master | Executioner's Strike |
+| Final | Valdris the Unbroken | Wrath of the Undefeated |
+
+#### Files v2.4.0
+
+- `src/commands/arena.ts` — full arena handler, `handleArenaCommand`, `handleEnterArenaCommand`
+- `src/router.ts` — `!arena` and `!enterarena` wired outside normal command map
+
+## v2.3.0 — June 3, 2026
 
 ### Duel Automation
 

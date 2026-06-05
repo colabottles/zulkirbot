@@ -8,6 +8,7 @@ import { handleNamedCampaignCommand, handleNamedJoinCamp, checkConsequences } fr
 import { handleGreyhawkCampaignCommand, checkGreyhawkConsequences, handleGreyhawkJoinCamp } from './commands/greyhawk_campaign'
 import { handleClericCommand, isYvannisPresent } from './commands/cleric'
 import { isFeebleminded, isPolymorphed, isTashaed, getTashaMessage } from './commands/new_commands'
+import { handleArenaCommand, handleEnterArenaCommand } from './commands/arena'
 import { handlePollVote } from './commands/poll'
 import { isZulkirjaxPresent, summonZulkirjax, handleZulkirjaxAttack } from './lib/zulkirjax'
 import { isCampaignActive } from './lib/campaignState'
@@ -125,6 +126,16 @@ export function registerCommands(
           await handleJoinCampCommand(client, channel, username)
         }
       }
+      return
+    }
+
+    if (cmdName === 'arena') {
+      await handleArenaCommand(client, channel, username)
+      return
+    }
+
+    if (cmdName === 'enterarena') {
+      await handleEnterArenaCommand(client, channel, username)
       return
     }
 
