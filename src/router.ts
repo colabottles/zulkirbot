@@ -11,14 +11,22 @@ import { isFeebleminded, isPolymorphed, isTashaed, getTashaMessage } from './com
 import { handleArenaCommand, handleEnterArenaCommand } from './commands/arena'
 import { handlePollVote } from './commands/poll'
 import { isZulkirjaxPresent, summonZulkirjax, handleZulkirjaxAttack } from './lib/zulkirjax'
-import { isCampaignActive } from './lib/campaignState'
 
-const EXEMPT_COMMANDS = new Set([
-  'help', 'status', 'start', 'stop', 'setcode', 'ddo', 'draw',
-  'pause', 'resume', 'poll', 'endauction'
+const BOT_ACCOUNTS = new Set([
+  'moobot',
+  'wizebot',
+  'sery_bot',
+  'wzbot',
+  'kofistreambot',
+  'soundalerts',
 ])
 
-const warnedUsers = new Set<string>()
+const EXEMPT_COMMANDS = new Set([
+  'help', 'status', 'start', 'stop', 'setcode', 'ddo', 'donate', 'draw',
+  'pause', 'resume', 'poll', 'endauction', 'ddofree', 'ddonews', 'rtfm',
+  'lurk', 'so', 'vso', 'followage', 'uptime',
+])
+
 const cooldowns = new Map<string, Map<string, number>>()
 const ZULKIRJAX_COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
 let lastZulkirjaxSummon = 0
@@ -47,13 +55,15 @@ export function registerCommands(
   client.on('message', async (channel, tags, message, self) => {
     if (self) return
 
-    handlePollVote(channel, tags.username ?? 'unknown', message)
-
-    if (!message.startsWith('!')) return
-
     const [rawCmd, ...args] = message.trim().split(/\s+/)
     const cmdName = rawCmd.slice(1).toLowerCase()
     const username = tags.username ?? 'unknown'
+
+    if (BOT_ACCOUNTS.has(username)) return
+
+    handlePollVote(channel, tags.username ?? 'unknown', message)
+
+    if (!message.startsWith('!')) return
 
     if (cmdName === 'cleric') {
       await handleClericCommand(client, supabase, channel, username, args)
@@ -71,7 +81,6 @@ export function registerCommands(
     if (
       !isZulkirjaxPresent() &&
       !zulkirjaxSummoning &&
-      !isCampaignActive() &&
       now - lastZulkirjaxSummon > ZULKIRJAX_COOLDOWN_MS &&
       Math.random() < 0.002
     ) {
@@ -229,14 +238,6 @@ export function registerCommands(
     if (isTashaed(username)) {
       client.say(channel, getTashaMessage(username))
       return
-    }
-
-    // First command mute warning
-    if (!warnedUsers.has(username)) {
-      warnedUsers.add(username)
-      client.say(channel,
-        `⚠️ HEADS UP @${username} — Twitch will temporarily mute you if you send too many commands too fast. Pace yourself! This is called the Ysukai Directive. ⚠️`
-      )
     }
 
     try {

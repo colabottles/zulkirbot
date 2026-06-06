@@ -2390,6 +2390,10 @@ async function runNamedCampaign(
 
 const namedPendingJoins = new Map<string, Set<string>>()
 
+function namedJoinKey(channel: string, campaignId: string): string {
+  return `${channel}:${campaignId}`
+}
+
 export async function handleNamedCampaignCommand(
   client: Client,
   supabase: SupabaseClient,
@@ -2397,19 +2401,6 @@ export async function handleNamedCampaignCommand(
   username: string,
   slug: string
 ) {
-  const { data: existing } = await supabase
-    .from('campaigns')
-    .select('id')
-    .eq('initiated_by', username)
-    .gte('started_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
-    .limit(1)
-    .single()
-
-  if (existing) {
-    await say(client, channel, `@${username} You've already run a campaign today. Come back tomorrow.`)
-    return
-  }
-
   const { data: initiatorChar } = await supabase
     .from('characters')
     .select('hp')
@@ -2526,7 +2517,8 @@ export async function handleNamedCampaignCommand(
 
     } else {
       const joiners = new Set<string>([username])
-      namedPendingJoins.set(channel, joiners)
+      const joinKey = namedJoinKey(channel, campaign.id)
+      namedPendingJoins.set(joinKey, joiners)
 
       await say(client, channel,
         `Party forming for ${campaignData.name}! ` +
@@ -2534,7 +2526,7 @@ export async function handleNamedCampaignCommand(
       )
 
       await delay(JOIN_WINDOW_MS)
-      namedPendingJoins.delete(channel)
+      namedPendingJoins.delete(joinKey)
 
       for (const joiner of joiners) {
         if (joiner !== username) {
@@ -2603,8 +2595,10 @@ export async function handleNamedJoinCamp(
   channel: string,
   username: string
 ): Promise<boolean> {
-  const joiners = namedPendingJoins.get(channel)
-  if (!joiners) return false
+  // Find the most recently opened join window for this channel
+  const channelKeys = [...namedPendingJoins.keys()].filter(k => k.startsWith(`${channel}:`))
+  if (channelKeys.length === 0) return false
+  const joiners = namedPendingJoins.get(channelKeys[channelKeys.length - 1])!
 
   const { data: joinerChar } = await supabase
     .from('characters')

@@ -1,11 +1,3 @@
-// ============================================================
-// ZulkirBot: !campaign Command Handler
-// ============================================================
-// Handles the full campaign lifecycle:
-//   initiation → solo/party prompt → join window →
-//   stage loop → rest shrine → boss fight → rewards
-// ============================================================
-
 import { Client } from 'tmi.js'
 import { supabase } from './../lib/supabase'
 import { SupabaseClient } from '@supabase/supabase-js'
@@ -662,6 +654,10 @@ async function runCampaign(
 // Track pending party join windows: channel → Set of usernames
 const pendingJoins = new Map<string, Set<string>>()
 
+function joinKey(channel: string, campaignId: string): string {
+  return `${channel}:${campaignId}`
+}
+
 export async function handleCampaignCommand(
   client: Client,
   supabase: SupabaseClient,
@@ -670,6 +666,14 @@ export async function handleCampaignCommand(
 ) {
 
   // Block solo if player is in an active party campaign
+  // Mark campaigns older than 30 minutes as failed so players don't get stuck
+  const staleThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  await supabase
+    .from('campaigns')
+    .update({ status: 'failed', completed_at: new Date().toISOString() })
+    .in('status', ['joining', 'active'])
+    .lt('started_at', staleThreshold)
+
   const { data: activeParty } = await supabase
     .from('campaign_participants')
     .select('campaign_id, campaigns!inner(status, mode)')
@@ -740,7 +744,8 @@ export async function handleCampaignCommand(
       await addParticipant(supabase, campaign.id, username)
 
       const joiners = new Set<string>([username])
-      pendingJoins.set(channel, joiners)
+      const key = joinKey(channel, campaign.id)
+      pendingJoins.set(key, joiners)
 
       await say(client, channel,
         `🛡️  Party forming! Type !joincamp to join the campaign. ` +
@@ -748,7 +753,7 @@ export async function handleCampaignCommand(
       )
 
       await delay(JOIN_WINDOW_MS)
-      pendingJoins.delete(channel)
+      pendingJoins.delete(key)
 
       for (const joiner of joiners) {
         if (joiner !== username) {
@@ -794,11 +799,12 @@ export async function handleJoinCampCommand(
   channel: string,
   username: string
 ) {
-  const joiners = pendingJoins.get(channel)
-  if (!joiners) {
+  const channelKeys = [...pendingJoins.keys()].filter(k => k.startsWith(`${channel}:`))
+  if (channelKeys.length === 0) {
     await say(client, channel, `@${username} There's no campaign forming right now.`)
     return
   }
+  const joiners = pendingJoins.get(channelKeys[channelKeys.length - 1])!
 
   const { data: joinerChar } = await supabase
     .from('characters')

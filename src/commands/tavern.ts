@@ -5,6 +5,7 @@ import { applyBuff } from '../lib/tavernBuffs'
 import { activeFights } from '../game/engine'
 import { markTavernVisit } from '../lib/tavernSession'
 import { maybeStartBrawl } from '../lib/tavernSession'
+import { getActiveBarkeep, getBarkeepFood } from './barkeep'
 
 export const tavernCommand: BotCommand = {
   name: 'tavern',
@@ -23,12 +24,31 @@ export const tavernCommand: BotCommand = {
 
     // Show menu
     if (!args.length) {
-      client.say(
-        channel,
-        `🍺 Welcome to the tavern, @${username}! Use !drinks to see the drink menu, ` +
-        `!meals to see the food menu. Use !tavern drink [name] or !tavern meal [name] to order. ` +
-        `!gamble [amount] to try your luck! !barkeep and !rumour available after your first purchase.`
-      )
+      const activeBarkeep = getActiveBarkeep()
+      const isInjured = char.hp < char.max_hp
+
+      if (isInjured) {
+        await supabase
+          .from('characters')
+          .update({ hp: char.max_hp })
+          .eq('twitch_username', username)
+
+        client.say(
+          channel,
+          `🍺 Welcome to the tavern, @${username}! ${activeBarkeep} slides ${getBarkeepFood(activeBarkeep)} across the bar. ` +
+          `"You look like you need this." HP fully restored! (${char.max_hp}/${char.max_hp}) ` +
+          `Use !drinks, !meals, !tavern drink [name], !tavern meal [name], or !gamble [amount].`
+        )
+      } else {
+        client.say(
+          channel,
+          `🍺 Welcome to the tavern, @${username}! ${activeBarkeep} gives you a nod from behind the bar. ` +
+          `Use !drinks, !meals, !tavern drink [name], !tavern meal [name], or !gamble [amount].`
+        )
+      }
+
+      markTavernVisit(username)
+      maybeStartBrawl(channel, username, client)
       return
     }
 

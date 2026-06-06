@@ -1,20 +1,10 @@
-// ============================================================
-// ZulkirBot: !arena — Gladiator Arena
-// ============================================================
-// Broadcaster triggers a gladiator-style arena event.
-// Players type !enterarena to join a 60-second window.
-// Waves of monsters scale to participant count and avg level.
-// No permadeath — fallen players drop to 0 HP.
-// Survivors earn XP and gold scaled to waves cleared.
-// ============================================================
-
 import { Client } from 'tmi.js'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { getDisplayName } from '../lib/displayName'
 import { campaignAttackPending } from './campaign'
 
-const JOIN_WINDOW_MS = 60_000
+const JOIN_WINDOW_MS = 180_000
 const ROUND_DELAY_MS = 1_000
 const WAVE_DELAY_MS = 3_000
 
@@ -344,11 +334,6 @@ export async function handleArenaCommand(
   channel: string,
   username: string
 ): Promise<void> {
-  if (username !== process.env.TWITCH_CHANNEL) {
-    client.say(channel, `@${username} — you don't have permission to use that command.`)
-    return
-  }
-
   if (activeArenas.has(channel)) {
     client.say(channel, `@${username} — an arena event is already active.`)
     return
@@ -362,8 +347,9 @@ export async function handleArenaCommand(
 
     await say(client, channel,
       `${pickRandom(ARENA_INTROS)} ` +
-      `⚔️ GLADIATOR ARENA is open! Type !enterarena to throw yourself in. ` +
-      `60 seconds to enter. No permadeath — but losers leave at 0 HP.`
+      `⚔️ GLADIATOR ARENA is open! Type !enterarena to join. ` +
+      `3 minutes to enter — 6 gladiators is the ideal number for a full run. ` +
+      `No permadeath — but losers leave at 0 HP.`
     )
 
     await delay(JOIN_WINDOW_MS)

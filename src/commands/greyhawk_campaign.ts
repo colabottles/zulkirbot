@@ -1986,8 +1986,11 @@ async function runGreyhawkCampaign(
 // Entry point
 // ------------------------------------------------------------
 
-const greyhawkLock = new Map<string, boolean>()
 const greyhawkPendingJoins = new Map<string, Set<string>>()
+
+function greyhawkJoinKey(channel: string, campaignId: string): string {
+  return `${channel}:${campaignId}`
+}
 
 export async function handleGreyhawkCampaignCommand(
   client: Client,
@@ -1997,25 +2000,6 @@ export async function handleGreyhawkCampaignCommand(
   slug: string
 ) {
   if (!GREYHAWK_SLUGS.includes(slug)) return
-
-  if (greyhawkLock.get(channel)) {
-    await say(client, channel, `@${username} A campaign is already being set up. Hang tight!`)
-    return
-  }
-
-  const { data: existing } = await supabase
-    .from('campaign_today')
-    .select('*')
-    .eq('channel', channel)
-    .limit(1)
-    .single()
-
-  if (existing) {
-    await say(client, channel,
-      `@${username} The channel has already run a campaign today. Try again tomorrow.`
-    )
-    return
-  }
 
   const { data: initiatorChar } = await supabase
     .from('characters')
@@ -2062,8 +2046,6 @@ export async function handleGreyhawkCampaignCommand(
     return
   }
 
-  greyhawkLock.set(channel, true)
-
   try {
     const { data: stagesData } = await supabase
       .from('named_campaign_stages')
@@ -2107,8 +2089,20 @@ export async function handleGreyhawkCampaignCommand(
     if (error || !campaign) throw error
 
     await supabase
+    const { data: initiatorHp } = await supabase
+      .from('characters')
+      .select('hp, max_hp')
+      .eq('twitch_username', username)
+      .single()
+
+    await supabase
       .from('campaign_participants')
-      .insert({ campaign_id: campaign.id, username, hp: 100, max_hp: 100 })
+      .insert({
+        campaign_id: campaign.id,
+        username,
+        hp: initiatorHp?.hp ?? 100,
+        max_hp: initiatorHp?.max_hp ?? 100,
+      })
 
     if (mode === 'solo') {
       await say(client, channel,
@@ -2116,6 +2110,7 @@ export async function handleGreyhawkCampaignCommand(
       )
     } else {
       const joiners = new Set<string>([username])
+      const joinKey = greyhawkJoinKey(channel, campaign.id)
       greyhawkPendingJoins.set(channel, joiners)
 
       await say(client, channel,
@@ -2128,9 +2123,20 @@ export async function handleGreyhawkCampaignCommand(
 
       for (const joiner of joiners) {
         if (joiner !== username) {
+          const { data: joinerHp } = await supabase
+            .from('characters')
+            .select('hp, max_hp')
+            .eq('twitch_username', joiner)
+            .single()
+
           await supabase
             .from('campaign_participants')
-            .insert({ campaign_id: campaign.id, username: joiner, hp: 100, max_hp: 100 })
+            .insert({
+              campaign_id: campaign.id,
+              username: joiner,
+              hp: joinerHp?.hp ?? 100,
+              max_hp: joinerHp?.max_hp ?? 100,
+            })
         }
       }
 
@@ -2153,9 +2159,7 @@ export async function handleGreyhawkCampaignCommand(
       campaignData as NamedCampaign, stages, outcomes, participants
     )
 
-  } finally {
-    greyhawkLock.delete(channel)
-  }
+  } finally {}
 }
 
 export async function handleGreyhawkJoinCamp(
@@ -2163,8 +2167,9 @@ export async function handleGreyhawkJoinCamp(
   channel: string,
   username: string
 ): Promise<boolean> {
-  const joiners = greyhawkPendingJoins.get(channel)
-  if (!joiners) return false
+  const channelKeys = [...greyhawkPendingJoins.keys()].filter(k => k.startsWith(`${channel}:`))
+  if (channelKeys.length === 0) return false
+  const joiners = greyhawkPendingJoins.get(channelKeys[channelKeys.length - 1])!
 
   const { data: joinerChar } = await supabase
     .from('characters')

@@ -12,7 +12,9 @@ export const exploreCommand: BotCommand = {
   name: 'explore',
   aliases: ['x'],
   cooldownSeconds: 3,
-  handler: async (channel, username, _args, client) => {
+  handler: async (channel, username, args, client) => {
+    if (args.length > 0) return
+
     if (activeFights.has(username)) {
       client.say(channel, `@${username} — finish your fight first.`)
       return

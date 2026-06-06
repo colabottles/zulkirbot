@@ -4,7 +4,25 @@ import { hasTavernVisit } from '../lib/tavernSession'
 
 const BARKEEP_NAMES = [
   'Nachowench',
+  'JackDrag0n',
+  'Jabberw0okie',
+  'Ysukai'
 ]
+
+const BARKEEP_FOOD: Record<string, string> = {
+  'Nachowench': 'a plate of cheesynachos',
+  'JackDrag0n': 'a bowl of hearty owlbear stew',
+  'Jabberw0okie': 'a slice of elven waybread',
+  'Ysukai': 'a kobold burger and orc finger fries'
+}
+
+export function getActiveBarkeep(): string {
+  return BARKEEP_NAMES[Math.floor(Math.random() * BARKEEP_NAMES.length)]
+}
+
+export function getBarkeepFood(name: string): string {
+  return BARKEEP_FOOD[name] ?? 'a plate of food'
+}
 
 const BARKEEP_LINES: string[] = [
   // Flavor
@@ -18,7 +36,8 @@ const BARKEEP_LINES: string[] = [
   `"First drink's almost the cheapest. Almost."`,
   `"Had a bard in here last week. Lovely voice. Terrible tipper."`,
   `"You remind me of someone who used to come in here. They're in the graveyard now. Good luck."`,
-  `"Dragon_Lore may change his name again to something else. Be mindful."`,
+  `"NeutralAgent is somewhere in the area pork barreling."`,
+  `"Ysukai greets you, he asks you if you would be interested in timeshare in Barovia."`,
   // Tips
   `"Word of advice — check the !shop every hour. Stock changes and the good stuff goes fast."`,
   `"The !shrine's kept more than one poor soul from permadeath. Don't skip it."`,
