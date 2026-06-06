@@ -2,6 +2,41 @@
 
 ---
 
+## v2.4.1 — June 6, 2026
+
+### Bug Fixes & Improvements
+
+- **`!arena`** — Removed broadcaster-only restriction. Any player can now open the arena. Join window extended from 60 seconds to 3 minutes. Opening announcement updated to call out 6 gladiators as the ideal number for a full run.
+- **`!campaign`** — Fixed stale campaign rows locking players out with a false "already in a campaign" message. Campaigns older than 30 minutes are now marked failed before the active-party check runs.
+- **Named campaigns** — Removed per-user daily cooldown from `handleNamedCampaignCommand` in both `named_campaign.ts` and `greyhawk_campaign.ts`. Players can now run campaigns freely without a once-per-day limit.
+- **All campaign types** — Join windows are now keyed by `channel:campaignId` instead of channel alone, allowing two party campaigns to run simultaneously. `handleJoinCampCommand`, `handleNamedJoinCamp`, and `handleGreyhawkJoinCamp` all updated to find the most recently opened join window when multiple are active.
+- **Greyhawk campaigns** — Removed channel-wide `greyhawkLock` that was blocking a second simultaneous campaign. Participants now load real HP from the `characters` table instead of hardcoded 100/100.
+- **`!explore`** — Numeric suffixes (`!explore 11`, etc.) now fail silently. Only the bare `!explore` command is accepted.
+- **Bot account filtering** — ZulkirBot now ignores messages from known bot accounts: `moobot`, `wizebot`, `sery_bot`, `wzbot`, `kofistreambot`, `soundalerts`, `zulkirjax`, `zulkirbot`.
+- **Ysukai Directive removed** — First-command mute warning eliminated from `router.ts`.
+- **`campaignState.ts` removed** — Dead module. `setCampaignActive` was never called so `isCampaignActive()` always returned false. Import and condition removed from `router.ts`.
+- **Nachowench** — Added as the tavern barkeep. Visiting `!tavern` with no args now fully restores HP for free if the player is injured, with Nachowench serving nachos. Full HP players get a nod. Barkeep food is now driven by a `BARKEEP_FOOD` lookup in `barkeep.ts` so future barkeeps can serve their own food.
+- **`!linkddo`** — New command. Players can link their DDO character name and server to their ZulkirBot account. ZulkirBot verifies the character exists on DDO Audit before saving.
+- **Hexmongers giveaway bonus** — Players with a DDO character linked via `!linkddo` who are members of The Hexmongers guild on Thrane receive 2 giveaway entries when typing `!ddo`, matching the existing subscriber bonus.
+
+### Database
+
+- New columns on `characters`: `ddo_character_name` (text, nullable), `ddo_server` (text, nullable).
+
+### Files v2.4.1
+
+- `src/commands/arena.ts` — broadcaster check removed, join window extended to 3 minutes, announcement updated
+- `src/commands/campaign.ts` — stale campaign cleanup added, join window keyed by campaign ID
+- `src/commands/named_campaign.ts` — daily cooldown removed, join window keyed by campaign ID
+- `src/commands/greyhawk_campaign.ts` — daily cooldown removed (was absent), `greyhawkLock` removed, join window keyed by campaign ID, real HP loaded for all participants
+- `src/commands/explore.ts` — numeric argument guard added
+- `src/commands/tavern.ts` — Nachowench heal logic added, barkeep and food pulled from `barkeep.ts`
+- `src/commands/barkeep.ts` — `BARKEEP_FOOD` map added, `getActiveBarkeep` and `getBarkeepFood` exported
+- `src/commands/ddo.ts` — Hexmongers guild check added via DDO Audit API
+- `src/commands/linkddo.ts` — new command
+- `src/lib/campaignState.ts` — deleted
+- `src/router.ts` — `BOT_ACCOUNTS` filter added, Ysukai Directive removed, `campaignState` import and condition removed, `linkddo` wired
+
 ## v2.4.0 — June 4, 2026
 
 ### Gladiator Arena
@@ -107,7 +142,7 @@ Added and edited shortcut keys and aliases.
 - Unique invasion title granted per boss (e.g. "Tomb Breaker", "Void Walker", "Hell's Defiant").
 - Per-player legendary item drop chance (7–25% depending on tier).
 
-#### Database
+#### Database v2.2.0
 
 - `player_titles` — existing table used for title grants (column: `username`).
 - `player_titles (username, title)` — unique index added.
@@ -505,7 +540,7 @@ Added and edited shortcut keys and aliases.
 
 ## v1.6.1 — April 20, 2026
 
-### Bug Fixes & Improvements
+### Bug Fixes & Improvements v1.6.1
 
 - **Flee HP persistence** — `!flee` now correctly writes the player's post-flee HP to the database. Previously flee damage was applied in memory but not saved, causing `!status` to show stale HP.
 - **Trap death fix** — Trap damage in `!explore` now re-fetches current HP from the database before calculating death, preventing a player with reduced HP from surviving a lethal trap hit.

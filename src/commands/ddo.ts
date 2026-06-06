@@ -5,9 +5,35 @@ import {
   startTimer,
 } from '../lib/giveaway'
 import { isSubscriber } from '../lib/twitch'
+import { supabase } from '../lib/supabase'
 import tmi from 'tmi.js'
 
 let clientRef: tmi.Client | null = null
+
+const HEXMONGERS_GUILD = 'The Hexmongers'
+const HEXMONGERS_SERVER = 'thrane'
+
+async function isHexmongersMember(username: string): Promise<boolean> {
+  const { data: char } = await supabase
+    .from('characters')
+    .select('ddo_character_name, ddo_server')
+    .eq('twitch_username', username)
+    .single()
+
+  if (!char?.ddo_character_name || !char?.ddo_server) return false
+  if (char.ddo_server !== HEXMONGERS_SERVER) return false
+
+  try {
+    const res = await fetch(
+      `https://api.ddoaudit.com/v1/characters/${char.ddo_server}/${encodeURIComponent(char.ddo_character_name)}`
+    )
+    if (!res.ok) return false
+    const json = await res.json() as { data?: { guild_name?: string } }
+    return json.data?.guild_name === HEXMONGERS_GUILD
+  } catch {
+    return false
+  }
+}
 
 export function setDdoClient(client: tmi.Client): void {
   clientRef = client
@@ -24,14 +50,17 @@ export const ddoCommand: BotCommand = {
 
     const channelName = process.env.TWITCH_CHANNEL!
     const sub = await isSubscriber(username, channelName)
-    const added = addEntry(username, sub)
-
+    const hexmonger = await isHexmongersMember(username)
+    const added = addEntry(username, sub || hexmonger)
     if (!added) {
       client.say(channel, `@${username} — you're already entered!`)
       return
     }
-
-    const subMsg = sub ? ` 🌟 Subscriber bonus — you get 2 entries!` : ''
+    const subMsg = sub
+      ? ` 🌟 Subscriber bonus — you get 2 entries!`
+      : hexmonger
+        ? ` ⚔️ Hexmongers guild member — you get 2 entries!`
+        : ''
 
     // First entry starts the timer
     if (!state.timerStarted) {

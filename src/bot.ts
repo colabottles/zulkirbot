@@ -35,7 +35,7 @@ const client = new tmi.Client({
 
 client.connect().then(async () => {
   console.log(`ZulkirBot connected to #${process.env.TWITCH_CHANNEL}`)
-  client.say(`#${process.env.TWITCH_CHANNEL}`, `🎲 ZulkirBot v2.4.0 is online! Check the docs for the latest changes and new commands: https://zulkirbot-docs.netlify.app`)
+  client.say(`#${process.env.TWITCH_CHANNEL}`, `🎲 ZulkirBot v2.4.1 is online! Check the docs for the latest changes and new commands: https://zulkirbot-docs.netlify.app`)
   registerCommands(client, allCommands)
   setShopClient(client, process.env.TWITCH_CHANNEL!)
   await rotateShop()
