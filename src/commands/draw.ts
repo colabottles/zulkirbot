@@ -44,16 +44,14 @@ export const drawCommand: BotCommand = {
       `🎉 Congratulations! You won the ${state.prizeName} giveaway on ${process.env.TWITCH_CHANNEL}'s stream! ` +
       `Here is your code: ${state.prizeCode} — Enjoy!`
     )
-
     console.log(`[Draw] Whisper sent: ${whisperSent}`)
 
-    if (!whisperSent) {
-      client.say(
-        channel,
-        `@${winner} — I couldn't send you a whisper! Please make sure your whispers are open ` +
-        `and contact @${process.env.TWITCH_CHANNEL} directly for your code.`
-      )
-    }
+    // Always post to chat — Twitch whispers are unreliable even when API returns 204
+    client.say(
+      channel,
+      `@${winner} — your prize code has been sent to your Twitch whispers! ` +
+      `If you don't receive it, please whisper @${process.env.TWITCH_CHANNEL} directly to claim your code.`
+    )
 
     client.say(
       channel,

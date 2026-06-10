@@ -24,8 +24,11 @@ const BOT_ACCOUNTS = new Set([
 const EXEMPT_COMMANDS = new Set([
   'help', 'status', 'start', 'stop', 'setcode', 'ddo', 'donate', 'draw',
   'pause', 'resume', 'poll', 'endauction', 'ddofree', 'ddonews', 'rtfm',
-  'lurk', 'so', 'vso', 'followage', 'uptime',
+  'lurk', 'so', 'vso', 'followage', 'uptime', 'solo'
 ])
+
+// After:
+const SILENT_COMMANDS = new Set(['donate', 'vso', 'so', 'followage', 'uptime', 'solo', 'party'])
 
 const cooldowns = new Map<string, Map<string, number>>()
 const ZULKIRJAX_COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
