@@ -2,6 +2,18 @@
 
 ---
 
+## v2.4.2 — June 10, 2026
+
+### Bug Fixes
+
+- **`!solo` and `!party` roast** — Both commands now silently ignored by the unknown command handler. Previously the roast fired alongside the campaign mode selection, producing a spurious response in chat.
+- **Giveaway whisper fallback** — `!draw` now always posts a chat message to the winner telling them to check their Twitch whispers, regardless of whether the whisper API returned success. Twitch's whisper API returns 204 (accepted) even when delivery fails silently — the chat fallback ensures winners are always notified.
+
+### Files v2.4.2
+
+- `src/router.ts` — `solo` and `party` added to `SILENT_COMMANDS`
+- `src/commands/draw.ts` — winner chat notification always fires after whisper attempt
+
 ## v2.4.1 — June 6, 2026
 
 ### Bug Fixes & Improvements
@@ -158,7 +170,7 @@ Added and edited shortcut keys and aliases.
 
 ## v2.1.1 — May 6, 2026
 
-### Bug Fixes
+### Bug Fixes v2.1.1
 
 - Fixed Zulkir Jax messages interleaving with command responses — `summonZulkirjax` is now awaited in `router.ts` so the full Zulkirjax sequence completes before any command executes. The triggering command is swallowed when Zulkirjax appears.
 - Fixed misplaced closing brace in `router.ts` that was cutting off the message handler scope, causing linter errors for `username` and `channel`.
