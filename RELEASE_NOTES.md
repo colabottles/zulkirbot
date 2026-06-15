@@ -2,6 +2,24 @@
 
 ---
 
+## v2.4.4 — June 11, 2026
+
+### Duel & Campaign Reminder
+
+- New recurring reminder fires every 30 minutes encouraging players to try `!duel` or `!campaign`, suppressed while any duel or campaign is currently active.
+- New `src/lib/activityState.ts` module tracks active campaign count via `markCampaignActive()` / `markCampaignInactive()` / `isAnyCampaignActive()`.
+- `src/lib/duels.ts` — new `isAnyDuelActive()` export checks whether any duel is in progress.
+- `campaign.ts`, `named_campaign.ts`, and `greyhawk_campaign.ts` now wrap their respective campaign runners (`runCampaign`, `runNamedCampaign`, `runGreyhawkCampaign`) in `markCampaignActive()` / `markCampaignInactive()` so the reminder correctly skips during active play.
+
+### Files v2.4.4
+
+- `src/lib/activityState.ts` — new module
+- `src/lib/duels.ts` — `isAnyDuelActive()` added
+- `src/commands/campaign.ts` — campaign activity tracking wired into solo and party runs
+- `src/commands/named_campaign.ts` — campaign activity tracking wired in
+- `src/commands/greyhawk_campaign.ts` — campaign activity tracking wired in
+- `src/bot.ts` — new `DUEL_CAMPAIGN_REMINDERS` pool, 30-minute interval reminder, suppressed when `isAnyDuelActive()` or `isAnyCampaignActive()` is true
+
 ## v2.4.3 — June 12, 2026
 
 - Replaced all names with generated names.
