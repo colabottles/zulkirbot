@@ -6,6 +6,8 @@ import { setShopClient } from './lib/shopRotation'
 import { allCommands } from '../src/commands'
 import { rotateShop } from './lib/shopRotation'
 import { refreshToken } from './lib/auth'
+import { isAnyDuelActive } from '../src/lib/duels'
+import { isAnyCampaignActive } from '../src/lib/activityState'
 
 const FOLLOW_WHISPER_REMINDERS = [
   `📢 Reminder: Follow @ZulkirBot on Twitch and send it a whisper so it can DM you prize codes during giveaways!`,
@@ -14,6 +16,18 @@ const FOLLOW_WHISPER_REMINDERS = [
   `📢 Don't miss out on prizes! Follow @ZulkirBot and whisper it anything to unlock prize code delivery.`,
   `📢 ZulkirBot whispers prize codes to winners — make sure you're following it and have whispered it at least once!`,
 ]
+
+const DUEL_CAMPAIGN_REMINDERS = [
+  `⚔️ Looking for a challenge? Try !duel [username] to fight another player, or !campaign to start a multi-stage adventure!`,
+  `⚔️ Quiet moment? Challenge someone with !duel, or gather a party with !campaign for the full gauntlet!`,
+  `⚔️ Test your steel — !duel a fellow adventurer or dive into !campaign for XP, gold, and rare loot!`,
+]
+
+setInterval(() => {
+  if (isAnyDuelActive() || isAnyCampaignActive()) return
+  const msg = DUEL_CAMPAIGN_REMINDERS[Math.floor(Math.random() * DUEL_CAMPAIGN_REMINDERS.length)]
+  client.say(`#${process.env.TWITCH_CHANNEL}`, msg)
+}, 30 * 60 * 1000)
 
 let isRefreshing = false
 

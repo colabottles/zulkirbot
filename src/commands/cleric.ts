@@ -1,5 +1,5 @@
 // ============================================================
-// Brother Yvannis appears once per campaign at a random stage
+// Brother Galenus appears once per campaign at a random stage
 // (1–4) alongside the rest shrine. Players can interact with
 // him once per appearance to receive healing or cleansing.
 // ============================================================
@@ -7,7 +7,7 @@
 import { Client } from 'tmi.js'
 import { SupabaseClient } from '@supabase/supabase-js'
 
-interface YvannisService {
+interface GalenusService {
   key: string
   label: string
   description: string
@@ -18,7 +18,7 @@ interface YvannisService {
 
 const INTERACTION_WINDOW_MS = 90_000  // 90s for players to interact
 
-const SERVICES: YvannisService[] = [
+const SERVICES: GalenusService[] = [
   {
     key: 'cure_disease',
     label: 'Cure Disease',
@@ -57,41 +57,41 @@ const SERVICES: YvannisService[] = [
 ]
 
 const APPEARANCE_LINES = [
-  'Ah. Adventurers. It\'s fine. Everything is fine. Brother Yvannis is here.',
+  'Ah. Adventurers. It\'s fine. Everything is fine. Brother Galenus is here.',
   'Don\'t mind the blood. Mine or yours, it doesn\'t matter. I can help. Probably.',
   'I\'ve seen worse. I think. It\'s fine. What do you need?',
   'The light of the divine reaches even here. Barely. It\'s fine.',
-  'Brother Yvannis arrives. The situation is under control. Mostly. It\'s fine.',
+  'Brother Galenus arrives. The situation is under control. Mostly. It\'s fine.',
 ]
 
 const DEPARTURE_LINES = [
   'Go. Be well. It\'s fine. Everything is — it\'s fine.',
-  'Brother Yvannis must press on. There are others. It\'s always fine in the end.',
+  'Brother Galenus must press on. There are others. It\'s always fine in the end.',
   'May the divine watch over you. I\'ll be fine. You\'ll be fine. It\'s all fine.',
   'Right then. Off I go. Into the dark. It\'s fine.',
-  'Yvannis out. Everything is fine. Don\'t look at what\'s behind me.',
+  'Galenus out. Everything is fine. Don\'t look at what\'s behind me.',
 ]
 
 const NOTHING_TO_DO_LINES = [
-  'You seem... fine, actually. Brother Yvannis appreciates that. Move along.',
+  'You seem... fine, actually. Brother Galenus appreciates that. Move along.',
   'I\'d help but there\'s nothing to help with. Which is fine. Refreshing, even.',
   'No disease, no curse, full health. You\'re doing better than most. It\'s fine.',
-  'Nothing afflicts you. Yvannis is pleased. And slightly suspicious. It\'s fine.',
-  'You look like you could use a drink, not a miracle. Yvannis is sure you\'ll be fine.',
+  'Nothing afflicts you. Galenus is pleased. And slightly suspicious. It\'s fine.',
+  'You look like you could use a drink, not a miracle. Galenus is sure you\'ll be fine.',
 ]
 
 const CANT_AFFORD_LINES = [
-  'Gold. You need gold. Brother Yvannis requires gold. This is not negotiable. Sorry.',
+  'Gold. You need gold. Brother Galenus requires gold. This is not negotiable. Sorry.',
   'I\'m a man of faith, not charity. Come back with more gold. It\'s fine.',
   'The divine has overhead costs. You can\'t afford this. It\'s... less fine.',
-  'Not enough gold. Yvannis is sorry. It will be fine. Eventually.',
+  'Not enough gold. Galenus is sorry. It will be fine. Eventually.',
   'You don\'t have enough gold. This is awkward. It\'s fine. Just... come back later.',
 ]
 
 const ALREADY_SERVED_LINES = [
-  'Brother Yvannis has already helped you today. Generously. It\'s fine. Move along.',
+  'Brother Galenus has already helped you today. Generously. It\'s fine. Move along.',
   'One miracle per customer. That\'s the rule. It\'s fine.',
-  'You\'ve had your turn. Yvannis must attend to others. It\'s fine.',
+  'You\'ve had your turn. Galenus must attend to others. It\'s fine.',
   'I\'m sure you understand. It\'s only fair. It\'s fine.',
   'Patience is a virtue. You\'ll get your chance next time. It\'s fine.',
 ]
@@ -104,7 +104,7 @@ const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
 const say = (client: Client, channel: string, msg: string) =>
   client.say(channel, msg)
 
-interface YvannisSession {
+interface GalenusSession {
   campaignId: string
   stage: number
   servedPlayers: Set<string>
@@ -112,14 +112,14 @@ interface YvannisSession {
   participantMaxHps: Map<string, number> // username → max HP
 }
 
-const activeSessions = new Map<string, YvannisSession>()
+const activeSessions = new Map<string, GalenusSession>()
 
 async function getAvailableServices(
   supabase: SupabaseClient,
   username: string,
   currentHp: number,
   maxHp: number
-): Promise<YvannisService[]> {
+): Promise<GalenusService[]> {
   // Fetch all active consequence/debuff flags for player
   const { data: flags } = await supabase
     .from('player_consequence_flags')
@@ -147,8 +147,8 @@ function calculateCost(gold: number, percent: number): number {
 async function applyService(
   supabase: SupabaseClient,
   username: string,
-  service: YvannisService,
-  session: YvannisSession
+  service: GalenusService,
+  session: GalenusSession
 ): Promise<string> {
   switch (service.key) {
     case 'cure_disease':
@@ -204,7 +204,7 @@ async function applyService(
   }
 }
 
-export async function summonYvannis(
+export async function summonGalenus(
   client: Client,
   supabase: SupabaseClient,
   channel: string,
@@ -223,7 +223,7 @@ export async function summonYvannis(
     participantMaxHps.set(p.username, p.max_hp)
   }
 
-  const session: YvannisSession = {
+  const session: GalenusSession = {
     campaignId,
     stage,
     servedPlayers: new Set(),
@@ -237,7 +237,7 @@ export async function summonYvannis(
   await say(client, channel, `🕯️  ${pickRandom(APPEARANCE_LINES)}`)
   await delay(1500)
   await say(client, channel,
-    `✨ Brother Yvannis offers his services to: ${living.map(p => p.username).join(', ')}. ` +
+    `✨ Brother Galenus offers his services to: ${living.map(p => p.username).join(', ')}. ` +
     `Type !cleric to see what he can do for you. You have 90 seconds.`
   )
 
@@ -265,7 +265,7 @@ export async function handleClericCommand(
 
   if (!session) {
     await say(client, channel,
-      `@${username} Brother Yvannis is not here right now. ` +
+      `@${username} Brother Galenus is not here right now. ` +
       `He appears during campaigns at rest shrines. It\'s fine.`
     )
     return
@@ -274,7 +274,7 @@ export async function handleClericCommand(
   // Check if player is a living participant
   if (!session.participantHps.has(username)) {
     await say(client, channel,
-      `@${username} Brother Yvannis squints at you. You\'re not part of this campaign. It\'s fine. Move along.`
+      `@${username} Brother Galenus squints at you. You\'re not part of this campaign. It\'s fine. Move along.`
     )
     return
   }
@@ -320,7 +320,7 @@ export async function handleClericCommand(
       .join(' | ')
 
     await say(client, channel,
-      `@${username} Brother Yvannis tilts his head. "What ails you?" ` +
+      `@${username} Brother Galenus tilts his head. "What ails you?" ` +
       `Your options: ${menu}. Type !cleric <number> to choose.`
     )
     return
@@ -346,7 +346,7 @@ export async function handleClericCommand(
 
   if (!char) {
     await say(client, channel,
-      `@${username} Brother Yvannis can\'t find your record. It\'s fine. Probably.`
+      `@${username} Brother Galenus can\'t find your record. It\'s fine. Probably.`
     )
     return
   }
@@ -375,20 +375,20 @@ export async function handleClericCommand(
   session.servedPlayers.add(username)
 
   await say(client, channel,
-    `✨ @${username} — Brother Yvannis performs ${chosen.label}. ` +
+    `✨ @${username} — Brother Galenus performs ${chosen.label}. ` +
     `${resultMsg} (-${cost}gp)`
   )
   await delay(800)
   await say(client, channel,
-    `🙏 "It\'s fine. You\'re going to be fine. Probably." — Brother Yvannis`
+    `🙏 "It\'s fine. You\'re going to be fine. Probably." — Brother Galenus`
   )
 }
 
-export function rollYvannisStage(): number {
+export function rollGalenusStage(): number {
   // Random stage between 1 and 4
   return Math.floor(Math.random() * 4) + 1
 }
 
-export function isYvannisPresent(channel: string): boolean {
+export function isGalenusPresent(channel: string): boolean {
   return activeSessions.has(channel)
 }

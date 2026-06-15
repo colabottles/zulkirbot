@@ -1,8 +1,9 @@
 import { Client } from 'tmi.js'
 import { supabase } from './../lib/supabase'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { summonYvannis, rollYvannisStage } from './cleric'
+import { summonGalenus, rollGalenusStage } from './cleric'
 import { getDisplayName } from '../lib/displayName'
+import { markCampaignActive, markCampaignInactive } from '../lib/activityState'
 
 export const campaignAttackPending = new Map<string, () => void>()
 
@@ -26,7 +27,7 @@ interface Campaign {
   boss_special: string
   started_at: string | null
   completed_at: string | null
-  yvannis_stage: number | null
+  Galenus_stage: number | null
 }
 
 interface BossPoolEntry {
@@ -246,7 +247,7 @@ async function createCampaign(
       boss_name: boss.boss_name,
       boss_special: boss.special_move,
       started_at: new Date().toISOString(),
-      yvannis_stage: rollYvannisStage(),
+      Galenus_stage: rollGalenusStage(),
     })
     .select()
     .single()
@@ -588,8 +589,8 @@ async function runCampaign(
       await delay(3000)
       await restShrine(client, supabase, channel, campaign, participants)
       await delay(2000)
-      if (stageNum === campaign.yvannis_stage) {
-        await summonYvannis(client, supabase, channel, campaign.id, stageNum, participants)
+      if (stageNum === campaign.Galenus_stage) {
+        await summonGalenus(client, supabase, channel, campaign.id, stageNum, participants)
         await delay(1500)
       }
     }
@@ -737,6 +738,13 @@ export async function handleCampaignCommand(
       )
       await delay(2000)
 
+      markCampaignActive()
+      try {
+        await runCampaign(client, supabase, channel, campaign, participants)
+      } finally {
+        markCampaignInactive()
+      }
+
       await runCampaign(client, supabase, channel, campaign, participants)
 
     } else {
@@ -785,7 +793,12 @@ export async function handleCampaignCommand(
         `⚠️ This campaign is scaled for ${levelRange}.`
       )
       await delay(2000)
-      await runCampaign(client, supabase, channel, campaign, participants)
+      markCampaignActive()
+      try {
+        await runCampaign(client, supabase, channel, campaign, participants)
+      } finally {
+        markCampaignInactive()
+      }
     }
 
   } catch (err) {

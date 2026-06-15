@@ -24,8 +24,9 @@ import { Client } from 'tmi.js'
 import { supabase } from './../lib/supabase';
 import { SupabaseClient } from '@supabase/supabase-js'
 import { getDisplayName } from '../lib/displayName'
-import { summonYvannis, rollYvannisStage } from './cleric'
+import { summonGalenus, rollGalenusStage } from './cleric'
 import { d20 } from '../game/dice'
+import { markCampaignActive, markCampaignInactive } from '../lib/activityState'
 
 // ------------------------------------------------------------
 // Types
@@ -63,7 +64,7 @@ interface NamedCampaign {
   description: string
   unlock_required: number
   difficulty_mod: number
-  yvannis_stage: number | null
+  Galenus_stage: number | null
 }
 
 interface Participant {
@@ -2145,7 +2146,7 @@ async function runNamedCampaign(
       await delay(3000)
       await restShrine(client, supabase, channel, campaignId, stage, participants)
       await delay(2000)
-      if (stage.stage === campaignData.yvannis_stage) { await summonYvannis(client, supabase, channel, campaignId, stage.stage, participants); await delay(1500) }
+      if (stage.stage === campaignData.Galenus_stage) { await summonGalenus(client, supabase, channel, campaignId, stage.stage, participants); await delay(1500) }
     }
 
     await supabase.from('campaigns').update({ stage: stage.stage }).eq('id', campaignId)
@@ -2486,7 +2487,7 @@ export async function handleNamedCampaignCommand(
         boss_name: bossName,
         boss_special: bossStage?.special_name ?? '',
         started_at: mode === 'solo' ? new Date().toISOString() : null,
-        yvannis_stage: rollYvannisStage(),
+        Galenus_stage: rollGalenusStage(),
       })
       .select()
       .single()
@@ -2578,11 +2579,16 @@ export async function handleNamedCampaignCommand(
     const participants = (participantsData ?? []) as Participant[]
     await enrichParticipantsWithNames(supabase, participants)
 
-    await runNamedCampaign(
-      client, supabase, channel,
-      campaign.id, campaignData as NamedCampaign,
-      stages, outcomes, participants
-    )
+    markCampaignActive()
+    try {
+      await runNamedCampaign(
+        client, supabase, channel,
+        campaign.id, campaignData as NamedCampaign,
+        stages, outcomes, participants
+      )
+    } finally {
+      markCampaignInactive()
+    }
 
   } catch (err) {
     console.error('[named_campaign] error:', err)

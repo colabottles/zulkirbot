@@ -2,6 +2,10 @@
 
 ---
 
+## v2.4.3 — June 12, 2026
+
+- Replaced all names with generated names.
+
 ## v2.4.2 — June 10, 2026
 
 ### Bug Fixes

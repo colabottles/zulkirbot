@@ -61,6 +61,10 @@ export function removeDuel(challenger: string, target: string): void {
   activeDuels.delete(target)
 }
 
+export function isAnyDuelActive(): boolean {
+  return activeDuels.size > 0
+}
+
 export function isInDuel(username: string): boolean {
   return activeDuels.has(username)
 }

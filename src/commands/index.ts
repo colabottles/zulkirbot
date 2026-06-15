@@ -80,6 +80,7 @@ import { setcodeCommand } from './setcode'
 import { ddoCommand } from './ddo'
 import { drawCommand } from './draw'
 import { addentryCommand } from './addentry'
+import { linkDdoCommand } from './linkddo'
 
 // ── Broadcaster / Special ────────────────────────────────────
 import { killCommand } from './kill'
@@ -186,6 +187,7 @@ export const allCommands: BotCommand[] = [
   ddoCommand,
   drawCommand,
   addentryCommand,
+  linkDdoCommand,
 
   // Broadcaster / Special
   killCommand,

@@ -3,17 +3,17 @@ import { supabase } from '../lib/supabase'
 import { hasTavernVisit } from '../lib/tavernSession'
 
 const BARKEEP_NAMES = [
-  'Nachowench',
-  'JackDrag0n',
-  'Jabberw0okie',
-  'Ysukai'
+  'Harlan Hops',
+  'Gilda Goodcask',
+  'Ginny Tonic',
+  'Porter House'
 ]
 
 const BARKEEP_FOOD: Record<string, string> = {
-  'Nachowench': 'a plate of cheesynachos',
-  'JackDrag0n': 'a bowl of hearty owlbear stew',
-  'Jabberw0okie': 'a slice of elven waybread',
-  'Ysukai': 'a kobold burger and orc finger fries'
+  'Harlan Hops': 'a plate of cheesynachos',
+  'Gilda Goodcask': 'a bowl of hearty owlbear stew',
+  'Ginny Tonic': 'a slice of elven waybread',
+  'Porter House': 'a kobold burger and orc finger fries'
 }
 
 export function getActiveBarkeep(): string {
@@ -37,7 +37,7 @@ const BARKEEP_LINES: string[] = [
   `"Had a bard in here last week. Lovely voice. Terrible tipper."`,
   `"You remind me of someone who used to come in here. They're in the graveyard now. Good luck."`,
   `"NeutralAgent is somewhere in the area pork barreling."`,
-  `"Ysukai greets you, he asks you if you would be interested in timeshare in Barovia."`,
+  `"Porter House greets you, he asks you if you would be interested in timeshare in Barovia."`,
   // Tips
   `"Word of advice — check the !shop every hour. Stock changes and the good stuff goes fast."`,
   `"The !shrine's kept more than one poor soul from permadeath. Don't skip it."`,

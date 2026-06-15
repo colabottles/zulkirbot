@@ -12,8 +12,9 @@
 import { Client } from 'tmi.js'
 import { supabase } from '../lib/supabase'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { summonYvannis, rollYvannisStage } from './cleric'
+import { summonGalenus, rollGalenusStage } from './cleric'
 import { d20 } from '../game/dice'
+import { markCampaignActive, markCampaignInactive } from '../lib/activityState'
 
 // ------------------------------------------------------------
 // Types
@@ -51,7 +52,7 @@ interface NamedCampaign {
   description: string
   unlock_required: number
   difficulty_mod: number
-  yvannis_stage: number | null
+  Galenus_stage: number | null
 }
 
 interface Participant {
@@ -1767,8 +1768,8 @@ async function runGreyhawkCampaign(
       await delay(3000)
       await restShrine(client, supabase, channel, campaignId, stage, participants)
       await delay(2000)
-      if (stage.stage === campaignData.yvannis_stage) {
-        await summonYvannis(client, supabase, channel, campaignId, stage.stage, participants)
+      if (stage.stage === campaignData.Galenus_stage) {
+        await summonGalenus(client, supabase, channel, campaignId, stage.stage, participants)
         await delay(1500)
       }
     }
@@ -2081,7 +2082,7 @@ export async function handleGreyhawkCampaignCommand(
         boss_name: bossName,
         boss_special: bossStage?.special_name ?? '',
         started_at: mode === 'solo' ? new Date().toISOString() : null,
-        yvannis_stage: rollYvannisStage(),
+        Galenus_stage: rollGalenusStage(),
       })
       .select()
       .single()
@@ -2154,10 +2155,15 @@ export async function handleGreyhawkCampaignCommand(
 
     const participants = (participantsData ?? []) as Participant[]
 
-    await runGreyhawkCampaign(
-      client, supabase, channel, campaign.id,
-      campaignData as NamedCampaign, stages, outcomes, participants
-    )
+    markCampaignActive()
+    try {
+      await runGreyhawkCampaign(
+        client, supabase, channel, campaign.id,
+        campaignData as NamedCampaign, stages, outcomes, participants
+      )
+    } finally {
+      markCampaignInactive()
+    }
 
   } finally {}
 }
