@@ -35,11 +35,15 @@ export async function rotateShop(): Promise<void> {
       !i.is_cursed
   )
 
-  const shuffled = eligible.sort(() => Math.random() - 0.5).slice(0, SHOP_SIZE)
+  const shuffled = [...eligible]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  const selected = shuffled.slice(0, SHOP_SIZE)
 
   await supabase.from('shop').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-
-  for (const item of shuffled) {
+  for (const item of selected) {
     const basePrice = PRICE_MAP[item.rarity as ItemRarity]
     const price = basePrice + Math.floor(Math.random() * 10) * 5
     await supabase.from('shop').insert({

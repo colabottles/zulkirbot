@@ -60,24 +60,10 @@ export type CharacterClass =
 
 // EquipmentSlot — add artifact slots
 export type EquipmentSlot =
-  | 'weapon'
-  | 'shield'
-  | 'armor'
-  | 'helmet'
-  | 'cloak'
-  | 'neck'
-  | 'eyes'
-  | 'waist'
-  | 'arms'
-  | 'hands'
-  | 'feet'
-  | 'ring1'
-  | 'ring2'
-  | 'trinket'
-  | 'artifact1'
-  | 'artifact2'
-  | 'artifact3'
-  | 'artifact4'
+  | 'weapon' | 'shield' | 'armor' | 'helmet' | 'cloak'
+  | 'neck' | 'eyes' | 'waist' | 'arms' | 'wrist' | 'hands'
+  | 'feet' | 'ring1' | 'ring2' | 'trinket'
+  | 'artifact1' | 'artifact2' | 'artifact3' | 'artifact4'
 
 // ItemType — add artifact
 export type ItemType =
@@ -90,13 +76,13 @@ export type ItemType =
   | 'eyes'
   | 'waist'
   | 'arms'
+  | 'wrist'
   | 'hands'
   | 'feet'
   | 'ring'
   | 'trinket'
   | 'potion'
   | 'scroll'
-  | 'artifact'
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic'
 

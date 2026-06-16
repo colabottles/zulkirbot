@@ -54,6 +54,7 @@ export const reviveCommand: BotCommand = {
       xp: fallen.xp,
       hp: maxHp,
       max_hp: maxHp,
+      base_max_hp: maxHp,
       gold: 10,
     })
 

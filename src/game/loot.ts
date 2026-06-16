@@ -22,10 +22,10 @@ export const LOOT_TABLES: Item[] = [
   { id: '65', name: 'Leather Belt', type: 'waist', rarity: 'common', stat_bonus: 1, description: 'Holds your pants up.' },
   { id: '66', name: 'Belt of Giant Strength', type: 'waist', rarity: 'rare', stat_bonus: 5, description: 'You feel impossibly strong.' },
   { id: '67', name: 'Cord of Direction', type: 'waist', rarity: 'uncommon', stat_bonus: 2, description: 'Always points the way.' },
-  // Arms
-  { id: '68', name: 'Leather Bracers', type: 'arms', rarity: 'common', stat_bonus: 1, description: 'Basic wrist protection.' },
-  { id: '69', name: 'Bracers of Archery', type: 'arms', rarity: 'uncommon', stat_bonus: 3, description: 'Your aim improves.' },
-  { id: '70', name: 'Bracers of Defense', type: 'arms', rarity: 'rare', stat_bonus: 5, description: 'Hard as adamantine.' },
+  // Wrists
+  { id: '68', name: 'Leather Bracers', type: 'wrist', rarity: 'common', stat_bonus: 1, description: 'Basic wrist protection.' },
+  { id: '69', name: 'Bracers of Archery', type: 'wrist', rarity: 'uncommon', stat_bonus: 3, description: 'Your aim improves.' },
+  { id: '70', name: 'Bracers of Defense', type: 'wrist', rarity: 'rare', stat_bonus: 5, description: 'Hard as adamantine.' },
   // Hands
   { id: '71', name: 'Worn Gloves', type: 'hands', rarity: 'common', stat_bonus: 1, description: 'Better than bare hands.' },
   { id: '72', name: 'Gloves of Thievery', type: 'hands', rarity: 'uncommon', stat_bonus: 2, description: 'Nimble fingers.' },
@@ -65,6 +65,14 @@ export const LOOT_TABLES: Item[] = [
   { id: '100', name: 'Ring of Clumsiness', type: 'ring', rarity: 'common', stat_bonus: 2, description: 'Feels oddly heavy.', is_cursed: true },
   { id: '101', name: 'Helm of Opposite Alignment', type: 'helmet', rarity: 'uncommon', stat_bonus: 2, description: 'Your thoughts feel strange.', is_cursed: true },
   { id: '102', name: 'Cloak of Poison', type: 'cloak', rarity: 'uncommon', stat_bonus: 2, description: 'Smells faintly of nightshade.', is_cursed: true },
+  // Arms
+  { id: '103', name: 'Worn Vambraces', type: 'arms', rarity: 'common', stat_bonus: 1, description: 'Battered arm guards. Still better than nothing.' },
+  { id: '104', name: 'Armbands of the Pit', type: 'arms', rarity: 'uncommon', stat_bonus: 3, description: 'Infernal markings that sharpen your strikes.' },
+  { id: '105', name: 'Vambraces of the Warlord', type: 'arms', rarity: 'rare', stat_bonus: 5, description: 'Commanders wear these for a reason.' },
+  // Wrists
+  { id: '106', name: 'Leather Bracers', type: 'wrist', rarity: 'common', stat_bonus: 1, description: 'Basic wrist protection.' },
+  { id: '107', name: 'Bracers of Archery', type: 'wrist', rarity: 'uncommon', stat_bonus: 3, description: 'Your aim improves.' },
+  { id: '108', name: 'Bracers of Defense', type: 'wrist', rarity: 'rare', stat_bonus: 5, description: 'Hard as adamantine.' },
 ]
 
 export function rollRarity(): string {

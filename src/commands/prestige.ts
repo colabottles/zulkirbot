@@ -1,6 +1,5 @@
 import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
-import { formatClass } from '../lib/format'
 
 const PRESTIGE_COST = 1000
 const PRESTIGE_MAX = 5
@@ -55,6 +54,7 @@ export const prestigeCommand: BotCommand = {
     const newRank = char.prestige_rank + 1
     const newHpBonus = char.prestige_hp_bonus + PRESTIGE_HP_BONUS
     const newMaxHp = char.max_hp - char.prestige_hp_bonus + newHpBonus
+    const newBaseMaxHp = char.base_max_hp - char.prestige_hp_bonus + newHpBonus
     const label = PRESTIGE_LABELS[newRank - 1]
 
     await supabase
@@ -65,6 +65,7 @@ export const prestigeCommand: BotCommand = {
         gold: char.gold - PRESTIGE_COST,
         hp: Math.min(char.hp, newMaxHp),
         max_hp: newMaxHp,
+        base_max_hp: newBaseMaxHp,
         prestige_rank: newRank,
         prestige_hp_bonus: newHpBonus,
       })

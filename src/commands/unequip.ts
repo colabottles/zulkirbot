@@ -1,10 +1,11 @@
 import { BotCommand, EquipmentSlot } from '../types'
 import { supabase } from '../lib/supabase'
 import { getSlotColumn } from '../lib/stats'
+import { getCharacterStats } from '../lib/stats'
 
 const VALID_SLOTS: EquipmentSlot[] = [
   'weapon', 'shield', 'armor', 'helmet', 'cloak', 'neck',
-  'eyes', 'waist', 'arms', 'hands', 'feet', 'ring1', 'ring2', 'trinket'
+  'eyes', 'waist', 'arms', 'wrist', 'hands', 'feet', 'ring1', 'ring2', 'trinket'
 ]
 
 export const unequipCommand: BotCommand = {
@@ -58,7 +59,15 @@ export const unequipCommand: BotCommand = {
         await supabase.from('inventory').update({ equipped: false }).eq('id', id)
       }
 
-      await supabase.from('characters').update(updates).eq('twitch_username', username)
+      const updatedChar = { ...char, ...updates }
+      const stats = await getCharacterStats(updatedChar)
+      const newMaxHp = char.base_max_hp + stats.hpBonus
+      const newHp = Math.min(char.hp, newMaxHp)
+
+      await supabase
+        .from('characters')
+        .update({ ...updates, max_hp: newMaxHp, hp: newHp })
+        .eq('twitch_username', username)
 
       client.say(channel, `@${username} — all non-cursed items unequipped.`)
       return
@@ -99,7 +108,16 @@ export const unequipCommand: BotCommand = {
     }
 
     await supabase.from('inventory').update({ equipped: false }).eq('id', itemId)
-    await supabase.from('characters').update({ [slotColumn]: null }).eq('twitch_username', username)
+
+    const updatedChar = { ...char, [slotColumn]: null }
+    const stats = await getCharacterStats(updatedChar)
+    const newMaxHp = char.base_max_hp + stats.hpBonus
+    const newHp = Math.min(char.hp, newMaxHp)
+
+    await supabase
+      .from('characters')
+      .update({ [slotColumn]: null, max_hp: newMaxHp, hp: newHp })
+      .eq('twitch_username', username)
 
     client.say(channel, `@${username} unequipped their ${slot}.`)
   }

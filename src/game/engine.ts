@@ -191,7 +191,7 @@ export async function continueFight(
     return
   }
 
-  // ── Critical / Fumble / Advantage / Disadvantage hooks ──────
+  // Critical / Fumble / Advantage / Disadvantage hooks
   const hasCrit = criticalPlayers.has(username)
   const hasFumble = fumblePlayers.has(username)
   const hasAdvantage = advantagePlayers.has(username)
@@ -202,11 +202,11 @@ export async function continueFight(
   if (hasAdvantage) advantagePlayers.delete(username)
   if (hasDisadvantage) disadvantagePlayers.delete(username)
 
-  // ── Inspiration hook ─────────────────────────────────────────
+  // Inspiration hook
   const hasInspiration = inspiredPlayers.has(username)
   if (hasInspiration) inspiredPlayers.delete(username)
 
-  // ── Player attack roll ───────────────────────────────────────
+  // Player attack roll
   let playerRoll: number
   if (hasCrit) {
     playerRoll = 20
@@ -385,6 +385,7 @@ async function handleVictory(
   const hpDie = CLASS_HP_DIE[char.class] ?? 6
   const hpRoll = leveledUp ? rollHp(hpDie) : 0
   const newMaxHp = leveledUp ? char.max_hp + hpRoll : char.max_hp
+  const newBaseMaxHp = leveledUp ? char.base_max_hp + hpRoll : char.base_max_hp
   const newHp = leveledUp ? fight.character_current_hp + hpRoll : fight.character_current_hp
 
   let lootMsg = ''
@@ -412,6 +413,7 @@ async function handleVictory(
     gold: newGold,
     hp: newHp,
     max_hp: newMaxHp,
+    base_max_hp: newBaseMaxHp,
   }).eq('twitch_username', username)
 
   const levelMsg = leveledUp

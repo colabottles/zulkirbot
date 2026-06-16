@@ -1,6 +1,7 @@
 import { BotCommand, EquipmentSlot } from '../types'
 import { supabase } from '../lib/supabase'
 import { getSlotColumn, getSlotForItemType } from '../lib/stats'
+import { getCharacterStats } from '../lib/stats'
 
 export const equipCommand: BotCommand = {
   name: 'equip',
@@ -112,6 +113,18 @@ export const equipCommand: BotCommand = {
       .update({ [slotColumn]: item.id })
       .eq('twitch_username', username)
 
+    const stats = await getCharacterStats({ ...char, [slotColumn]: item.id })
+    const newMaxHp = char.base_max_hp + stats.hpBonus
+    const hpDelta = newMaxHp - char.max_hp
+    const newHp = hpDelta > 0
+      ? char.hp + hpDelta
+      : Math.min(char.hp, newMaxHp)
+
+    await supabase
+      .from('characters')
+      .update({ max_hp: newMaxHp, hp: newHp })
+      .eq('twitch_username', username)
+
     const statLabels: Record<string, string> = {
       weapon: 'damage',
       shield: 'defense',
@@ -122,6 +135,7 @@ export const equipCommand: BotCommand = {
       eyes: 'attack',
       waist: 'HP',
       arms: 'attack',
+      wrist: 'defense',
       hands: 'damage',
       feet: 'defense',
       ring1: 'attack',

@@ -26,11 +26,10 @@ export const weeklyCommand: BotCommand = {
       .eq('twitch_username', username)
       .single()
 
-    const characterName = char.character_name ?? username
-
     if (!char) {
       return
     }
+    const characterName = char.character_name ?? username
 
     const lastMonday = getLastMonday()
     const lastClaimed = char.weekly_claimed_at
@@ -60,6 +59,7 @@ export const weeklyCommand: BotCommand = {
     const tauntMsg = xp === 1 ? ` The gods mock you. 1 XP. Truly, a legend in the making.` : ''
     const hpRoll = Array.from({ length: levelsGained }, () => rollHp(hpDie)).reduce((a, b) => a + b, 0)
     const newMaxHp = char.max_hp + hpRoll
+    const newBaseMaxHp = char.base_max_hp + hpRoll
     const newHp = Math.min(char.hp + hpRoll, newMaxHp)
 
     // 7% chance at uncommon or rarer item
@@ -90,6 +90,7 @@ export const weeklyCommand: BotCommand = {
         xp: newXpTotal,
         level: newLevel,
         max_hp: newMaxHp,
+        base_max_hp: newBaseMaxHp,
         hp: newHp,
         weekly_claimed_at: new Date().toISOString(),
       })

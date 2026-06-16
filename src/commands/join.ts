@@ -35,6 +35,7 @@ export const joinCommand: BotCommand = {
       xp: 0,
       hp: startingHp,
       max_hp: startingHp,
+      base_max_hp: startingHp,
       gold: 10,
     })
 
