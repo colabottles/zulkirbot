@@ -50,7 +50,7 @@ export const weeklyCommand: BotCommand = {
       return
     }
 
-    const xp = Math.floor(Math.random() * 1000) + 1
+    const xp = Math.floor(Math.random() * 1500) + 1
     const newXp = char.xp + xp
     const { newLevel, newXpTotal } = calculateLevel(newXp)
     const leveledUp = newLevel > char.level
