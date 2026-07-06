@@ -38,7 +38,7 @@ const SLOT_STAT: Record<EquipmentSlot, keyof CharacterStats> = {
   cloak: 'defenseBonus',
   neck: 'hpBonus',
   eyes: 'attackBonus',
-  waist: 'hpBonus',
+  waist: 'attackBonus',
   arms: 'attackBonus',
   wrist: 'defenseBonus',
   hands: 'damageBonus',

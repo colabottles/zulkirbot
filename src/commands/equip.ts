@@ -133,7 +133,7 @@ export const equipCommand: BotCommand = {
       cloak: 'defense',
       neck: 'HP',
       eyes: 'attack',
-      waist: 'HP',
+      waist: 'attack',
       arms: 'attack',
       wrist: 'defense',
       hands: 'damage',

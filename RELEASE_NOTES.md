@@ -2,6 +2,84 @@
 
 ---
 
+## v2.4.5 — July 6, 2026
+
+### HP Gear Bonuses & Base HP Tracking
+
+- HP-bonus items (neck, waist, trinket, artifact slots) now correctly apply to `max_hp` and `hp` when equipped or unequipped. Previously the bonus was displayed in chat but never written to the database.
+- New `base_max_hp` column added to `characters` — tracks max HP from class and level only, separate from gear bonuses. All existing characters backfilled with their current `max_hp`.
+- `!equip` now recalculates `max_hp = base_max_hp + hpBonus` after equipping and adjusts `hp` accordingly — gaining HP gear adds the difference to current HP, losing it clamps current HP to the new max.
+- `!unequip` and `!unequip all` do the same recalculation after removing gear.
+- `!join`, `!revive`, `!prestige`, `!weekly`, and level-up in `engine.ts` all now set `base_max_hp` correctly alongside `max_hp`.
+- `weekly.ts` — fixed null reference bug where `char.character_name` was accessed before the null check on `char`.
+- `prestige.ts` — removed unused `formatClass` import.
+
+### Wrist Slot
+
+- New `wrist` equipment slot added for bracers and similar defensive wrist gear.
+- Leather Bracers, Bracers of Archery, and Bracers of Defense moved from `arms` to `wrist`. Bracers of Defense now correctly contributes to `defenseBonus` instead of `attackBonus`.
+- `inventory` table check constraint updated to allow `item_type = 'wrist'`.
+- `characters` table — new `equipped_wrist` column added.
+- `inventory.html` — `wrist` added to `TYPE_ICON` (🪬) and `STAT_LABEL` (def).
+
+### Arms Slot Repopulated
+
+- Three new items added to `LOOT_TABLES` for the `arms` slot now that bracers moved to `wrist`:
+  - Worn Vambraces (common, +1 ATK)
+  - Armbands of the Pit (uncommon, +3 ATK)
+  - Vambraces of the Warlord (rare, +5 ATK)
+
+### Waist Slot Remapped
+
+- `waist` slot remapped from `hpBonus` to `attackBonus` — Giant Strength belts and girdles now contribute to attack rather than HP, which better reflects their D&D identity.
+
+### Loot Table Expansion
+
+- 120 new items added to `LOOT_TABLES` across all slot types — 30 each at rare, epic, legendary, and mythic rarity. Epic and mythic tiers were previously empty despite existing in `rollRarity()`.
+- Stat bonuses scale by tier: rare 4–6, epic 6–9, legendary 9–13, mythic 13–18.
+
+### Rogue Skill Level Scaling
+
+- Rogue skill success chances (`!picklock`, `!disabletrap`, `!findtraps`, `!searchdoor`) now scale with character level.
+- Eligible classes gain `+floor(level / 2)` to their base success chance, capped at 95%.
+- Ineligible classes gain `+floor(level / 4)`, capped at 35–40% depending on command.
+
+### Shop Rotation Fix
+
+- `rotateShop()` now uses a proper Fisher-Yates shuffle instead of the biased `Array.sort(() => Math.random() - 0.5)` approach. Shop rotations now produce meaningfully different selections each time.
+
+### NeutralAgent HP Fix
+
+- NeutralAgent's character was created before the HP dice roll system was introduced and had 4 HP at Level 3. Corrected directly in Supabase — character advanced to Level 4 with max HP (24) for `acolyte_of_the_skin`.
+
+### Weekly XP
+
+- Weekly XP reward range restored to 1–2000 (was reduced to 1–1000 in v1.9.0).
+
+### Database
+
+- `characters` — new column `base_max_hp` (int4, not null, default 100), backfilled from `max_hp`.
+- `characters` — new column `equipped_wrist` (uuid, nullable, references inventory).
+- `inventory` — check constraint updated to include `wrist` as a valid `item_type`.
+- Existing inventory rows for Leather Bracers, Bracers of Archery, and Bracers of Defense updated to `item_type = 'wrist'`.
+
+### Files v2.4.5
+
+- `src/lib/stats.ts` — `wrist` added to `SLOT_COLUMNS`, `SLOT_STAT` (defenseBonus), `getSlotForItemType`; `waist` remapped to `attackBonus`
+- `src/lib/activityState.ts` — `markCampaignActive`, `markCampaignInactive`, `isAnyCampaignActive`
+- `src/commands/equip.ts` — HP recalculation on equip, `wrist` added to `statLabels` (defense)
+- `src/commands/unequip.ts` — HP recalculation on unequip and unequip all, `wrist` added to `VALID_SLOTS`
+- `src/commands/join.ts` — `base_max_hp` set on character creation
+- `src/commands/revive.ts` — `base_max_hp` set on revive
+- `src/commands/prestige.ts` — `base_max_hp` updated on prestige, unused `formatClass` import removed
+- `src/commands/weekly.ts` — `base_max_hp` updated on level-up, null check order fixed, XP range restored to 2000
+- `src/commands/rogue_commands.ts` — `getSuccessChance` now accepts `level` parameter and scales success chances
+- `src/game/engine.ts` — `base_max_hp` updated on level-up in `handleVictory`
+- `src/game/loot.ts` — 120 new items added, `wrist` added as item type, arms slot repopulated
+- `src/types/index.ts` — `wrist` added to `EquipmentSlot` and `ItemType`
+- `src/lib/shopRotation.ts` — Fisher-Yates shuffle implemented
+- `public/inventory.html` — `wrist` added to `TYPE_ICON` and `STAT_LABEL`
+
 ## v2.4.4 — June 11, 2026
 
 ### Duel & Campaign Reminder
@@ -53,7 +131,7 @@
 - **`!linkddo`** — New command. Players can link their DDO character name and server to their ZulkirBot account. ZulkirBot verifies the character exists on DDO Audit before saving.
 - **Hexmongers giveaway bonus** — Players with a DDO character linked via `!linkddo` who are members of The Hexmongers guild on Thrane receive 2 giveaway entries when typing `!ddo`, matching the existing subscriber bonus.
 
-### Database
+### Database v2.4.1
 
 - New columns on `characters`: `ddo_character_name` (text, nullable), `ddo_server` (text, nullable).
 

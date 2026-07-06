@@ -74,29 +74,31 @@ export function clearPendingEvent(username: string): void {
 // ------------------------------------------------------------
 // Success chance by class (base %)
 // ------------------------------------------------------------
+function getSuccessChance(charClass: string, command: string, level: number): number {
+  const levelBonus = Math.floor(level / 2)
+  const ineligibleBonus = Math.floor(level / 4)
 
-function getSuccessChance(charClass: string, command: string): number {
   switch (command) {
     case 'picklock':
-      if (charClass === 'rogue') return 80
-      if (charClass === 'arcane_trickster') return 70
-      if (charClass === 'artificer') return 65
-      return 20 // ineligible class attempting
+      if (charClass === 'rogue') return Math.min(95, 80 + levelBonus)
+      if (charClass === 'arcane_trickster') return Math.min(95, 70 + levelBonus)
+      if (charClass === 'artificer') return Math.min(95, 65 + levelBonus)
+      return Math.min(40, 20 + ineligibleBonus)
     case 'disabletrap':
-      if (charClass === 'rogue') return 80
-      if (charClass === 'arcane_trickster') return 65
-      if (charClass === 'ranger') return 60
-      return 15
+      if (charClass === 'rogue') return Math.min(95, 80 + levelBonus)
+      if (charClass === 'arcane_trickster') return Math.min(95, 65 + levelBonus)
+      if (charClass === 'ranger') return Math.min(95, 60 + levelBonus)
+      return Math.min(35, 15 + ineligibleBonus)
     case 'findtraps':
-      if (charClass === 'rogue') return 90
-      if (charClass === 'arcane_trickster') return 75
-      if (charClass === 'artificer') return 70
-      return 20
+      if (charClass === 'rogue') return Math.min(95, 90 + levelBonus)
+      if (charClass === 'arcane_trickster') return Math.min(95, 75 + levelBonus)
+      if (charClass === 'artificer') return Math.min(95, 70 + levelBonus)
+      return Math.min(40, 20 + ineligibleBonus)
     case 'searchdoor':
-      if (charClass === 'rogue') return 85
-      if (charClass === 'arcane_trickster') return 70
-      if (charClass === 'ranger') return 65
-      return 20
+      if (charClass === 'rogue') return Math.min(95, 85 + levelBonus)
+      if (charClass === 'arcane_trickster') return Math.min(95, 70 + levelBonus)
+      if (charClass === 'ranger') return Math.min(95, 65 + levelBonus)
+      return Math.min(40, 20 + ineligibleBonus)
     default:
       return 20
   }
@@ -105,7 +107,6 @@ function getSuccessChance(charClass: string, command: string): number {
 // ------------------------------------------------------------
 // !picklock
 // ------------------------------------------------------------
-
 export const picklockCommand: BotCommand = {
   name: 'picklock',
   aliases: ['pl'],
@@ -135,7 +136,7 @@ export const picklockCommand: BotCommand = {
     clearPendingEvent(username)
 
     const isEligible = PICKLOCK_CLASSES.includes(char.class)
-    const chance = getSuccessChance(char.class, 'picklock')
+    const chance = getSuccessChance(char.class, 'picklock', char.level)
     const roll = d100()
 
     if (roll <= chance) {
@@ -195,7 +196,6 @@ export const picklockCommand: BotCommand = {
 // ------------------------------------------------------------
 // !disabletrap
 // ------------------------------------------------------------
-
 export const disabletrapCommand: BotCommand = {
   name: 'disabletrap',
   aliases: ['dt'],
@@ -230,7 +230,7 @@ export const disabletrapCommand: BotCommand = {
     clearPendingEvent(username)
 
     const isEligible = DISABLETRAP_CLASSES.includes(char.class)
-    const chance = getSuccessChance(char.class, 'disabletrap')
+    const chance = getSuccessChance(char.class, 'disabletrap', char.level)
     const roll = d100()
 
     if (roll <= chance) {
@@ -296,7 +296,6 @@ export const disabletrapCommand: BotCommand = {
 // ------------------------------------------------------------
 // !findtraps
 // ------------------------------------------------------------
-
 export const findtrapsCommand: BotCommand = {
   name: 'findtraps',
   aliases: ['ft'],
@@ -322,7 +321,7 @@ export const findtrapsCommand: BotCommand = {
     }
 
     const isEligible = FINDTRAPS_CLASSES.includes(char.class)
-    const chance = getSuccessChance(char.class, 'findtraps')
+    const chance = getSuccessChance(char.class, 'findtraps', char.level)
     const roll = d100()
 
     if (roll <= chance) {
@@ -371,7 +370,7 @@ export const searchdoorCommand: BotCommand = {
     }
 
     const isEligible = SEARCHDOOR_CLASSES.includes(char.class)
-    const chance = getSuccessChance(char.class, 'searchdoor')
+    const chance = getSuccessChance(char.class, 'searchdoor', char.level)
     const roll = d100()
 
     if (roll <= chance) {
