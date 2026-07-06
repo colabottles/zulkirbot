@@ -48,13 +48,9 @@
 
 - `rotateShop()` now uses a proper Fisher-Yates shuffle instead of the biased `Array.sort(() => Math.random() - 0.5)` approach. Shop rotations now produce meaningfully different selections each time.
 
-### NeutralAgent HP Fix
-
-- NeutralAgent's character was created before the HP dice roll system was introduced and had 4 HP at Level 3. Corrected directly in Supabase — character advanced to Level 4 with max HP (24) for `acolyte_of_the_skin`.
-
 ### Weekly XP
 
-- Weekly XP reward range restored to 1–2000 (was reduced to 1–1000 in v1.9.0).
+- Weekly XP reward range restored to 1–1500 (was reduced to 1–1000 in v1.9.0).
 
 ### Database
 
