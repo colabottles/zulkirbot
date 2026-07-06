@@ -68,11 +68,7 @@ export const LOOT_TABLES: Item[] = [
   // Arms
   { id: '103', name: 'Worn Vambraces', type: 'arms', rarity: 'common', stat_bonus: 1, description: 'Battered arm guards. Still better than nothing.' },
   { id: '104', name: 'Armbands of the Pit', type: 'arms', rarity: 'uncommon', stat_bonus: 3, description: 'Infernal markings that sharpen your strikes.' },
-  { id: '105', name: 'Vambraces of the Warlord', type: 'arms', rarity: 'rare', stat_bonus: 5, description: 'Commanders wear these for a reason.' },
-  // Wrists
-  { id: '106', name: 'Leather Bracers', type: 'wrist', rarity: 'common', stat_bonus: 1, description: 'Basic wrist protection.' },
-  { id: '107', name: 'Bracers of Archery', type: 'wrist', rarity: 'uncommon', stat_bonus: 3, description: 'Your aim improves.' },
-  { id: '108', name: 'Bracers of Defense', type: 'wrist', rarity: 'rare', stat_bonus: 5, description: 'Hard as adamantine.' },
+  { id: '105', name: 'Vambraces of the Warlord', type: 'arms', rarity: 'rare', stat_bonus: 5, description: 'Commanders wear these for a reason.' }
 ]
 
 export function rollRarity(): string {
