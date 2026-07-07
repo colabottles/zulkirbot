@@ -6,6 +6,7 @@ import { getMonsterForLevel } from '../game/monsters'
 import { resetTurnUndeadCooldown } from './turnundead'
 import { hirelingRest } from './hireling'
 import { rechargeSpellPoints } from '../lib/spellPoints'
+import { getCharacterStats } from '../lib/stats'
 
 const REST_INTERRUPT_CHANCE = 20
 
@@ -47,15 +48,19 @@ export const restCommand: BotCommand = {
       return
     }
 
-    const newHp = char.max_hp
+    // Rest succeeds — recalculate max_hp from base to undo any jax_doubt debuff, then heal
+    const stats = await getCharacterStats(char)
+    const newMaxHp = char.base_max_hp + stats.hpBonus
+    const newHp = newMaxHp
 
     await supabase.from('characters').update({
+      max_hp: newMaxHp,
       hp: newHp,
     }).eq('twitch_username', username)
 
     client.say(
       channel,
-      `😴 @${username} rests and wakes fully restored. (HP: ${newHp}/${char.max_hp})`
+      `😴 @${username} rests and wakes fully restored. (HP: ${newHp}/${newMaxHp})`
     )
     resetTurnUndeadCooldown(username)
     hirelingRest(username)
