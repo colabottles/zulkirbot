@@ -30,7 +30,9 @@
       --uncommon: #3a7a3a;
       --common: #8a7660;
       --rare: #2a4a9a;
+      --epic: #7a3ba8;
       --legendary: #9a7010;
+      --mythic: #c0392b;
     }
 
     html,
@@ -206,8 +208,20 @@
       color: var(--rare);
     }
 
+    .rarity-epic {
+      color: var(--epic);
+      font-style: normal;
+      font-weight: 700;
+    }
+
     .rarity-legendary {
       color: var(--legendary);
+      font-style: normal;
+      font-weight: 700;
+    }
+
+    .rarity-mythic {
+      color: var(--mythic);
       font-style: normal;
       font-weight: 700;
     }
@@ -323,9 +337,17 @@
         wrist: 'def', hands: 'dmg', feet: 'def', ring: 'atk',
         trinket: 'HP', artifact: 'HP', potion: 'HP', scroll: '',
       }
-      const statLabel = item.stat_type === 'attack_damage'
-        ? 'atk & dmg'
-        : STAT_LABEL[item.item_type] ?? ''
+      const STAT_TYPE_LABEL = {
+        attack_damage: 'atk & dmg',
+        attack: 'atk',
+        damage: 'dmg',
+        defense: 'def',
+        hp: 'HP',
+      }
+
+      const statLabel = item.stat_type
+        ? (STAT_TYPE_LABEL[item.stat_type] ?? '')
+        : (STAT_LABEL[item.item_type] ?? '')
       const bonus = item.stat_bonus && item.stat_bonus !== 0
         ? `+${item.stat_bonus} ${statLabel}`.trim()
         : ''
