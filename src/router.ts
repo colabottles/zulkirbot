@@ -11,6 +11,7 @@ import { isFeebleminded, isPolymorphed, isTashaed, getTashaMessage } from './com
 import { handleArenaCommand, handleEnterArenaCommand } from './commands/arena'
 import { handlePollVote } from './commands/poll'
 import { isZulkirjaxPresent, summonZulkirjax, handleZulkirjaxAttack } from './lib/zulkirjax'
+import { handleBuyFromMerchant, handleTradeItem } from './lib/npcEncounter'
 
 const BOT_ACCOUNTS = new Set([
   'moobot',
@@ -141,6 +142,16 @@ export function registerCommands(
       return
     }
 
+    if (cmdName === 'buyfrommerchant' || cmdName === 'bfm') {
+      await handleBuyFromMerchant(client, channel, username, args)
+      return
+    }
+
+    if (cmdName === 'tradeitem' || cmdName === 'ti') {
+      await handleTradeItem(client, channel, username, args)
+      return
+    }
+
     if (cmdName === 'arena') {
       await handleArenaCommand(client, channel, username)
       return
@@ -154,7 +165,10 @@ export function registerCommands(
     // --- Normal command routing ---
     const cmd = commandMap.get(cmdName)
     if (!cmd) {
-      const SILENT_COMMANDS = new Set(['donate', 'vso', 'so', 'followage', 'uptime'])
+      const SILENT_COMMANDS = new Set([
+        'donate', 'vso', 'so', 'followage', 'uptime', 'solo', 'party',
+        'buyfrommerchant', 'bfm', 'tradeitem', 'ti'
+      ])
       if (SILENT_COMMANDS.has(cmdName)) return
       const UNKNOWN_CMD_RESPONSES = [
         `@${username} — "!${cmdName}"? Bold strategy, Cotton. The dungeon remains unimpressed. Let’s see if it pays off for them.`,
@@ -185,11 +199,8 @@ export function registerCommands(
         `@${username} — What you've just said is one of the most insanely idiotic things I have ever heard. At no point in your rambling, incoherent chanting were you even close to anything that could be considered a rational thought. Everyone in this dungeon is now dumber for having listened to it.`,
         `@${username} — the echo of "!${cmdName}" bounced around the dungeon and came back as a whisper: "."`,
         `@${username} — You are in a glass case of emotion right now, ${username}. Try to contain yourself. And maybe try a real command while you're at it.`,
-        `@${username} — Well you can't expect to wield supreme executive power
-       just 'cause some watery tart threw a sword or a command in chat at you!`,
-        `@${username} — "!${cmdName}"?! I don't want to talk to you no more, you empty headed animal
-       food trough whopper!  I fart in your general direction!  You mother
-       was a hamster and your father smelt of elderberries.`,
+        `@${username} — Well you can't expect to wield supreme executive power just 'cause some watery tart threw a sword or a command in chat at you!`,
+        `@${username} — "!${cmdName}"?! I don't want to talk to you no more, you empty headed animal food trough whopper!  I fart in your general direction!  You mother was a hamster and your father smelt of elderberries.`,
       ]
       const msg = UNKNOWN_CMD_RESPONSES[Math.floor(Math.random() * UNKNOWN_CMD_RESPONSES.length)]
       client.say(channel, msg)

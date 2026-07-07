@@ -33,6 +33,7 @@ import {
 } from '../commands/hireling'
 import { checkConcentrationOnHit, breakConcentration } from '../commands/spells'
 import { steveBuff } from '../commands/burger'
+import { getActiveEffects, clearExploreEffects, pruneExpiredEffects } from '../lib/exploreEffects'
 
 export const activeFights = new Map<string, ActiveFight>()
 const FIGHT_TIMEOUT_MS = 20 * 60 * 1000
@@ -123,6 +124,11 @@ export async function continueFight(
   const displayName = getDisplayName(username, char ?? {})
 
   const stats = char ? await getCharacterStats(char) : { attackBonus: 0, defenseBonus: 0, hpBonus: 0, damageBonus: 0 }
+  await pruneExpiredEffects(username)
+  const exploreEffects = await getActiveEffects(username)
+  stats.attackBonus += exploreEffects.attackBonus
+  stats.defenseBonus += exploreEffects.defenseBonus
+  stats.damageBonus += exploreEffects.damageBonus
   const buff = getBuff(username)
 
   if (buff) {
@@ -362,6 +368,7 @@ async function handleVictory(
   client: tmi.Client
 ): Promise<void> {
   activeFights.delete(username)
+  await clearExploreEffects(username)
 
   const isBoss = BOSSES.some(b => b.name === fight.monster.name)
 
@@ -441,6 +448,7 @@ export async function handleDeath(
   client: tmi.Client
 ): Promise<void> {
   activeFights.delete(username)
+  await clearExploreEffects(username)
 
   const { data: char } = await supabase
     .from('characters')

@@ -2,11 +2,18 @@ import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
 import { activeFights } from '../game/engine'
 import { d100, d6 } from '../game/dice'
-import { rollLoot } from '../game/loot'
+import { rollLoot, rollLootByRarity } from '../game/loot'
 import { getTrapForLevel, rollTrapDamage, DISARM_CLASSES, DISARM_CHANCE } from '../game/traps'
 import { trimGraveyard } from '../lib/graveyard'
 import { setPendingEvent, pendingRogueEvents } from './rogue_commands'
 import { formatRarity } from '../lib/rarity'
+import { applyExploreEffect } from '../lib/exploreEffects'
+import { triggerHazard } from '../lib/applyHazard'
+import { pickRiddle } from '../game/riddles'
+import { setPendingRiddle } from './solveriddle'
+import { triggerGodShrine } from '../lib/applyShrine'
+import { triggerNpcEncounter } from '../lib/npcEncounter'
+import { startFight } from '../game/engine'
 
 export const exploreCommand: BotCommand = {
   name: 'explore',
@@ -27,6 +34,19 @@ export const exploreCommand: BotCommand = {
       .single()
 
     if (!char) return
+
+    // Zero-kill penalty — higher monster encounter rate and reduced rare+ loot
+    const hasNoKills = (char.kill_count ?? 0) === 0
+    const isNeutralAgent = username === 'neutralagent'
+
+    // Wandering monster — 15% chance for zero-kill players (normal is ~0%)
+    if (hasNoKills && d100() <= 15) {
+      client.say(channel,
+        `👣 @${username} — something has been following you. It stops following and starts attacking.`
+      )
+      await startFight(channel, username, client)
+      return
+    }
 
     const roll = d100()
 
@@ -85,7 +105,7 @@ export const exploreCommand: BotCommand = {
 
     // 2% chance: treasure chest
     if (roll <= 12) {
-      const item = rollLoot()
+      const item = hasNoKills ? rollLootByRarity('uncommon') : rollLoot()
       const gold = d6() * 5
       await supabase.from('inventory').insert({
         character_id: char.id,
@@ -147,7 +167,6 @@ export const exploreCommand: BotCommand = {
 
     // 14% chance: common item
     if (roll <= 56) {
-      const { rollLootByRarity } = await import('../game/loot')
       const item = rollLootByRarity('common')
       await supabase.from('inventory').insert({
         character_id: char.id,
@@ -172,6 +191,73 @@ export const exploreCommand: BotCommand = {
         description: 'Restores 10 HP.',
       })
       client.say(channel, `🧪 @${username} finds a Health Potion!`)
+      return
+    }
+
+    // 3% chance: random buff event
+    if (roll <= 69) {
+      const buffEvents = [
+        { stat: 'attack' as const, amount: 3, msg: `⚡ A surge of arcane energy courses through @${username}! +3 ATK until your next fight ends.`, source: 'arcane_surge' },
+        { stat: 'defense' as const, amount: 3, msg: `🛡️ @${username} finds a blessed ward scratched into the dungeon wall. +3 DEF until your next fight ends.`, source: 'blessed_ward' },
+        { stat: 'damage' as const, amount: 3, msg: `🔥 @${username} touches a smoldering rune. Your strikes burn hotter. +3 DMG until your next fight ends.`, source: 'smoldering_rune' },
+        { stat: 'attack' as const, amount: 5, msg: `✨ @${username} steps through a beam of divine light. Clarity sharpens your aim. +5 ATK until your next fight ends.`, source: 'divine_light' },
+        { stat: 'defense' as const, amount: 5, msg: `🪨 @${username} finds an old ward stone still active. The protection settles over you. +5 DEF until your next fight ends.`, source: 'ward_stone' },
+        { stat: 'damage' as const, amount: 5, msg: `⚔️ @${username} discovers a weapon oil left by a previous adventurer. Applied. +5 DMG until your next fight ends.`, source: 'weapon_oil' },
+      ]
+      const event = buffEvents[Math.floor(Math.random() * buffEvents.length)]
+      await applyExploreEffect(username, 'buff', event.stat, event.amount, event.source, 24 * 60 * 60 * 1000)
+      client.say(channel, event.msg)
+      return
+    }
+
+    // 3% chance: random debuff event
+    if (roll <= 72) {
+      const debuffEvents = [
+        { stat: 'attack' as const, amount: 3, msg: `😵 @${username} walks through a confusion hex. Your aim wavers. -3 ATK until your next fight ends or 1 hour.`, source: 'confusion_hex' },
+        { stat: 'defense' as const, amount: 3, msg: `🕷️ @${username} disturbs a nest of dungeon spiders. Bites slow your reactions. -3 DEF until your next fight ends or 1 hour.`, source: 'spider_bites' },
+        { stat: 'damage' as const, amount: 3, msg: `🌑 @${username} touches a draining shadow rune. Your strikes feel weak. -3 DMG until your next fight ends or 1 hour.`, source: 'shadow_rune' },
+        { stat: 'attack' as const, amount: 5, msg: `💀 @${username} triggers a curse glyph. Something has hold of your sword arm. -5 ATK until your next fight ends or 1 hour.`, source: 'curse_glyph' },
+        { stat: 'defense' as const, amount: 5, msg: `🩸 @${username} steps in something corrosive. Your armor is compromised. -5 DEF until your next fight ends or 1 hour.`, source: 'corrosive_floor' },
+        { stat: 'damage' as const, amount: 5, msg: `🧊 @${username} is struck by a residual frost trap. Your muscles seize. -5 DMG until your next fight ends or 1 hour.`, source: 'frost_trap' },
+      ]
+      const event = debuffEvents[Math.floor(Math.random() * debuffEvents.length)]
+      const oneHourMs = 60 * 60 * 1000
+      await applyExploreEffect(username, 'debuff', event.stat, event.amount, event.source, oneHourMs)
+      client.say(channel, event.msg)
+      return
+    }
+
+    // 4% chance: environmental hazard
+    if (roll <= 76) {
+      await triggerHazard(client, channel, username)
+      return
+    }
+
+    // 4% chance: riddle encounter
+    if (roll <= 80) {
+      const riddle = pickRiddle()
+      setPendingRiddle(username, riddle.answer, async () => {
+        client.say(channel,
+          `🧩 @${username} — time's up. The voice in the dark is displeased.`
+        )
+        await triggerHazard(client, channel, username)
+      })
+      client.say(channel,
+        `🧩 A voice echoes from the dark: "${riddle.question}" ` +
+        `Type !solveriddle [answer] within 60 seconds. Wrong 3 times or time runs out and the dungeon punishes you.`
+      )
+      return
+    }
+
+    // 4% chance: god shrine encounter
+    if (roll <= 84) {
+      await triggerGodShrine(client, channel, username)
+      return
+    }
+
+    // 5% chance: NPC encounter
+    if (roll <= 89) {
+      await triggerNpcEncounter(client, channel, username)
       return
     }
 

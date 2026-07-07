@@ -22,6 +22,7 @@ import { restCommand } from './rest'
 import { shrineCommand } from './shrine'
 import { graveyardCommand } from './graveyard'
 import { picklockCommand, disabletrapCommand, findtrapsCommand, searchdoorCommand, opendoorCommand } from './rogue_commands'
+import { solveRiddleCommand } from './solveriddle'
 
 // ── Items & Economy ──────────────────────────────────────────
 import { inventoryCommand } from './inventory'
@@ -125,6 +126,7 @@ export const allCommands: BotCommand[] = [
   findtrapsCommand,
   searchdoorCommand,
   opendoorCommand,
+  solveRiddleCommand,
 
   // Items & Economy
   inventoryCommand,
