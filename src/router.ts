@@ -167,7 +167,8 @@ export function registerCommands(
     if (!cmd) {
       const SILENT_COMMANDS = new Set([
         'donate', 'vso', 'so', 'followage', 'uptime', 'solo', 'party',
-        'buyfrommerchant', 'bfm', 'tradeitem', 'ti'
+        'buyfrommerchant', 'bfm', 'tradeitem', 'ti',
+        'spy', 'visit', 'raid', 'gather',
       ])
       if (SILENT_COMMANDS.has(cmdName)) return
       const UNKNOWN_CMD_RESPONSES = [

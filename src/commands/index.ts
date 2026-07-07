@@ -67,6 +67,14 @@ import { partyCommand } from './party'
 import { leaderboardCommand } from './leaderboard'
 import { whoisCommand } from './whois'
 
+// ── Stronghold ───────────────────────────────────────────────
+import { strongholdCommand } from './stronghold'
+import { buildroomCommand } from './buildroom'
+import { gatherCommand } from './gather'
+import { visitStrongholdCommand } from './visitstronghold'
+import { raidStrongholdCommand } from './raidstronghold'
+import { spyStrongholdCommand } from './spystronghold'
+
 // ── Progression ──────────────────────────────────────────────
 import { dailyCommand } from './daily'
 import { weeklyCommand } from './weekly'
@@ -176,6 +184,14 @@ export const allCommands: BotCommand[] = [
   partyCommand,
   leaderboardCommand,
   whoisCommand,
+
+  // Stronghold
+  strongholdCommand,
+  buildroomCommand,
+  gatherCommand,
+  visitStrongholdCommand,
+  raidStrongholdCommand,
+  spyStrongholdCommand,
 
   // Progression
   dailyCommand,

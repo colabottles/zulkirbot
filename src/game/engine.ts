@@ -34,6 +34,8 @@ import {
 import { checkConcentrationOnHit, breakConcentration } from '../commands/spells'
 import { steveBuff } from '../commands/burger'
 import { getActiveEffects, clearExploreEffects, pruneExpiredEffects } from '../lib/exploreEffects'
+import { destroyStronghold } from '../lib/stronghold'
+import { PERMADEATH_MESSAGES } from '../game/strongholdData'
 
 export const activeFights = new Map<string, ActiveFight>()
 const FIGHT_TIMEOUT_MS = 20 * 60 * 1000
@@ -469,6 +471,15 @@ export async function handleDeath(
   })
 
   await trimGraveyard()
+  // Destroy stronghold on permadeath
+  const destroyedTierName = await destroyStronghold(username)
+  if (destroyedTierName) {
+    const template = PERMADEATH_MESSAGES[Math.floor(Math.random() * PERMADEATH_MESSAGES.length)]
+    const destroyMsg = template
+      .replace('{username}', `@${username}`)
+      .replace('{stronghold}', destroyedTierName)
+    client.say(channel, `🏚️ ${destroyMsg}`)
+  }
   await supabase.from('characters').delete().eq('twitch_username', username)
 
   const boss = BOSSES.find(b => b.name === fight.monster.name)
