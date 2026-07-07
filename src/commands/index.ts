@@ -6,6 +6,7 @@ import { statusCommand } from './status'
 import { helpCommand } from './help'
 import { pauseCommand } from './pause'
 import { resumeCommand } from './resume'
+import { releasenotesCommand } from './releasenotes'
 
 // ── Combat ───────────────────────────────────────────────────
 import { fightCommand } from './fight'
@@ -116,6 +117,7 @@ export const allCommands: BotCommand[] = [
   helpCommand,
   pauseCommand,
   resumeCommand,
+  releasenotesCommand,
 
   // Combat
   fightCommand,

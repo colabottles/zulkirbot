@@ -2,7 +2,109 @@
 
 ---
 
-## v2.4.5 — July 6, 2026
+## v3.0.0 — July 6, 2026
+
+This is a major release introducing five large systems: expanded exploration, item upgrading and salvage, the split-stat system, full spell coverage for all classes, and the stronghold system. Several bug fixes and quality-of-life improvements are also included.
+
+---
+
+### Expanded !explore
+
+- New roll table with 14 distinct event types across 100 outcomes.
+- **Environmental Hazards** — 4% chance of a dungeon hazard dealing 5–16 HP damage. Rangers, Druids, and Barbarians are immune. Fighters, Paladins, and Monks take half damage.
+- **Riddles** — 4% chance of encountering a riddle from a pool of 40. Players use `!solveriddle [answer]` within 60 seconds. Two wrong answers allowed before a hazard fires. Correct answer rewards +250 XP.
+- **Buff/Debuff Events** — 3% chance of a random buff (+ATK/DEF/DMG until next fight ends), 3% chance of a random debuff (-ATK/DEF/DMG until next fight ends or 1 hour). All effects persisted to Supabase via new `explore_effects` table.
+- **God Shrines** — 4% chance of encountering a shrine to one of 10 gods (Mystra, Tempus, Tyr, Lathander, Selûne, Oghma, Kelemvor, Shar, Bane, Gruumsh). Good gods boon good-aligned classes and give nothing to others. Evil gods boon evil-aligned classes and debuff good-aligned classes. Effects last until after the next fight.
+- **NPC Encounters** — 5% chance of an NPC encounter. 40% friendly (merchant, adventurer, hermit), 30% hostile (mugger, rival), 30% neutral (flavor quotes). Merchant offers 6 items at 15% markup with a 60-second window. Adventurer offers a trade. Hermit gives a gameplay hint and +50 XP. Mugger steals 15% of gold. Rival triggers the full fight engine. Neutral NPCs deliver one of 30 flavor quotes with no mechanical effect.
+- **Zero-Kill Player Penalties** — players with 0 kills face a 15% pre-roll wandering monster chance and treasure chests capped at uncommon rarity.
+- Explore effects (buffs/debuffs) are applied to combat stats in `engine.ts` and cleared on fight end.
+
+### Item Upgrade & Salvage System
+
+- New `!upgrade [item]` command — upgrades an unequipped item one rarity tier. Costs gold, refinement stones, and motes at higher tiers. Failure chance at rare→epic and above.
+- Failure outcomes (roll on fail): 60% material loss only, 25% stat_bonus reduced by 1, 15% item destroyed.
+- Cursed items cannot be upgraded — attempts cost 10% of current gold as penalty.
+- New `!salvage [item]` command — destroys an unequipped item and returns refinement stones and motes scaled to rarity.
+- New `!status materials` subcommand — shows current refinement stone and mote balance.
+- Refinement stones and motes earned from: `!salvage`, `!explore` (8% stones, 5% motes), `!weekly` (20% stones, 10% motes), campaign clears (1/3/5 motes for standard/named/Greyhawk).
+- Upgrade costs scale exponentially: common→uncommon 100gp/20 stones; uncommon→rare 300gp/60 stones; rare→epic 900gp/180 stones/5 motes (10% fail); epic→legendary 2700gp/540 stones/15 motes (25% fail); legendary→mythic 8100gp/1620 stones/45 motes (40% fail).
+
+### Split-Stat System
+
+- New `stat_type` column on `inventory` table (nullable text).
+- Giant Strength belts and girdles (11 items across all rarity tiers) now carry `stat_type: 'attack_damage'`, splitting their `stat_bonus` evenly between `attackBonus` and `damageBonus` instead of routing through the slot default.
+- `getCharacterStats` in `stats.ts` checks `item.stat_type` before falling back to `SLOT_STAT`. Split items divide bonus evenly, rounding remainder to `attackBonus`.
+- `!equip` displays `+X attack & damage` for split-stat items.
+- `inventory.html` shows `atk & dmg` label for split-stat items.
+
+### Spell System — Full Class Coverage
+
+- **Monk** — 11 ki abilities added: Flurry of Blows, Stunning Strike, Wholeness of Body, Touch of Death, Empty Body, Quivering Palm, Diamond Soul, Elemental Strike, Step of the Wind, Ki Strike, Astral Self.
+- **Artificer** — 14 spells added covering levels 1–5: Arcane Weapon, Detect Magic, Cure Wounds, Faerie Fire, Heat Metal, Web, Elemental Weapon, Fireball, Arcane Eye, Freedom of Movement, Wall of Fire, Animate Objects, Bigby's Hand, Creation.
+- **Alchemist** — 13 DDO-style reaction vials added: Corrosive Bolt, Fulmination, Psychoactive Poison, Healing Elixir, Glaciation, Transmutation Vial, Virulent Poison, Alchemical Admixture, Reconstruction, Implosion Vial, Elixir of Fortitude, Grand Corrosion, Sovereign Remedy.
+- **Level 8 spells** — 10 new spells seeded: Sunburst, Earthquake, Incendiary Cloud, Dominate Monster, Power Word Stun, Abi-Dalzim's Horrid Wilting, Holy Aura, Mind Blank, Dark Consumption, Storm of Vengeance.
+- **Ranger** — 4 new spells added: Hunter's Mark, Ensnaring Strike, Conjure Barrage, Swift Quiver.
+- **Acolyte of the Skin** — 2 new spells added: Fiendish Fortitude, plus Wholeness of Body now shared with Sacred Fist.
+- **Blightcaster** — 1 new spell added: Necrotic Bloom.
+
+### Stronghold System
+
+- Players can build and upgrade a personal stronghold tied to their character. Lost on permadeath.
+- Stronghold type determined by class: martial (Fighter/Barbarian/Paladin/Ranger/Monk/Sacred Fist), arcane (Wizard/Sorcerer/Warlock/Wild Mage/Dragon Disciple), divine (Cleric/Druid/Favored Soul/Dark Apostate/Blightcaster), shadow (Rogue/Arcane Trickster), bardic (Bard/Stormsinger), artifice (Alchemist/Artificer).
+- Five tiers per type: martial Outpost→Keep→Castle→Fortress→Citadel; arcane Wizard's Tower→Arcane Spire→Tower of Power→Tower of Dominion→Tower of Eternity; divine Shrine→Temple→Cathedral→Sanctum→Divine Bastion; shadow Hideout→Safehouse→Thieves Den→Shadow Guild→Underworld Citadel; bardic Waystation→Inn→Grand Hall→Concert Hall→Legendary Minstrel Hall; artifice Workshop→Laboratory→Grand Laboratory→Inventor's Sanctum→Artifice Citadel.
+- Build costs scale per tier (gold + wood + stone + iron + bronze + steel).
+- 14 buildable rooms: Barracks, Armory, Guard Post, Library, Smithy, Chapel, Throne Room, Prison Cell, Magic Laboratory, Alchemical Laboratory, Courtyard, Gatehouse, Storage, Tavern. Each provides stat bonuses to HP, ATK, DEF, or morale.
+- Room slots scale with tier: 2/4/6/8/10.
+- **`!stronghold`** — view stronghold status (tier, HP, ATK, DEF, morale, rooms, materials).
+- **`!stronghold build`** — establish or upgrade stronghold.
+- **`!build [room]`** — build a room (costs gold + materials).
+- **`!gather [material]`** — gather raw materials (60s cooldown, 15% monster encounter chance). Materials: wood, stone, iron, bronze, steel, mithral, adamantine.
+- **`!visit @username`** — visit another player's stronghold. Gives +5 morale to host. Visitor benefits from tavern (heal 10 HP), library (+50 XP), magic laboratory (+3 spell points for casters). 10% alliance chance (+2 DEF to both).
+- **`!raid @username`** — auto-resolved raid. Steals 10–20% of defender's gold, 15% of a random material, and has 10% chance per room to damage rooms. Attacker morale and DEF/ATK affect outcome. Cannot raid allies.
+- **`!spy @username`** — 60% success chance (85% for Rogue/Arcane Trickster). Success reveals HP, ATK, DEF, morale, rooms, and materials. Failure has 30% catch chance — host notified, -10 morale to spying player.
+- Permadeath destroys the stronghold with a random flavor message posted to chat.
+- Morale (0–100) affects raid outcomes. Visiting increases morale, failed raids and being raided decrease it.
+
+### Database
+
+- New table `explore_effects` — stores buff/debuff effects with expiry timestamps.
+- New table `strongholds` — stores stronghold tier, HP, ATK, DEF, morale, type.
+- New table `stronghold_materials` — per-player material inventory.
+- New table `stronghold_rooms` — rooms built per stronghold with damage tracking.
+- New table `stronghold_alliances` — tracks alliances between players.
+- `characters` — new columns `refinement_stones` (int4), `motes` (int4).
+- `inventory` — new column `stat_type` (text, nullable), `upgrade_count` (int4).
+- `spells` — level 8 spells seeded; monk, artificer, alchemist spells seeded; ranger, acolyte_of_the_skin, blightcaster spells expanded.
+
+### Files v3.0.0
+
+- `src/commands/explore.ts` — full roll table rewrite with 14 event types
+- `src/commands/solveriddle.ts` — new `!solveriddle` command
+- `src/commands/upgrade.ts` — new `!upgrade` command
+- `src/commands/salvage.ts` — new `!salvage` command
+- `src/commands/stronghold.ts` — new `!stronghold` command
+- `src/commands/buildroom.ts` — new `!build` command
+- `src/commands/gather.ts` — new `!gather` command
+- `src/commands/visitstronghold.ts` — new `!visit` command
+- `src/commands/raidstronghold.ts` — new `!raid` command
+- `src/commands/spystronghold.ts` — new `!spy` command
+- `src/commands/index.ts` — all new commands registered
+- `src/game/engine.ts` — explore effects wired into combat, stronghold permadeath, base_max_hp on level-up
+- `src/game/hazards.ts` — 10 environmental hazards
+- `src/game/riddles.ts` — 40 riddles pool
+- `src/game/godShrines.ts` — 10 god shrines with alignment logic
+- `src/game/npcs.ts` — 30 neutral quotes, NPC type definitions
+- `src/game/upgradeSystem.ts` — upgrade costs, failure logic, rarity progression
+- `src/game/strongholdData.ts` — all stronghold constants, room definitions, material data
+- `src/lib/exploreEffects.ts` — buff/debuff persistence and retrieval
+- `src/lib/applyHazard.ts` — hazard trigger helper
+- `src/lib/applyShrine.ts` — god shrine trigger helper
+- `src/lib/npcEncounter.ts` — NPC encounter handlers
+- `src/lib/stronghold.ts` — stronghold core helpers
+- `src/lib/stats.ts` — split-stat system, wrist slot, waist remapped
+- `src/router.ts` — new commands added to SILENT_COMMANDS
+
+## v2.4.5 — July 5, 2026
 
 ### HP Gear Bonuses & Base HP Tracking
 
@@ -52,7 +154,7 @@
 
 - Weekly XP reward range restored to 1–1500 (was reduced to 1–1000 in v1.9.0).
 
-### Database
+### Database v.2.4.5
 
 - `characters` — new column `base_max_hp` (int4, not null, default 100), backfilled from `max_hp`.
 - `characters` — new column `equipped_wrist` (uuid, nullable, references inventory).
