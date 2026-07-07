@@ -328,11 +328,13 @@ Added and edited shortcut keys and aliases.
 - Vecna, the Undying King
 - Larloch, the Shadow King
 **Tier 2: Demigod** (base HP 580–700, scales +38–45 HP per participant)
+
 - Orcus, Prince of Undeath
 - Demogorgon, Prince of Demons
 - Tiamat, Queen of Evil Dragons
 - Yeenoghu, Beast of Butchery
 **Tier 3: True God** (base HP 900–1100, scales +55–65 HP per participant)
+
 - Asmodeus, Lord of the Nine Hells
 - Tharizdun, the Chained God
 - Bane, the Black Hand
