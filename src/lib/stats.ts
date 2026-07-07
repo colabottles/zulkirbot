@@ -69,19 +69,26 @@ export async function getCharacterStats(char: any): Promise<CharacterStats> {
 
     const { data: item } = await supabase
       .from('inventory')
-      .select('item_name, stat_bonus, is_cursed, curse_revealed')
+      .select('item_name, stat_bonus, stat_type, is_cursed, curse_revealed')
       .eq('id', itemId)
       .single()
 
     if (!item) continue
-
     // Skip duplicate item names — only first instance counts
     if (seenItemNames.has(item.item_name.toLowerCase())) continue
     seenItemNames.add(item.item_name.toLowerCase())
-
-    const statKey = SLOT_STAT[slot]
     const bonus = item.is_cursed ? -Math.abs(item.stat_bonus) : item.stat_bonus
-    stats[statKey] += bonus
+
+    if (item.stat_type === 'attack_damage') {
+      // Split evenly between attack and damage, rounding up attack on odd numbers
+      const half = Math.floor(bonus / 2)
+      const remainder = bonus % 2
+      stats.attackBonus += half + remainder
+      stats.damageBonus += half
+    } else {
+      const statKey = SLOT_STAT[slot]
+      stats[statKey] += bonus
+    }
   }
 
   return stats

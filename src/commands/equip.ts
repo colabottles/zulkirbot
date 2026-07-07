@@ -147,11 +147,14 @@ export const equipCommand: BotCommand = {
       artifact4: 'HP',
     }
 
-    const statLabel = statLabels[slot] ?? 'stat'
     const bonusSign = item.is_cursed ? '-' : '+'
     const curseMsg = item.is_cursed
       ? ` ⚠️ A dark energy courses through you... this item is CURSED!`
       : ''
+
+    const statLabel = item.stat_type === 'attack_damage'
+      ? `attack & damage`
+      : statLabels[slot] ?? 'stat'
 
     // Check for duplicate equipped item names
     const { data: equippedItems } = await supabase

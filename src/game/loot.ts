@@ -20,7 +20,7 @@ export const LOOT_TABLES: Item[] = [
   { id: '64', name: 'Eyes of the Eagle', type: 'eyes', rarity: 'rare', stat_bonus: 4, description: 'Spot a coin at 100 yards.' },
   // Waist
   { id: '65', name: 'Leather Belt', type: 'waist', rarity: 'common', stat_bonus: 1, description: 'Holds your pants up.' },
-  { id: '66', name: 'Belt of Giant Strength', type: 'waist', rarity: 'rare', stat_bonus: 5, description: 'You feel impossibly strong.' },
+  { id: '66', name: 'Belt of Giant Strength', type: 'waist', rarity: 'rare', stat_bonus: 5, description: 'You feel impossibly strong.', stat_type: 'attack_damage' },
   { id: '67', name: 'Cord of Direction', type: 'waist', rarity: 'uncommon', stat_bonus: 2, description: 'Always points the way.' },
   // Wrists
   { id: '68', name: 'Leather Bracers', type: 'wrist', rarity: 'common', stat_bonus: 1, description: 'Basic wrist protection.' },
@@ -98,13 +98,13 @@ export const LOOT_TABLES: Item[] = [
   { id: '131', name: 'Shield of the Hidden Lord', type: 'shield', rarity: 'rare', stat_bonus: 6, description: 'Something is watching from behind the steel.' },
   { id: '132', name: 'Amulet of the Devout', type: 'neck', rarity: 'rare', stat_bonus: 5, description: 'Faith made tangible.' },
   { id: '133', name: 'Gauntlets of Flaming Fury', type: 'hands', rarity: 'rare', stat_bonus: 6, description: 'Warm to the touch. Very warm.' },
-  { id: '134', name: 'Belt of Hill Giant Strength', type: 'waist', rarity: 'rare', stat_bonus: 6, description: 'Hills feel smaller now.' },
+  { id: '134', name: 'Belt of Hill Giant Strength', type: 'waist', rarity: 'rare', stat_bonus: 6, description: 'Hills feel smaller now.', stat_type: 'attack_damage' },
   { id: '135', name: 'Vambraces of the Fallen', type: 'arms', rarity: 'rare', stat_bonus: 5, description: 'Worn by someone who did not make it.' },
 
   // ── Epic ─────────────────────────────────────────────────────
   { id: '136', name: 'Mantle of Spell Resistance', type: 'cloak', rarity: 'epic', stat_bonus: 7, description: 'Magic slides off you like water.' },
   { id: '137', name: 'Helm of Brilliant Light', type: 'helmet', rarity: 'epic', stat_bonus: 7, description: 'Radiance that hurts to look at.' },
-  { id: '138', name: 'Girdle of Stone Giant Strength', type: 'waist', rarity: 'epic', stat_bonus: 8, description: 'Stone bends before you.' },
+  { id: '138', name: 'Girdle of Stone Giant Strength', type: 'waist', rarity: 'epic', stat_bonus: 8, description: 'Stone bends before you.', stat_type: 'attack_damage' },
   { id: '139', name: 'Ring of Regeneration', type: 'ring', rarity: 'epic', stat_bonus: 8, description: 'Wounds close on their own schedule.' },
   { id: '140', name: 'Boots of Teleportation', type: 'feet', rarity: 'epic', stat_bonus: 7, description: 'Here one moment. There the next.' },
   { id: '141', name: 'Gloves of the Artificer', type: 'hands', rarity: 'epic', stat_bonus: 7, description: 'Every tool responds to your touch.' },
@@ -119,7 +119,7 @@ export const LOOT_TABLES: Item[] = [
   { id: '150', name: 'Circlet of the Archdruid', type: 'helmet', rarity: 'epic', stat_bonus: 8, description: 'The wild recognizes your authority.' },
   { id: '151', name: 'Necklace of Prayer Beads', type: 'neck', rarity: 'epic', stat_bonus: 7, description: 'Each bead holds a blessing.' },
   { id: '152', name: 'Gauntlets of the Titan', type: 'hands', rarity: 'epic', stat_bonus: 9, description: 'Made for something larger than you.' },
-  { id: '153', name: 'Belt of Fire Giant Strength', type: 'waist', rarity: 'epic', stat_bonus: 9, description: 'Fire giants are not known for subtlety.' },
+  { id: '153', name: 'Belt of Fire Giant Strength', type: 'waist', rarity: 'epic', stat_bonus: 9, description: 'Fire giants are not known for subtlety.', stat_type: 'attack_damage' },
   { id: '154', name: 'Vambraces of the Storm', type: 'arms', rarity: 'epic', stat_bonus: 7, description: 'Lightning traces the runes on every strike.' },
   { id: '155', name: 'Diadem of the Mage', type: 'helmet', rarity: 'epic', stat_bonus: 7, description: 'Power radiates from every facet.' },
   { id: '156', name: 'Boots of the Planar Walker', type: 'feet', rarity: 'epic', stat_bonus: 6, description: 'You have walked roads most cannot find.' },
@@ -130,13 +130,13 @@ export const LOOT_TABLES: Item[] = [
   { id: '161', name: 'Aegis Shield', type: 'shield', rarity: 'epic', stat_bonus: 7, description: 'Ancient. Proven. Unyielding.' },
   { id: '162', name: 'Amulet of the Undying', type: 'neck', rarity: 'epic', stat_bonus: 8, description: 'Something keeps pulling you back.' },
   { id: '163', name: 'Gauntlets of the Warlord', type: 'hands', rarity: 'epic', stat_bonus: 7, description: 'Command presence starts at the hands.' },
-  { id: '164', name: 'Belt of the Frost Giant', type: 'waist', rarity: 'epic', stat_bonus: 8, description: 'Cold as the north. Twice as dangerous.' },
+  { id: '164', name: 'Belt of the Frost Giant', type: 'waist', rarity: 'epic', stat_bonus: 8, description: 'Cold as the north. Twice as dangerous.', stat_type: 'attack_damage' },
   { id: '165', name: 'Vambraces of the Undying Champion', type: 'arms', rarity: 'epic', stat_bonus: 9, description: 'The champion fell. The arms remain.' },
 
   // ── Legendary ────────────────────────────────────────────────
   { id: '166', name: 'Cloak of Invisibility', type: 'cloak', rarity: 'legendary', stat_bonus: 10, description: 'You are not here.' },
   { id: '167', name: 'Helm of the Dragon', type: 'helmet', rarity: 'legendary', stat_bonus: 11, description: 'Dragonfire shaped this. Dragonfire fears it.' },
-  { id: '168', name: 'Belt of Cloud Giant Strength', type: 'waist', rarity: 'legendary', stat_bonus: 11, description: 'The clouds are below you now.' },
+  { id: '168', name: 'Belt of Cloud Giant Strength', type: 'waist', rarity: 'legendary', stat_bonus: 11, description: 'The clouds are below you now.', stat_type: 'attack_damage' },
   { id: '169', name: 'Ring of Djinni Summoning', type: 'ring', rarity: 'legendary', stat_bonus: 10, description: 'Three wishes. Choose carefully.' },
   { id: '170', name: 'Boots of the Void', type: 'feet', rarity: 'legendary', stat_bonus: 11, description: 'You leave no footprints. In anything.' },
   { id: '171', name: 'Gauntlets of the Overlord', type: 'hands', rarity: 'legendary', stat_bonus: 12, description: 'Armies knelt before whoever wore these last.' },
@@ -151,7 +151,7 @@ export const LOOT_TABLES: Item[] = [
   { id: '180', name: 'Crown of the Warlord', type: 'helmet', rarity: 'legendary', stat_bonus: 12, description: 'Nations were built on the back of whoever wore this.' },
   { id: '181', name: 'Necklace of the Dragon Lord', type: 'neck', rarity: 'legendary', stat_bonus: 10, description: 'The dragons remember this. They are not pleased.' },
   { id: '182', name: 'Gauntlets of the Demigod', type: 'hands', rarity: 'legendary', stat_bonus: 11, description: 'Half divine. Fully dangerous.' },
-  { id: '183', name: 'Belt of the Storm Giant', type: 'waist', rarity: 'legendary', stat_bonus: 12, description: 'The storm does not follow you. It obeys you.' },
+  { id: '183', name: 'Belt of the Storm Giant', type: 'waist', rarity: 'legendary', stat_bonus: 12, description: 'The storm does not follow you. It obeys you.', stat_type: 'attack_damage' },
   { id: '184', name: 'Vambraces of the Fallen God', type: 'arms', rarity: 'legendary', stat_bonus: 12, description: 'A god wore these. Once.' },
   { id: '185', name: 'Diadem of the Archlich', type: 'helmet', rarity: 'legendary', stat_bonus: 10, description: 'Absolute authority over the dead.' },
   { id: '186', name: 'Boots of the Eternal Chase', type: 'feet', rarity: 'legendary', stat_bonus: 12, description: 'You always catch what you pursue.' },
@@ -162,13 +162,13 @@ export const LOOT_TABLES: Item[] = [
   { id: '191', name: 'Aegis of the Eternal', type: 'shield', rarity: 'legendary', stat_bonus: 11, description: 'It predates the kingdom it protected.' },
   { id: '192', name: 'Amulet of the Lich King', type: 'neck', rarity: 'legendary', stat_bonus: 12, description: 'Zulkir Jax is looking for this.' },
   { id: '193', name: 'Gauntlets of the Void', type: 'hands', rarity: 'legendary', stat_bonus: 13, description: 'Between strikes, nothing exists.' },
-  { id: '194', name: 'Belt of the Titan', type: 'waist', rarity: 'legendary', stat_bonus: 13, description: 'Titans are no longer common. This is why.' },
+  { id: '194', name: 'Belt of the Titan', type: 'waist', rarity: 'legendary', stat_bonus: 13, description: 'Titans are no longer common. This is why.', stat_type: 'attack_damage' },
   { id: '195', name: 'Vambraces of the Dread Knight', type: 'arms', rarity: 'legendary', stat_bonus: 13, description: 'The Dread Knight fell. The arms did not.' },
 
   // ── Mythic ───────────────────────────────────────────────────
   { id: '196', name: 'Cloak of the Outer Dark', type: 'cloak', rarity: 'mythic', stat_bonus: 14, description: 'The void peers through it. Back at you.' },
   { id: '197', name: 'Helm of Absolute Authority', type: 'helmet', rarity: 'mythic', stat_bonus: 15, description: 'The gods notice when you wear this.' },
-  { id: '198', name: 'Belt of Titanic Strength', type: 'waist', rarity: 'mythic', stat_bonus: 16, description: 'The word "impossible" no longer applies.' },
+  { id: '198', name: 'Belt of Titanic Strength', type: 'waist', rarity: 'mythic', stat_bonus: 16, description: 'The word "impossible" no longer applies.', stat_type: 'attack_damage' },
   { id: '199', name: 'Ring of the Wish Eternal', type: 'ring', rarity: 'mythic', stat_bonus: 15, description: 'It grants what it wants to grant. Mostly what you want.' },
   { id: '200', name: 'Boots of the Godwalker', type: 'feet', rarity: 'mythic', stat_bonus: 15, description: 'Gods walk paths mortals cannot see. Now you can.' },
   { id: '201', name: 'Gauntlets of the World Breaker', type: 'hands', rarity: 'mythic', stat_bonus: 17, description: 'The name is a warning.' },
@@ -183,7 +183,7 @@ export const LOOT_TABLES: Item[] = [
   { id: '210', name: 'Crown of the Overgod', type: 'helmet', rarity: 'mythic', stat_bonus: 16, description: 'Ao is going to want this back.' },
   { id: '211', name: 'Necklace of the World Soul', type: 'neck', rarity: 'mythic', stat_bonus: 15, description: 'The world knows you wear this. It approves.' },
   { id: '212', name: 'Gauntlets of the Primordial Titan', type: 'hands', rarity: 'mythic', stat_bonus: 16, description: 'Primordial titans are extinct. Possibly because of these.' },
-  { id: '213', name: 'Belt of the World Breaker', type: 'waist', rarity: 'mythic', stat_bonus: 17, description: 'The world has not broken yet. Encourage that trend.' },
+  { id: '213', name: 'Belt of the World Breaker', type: 'waist', rarity: 'mythic', stat_bonus: 17, description: 'The world has not broken yet. Encourage that trend.', stat_type: 'attack_damage' },
   { id: '214', name: 'Vambraces of the Eternal War', type: 'arms', rarity: 'mythic', stat_bonus: 17, description: 'The war never ended. It just moved.' },
   { id: '215', name: 'Diadem of the Overgod', type: 'helmet', rarity: 'mythic', stat_bonus: 15, description: 'Authority absolute. Responsibility unclear.' },
   { id: '216', name: 'Boots of the Infinite Road', type: 'feet', rarity: 'mythic', stat_bonus: 16, description: 'The road goes on. So do you.' },
@@ -194,7 +194,7 @@ export const LOOT_TABLES: Item[] = [
   { id: '221', name: 'Aegis of the First Age', type: 'shield', rarity: 'mythic', stat_bonus: 16, description: 'The first age ended. This survived it.' },
   { id: '222', name: 'Amulet of the World Tree', type: 'neck', rarity: 'mythic', stat_bonus: 17, description: 'Yggdrasil remembers the one who wore this.' },
   { id: '223', name: 'Gauntlets of the Eternal Champion', type: 'hands', rarity: 'mythic', stat_bonus: 18, description: 'The champion is eternal. So is the burden.' },
-  { id: '224', name: 'Belt of the Eternal Conqueror', type: 'waist', rarity: 'mythic', stat_bonus: 18, description: 'Nothing stands before you. Nothing ever has.' },
+  { id: '224', name: 'Belt of the Eternal Conqueror', type: 'waist', rarity: 'mythic', stat_bonus: 18, description: 'Nothing stands before you. Nothing ever has.', stat_type: 'attack_damage' },
   { id: '225', name: 'Vambraces of the World Breaker', type: 'arms', rarity: 'mythic', stat_bonus: 18, description: 'The last thing standing after everything else falls.' },
 ]
 

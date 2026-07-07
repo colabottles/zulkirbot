@@ -96,6 +96,7 @@ export interface Item {
   slot?: EquipmentSlot
   is_cursed?: boolean
   curse_revealed?: boolean
+  stat_type?: string
 }
 
 export interface ShopItem {
