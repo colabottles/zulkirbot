@@ -169,6 +169,8 @@ export function registerCommands(
         'donate', 'vso', 'so', 'followage', 'uptime', 'solo', 'party',
         'buyfrommerchant', 'bfm', 'tradeitem', 'ti',
         'spy', 'visit', 'raid', 'gather',
+        'ddofree', 'ddonews',
+        'ads', 'ann', 'cc', 'ddoname', 'follow', 'lurk', 'news', 'prime', 'rules', 'socials', 'tip',
       ])
       if (SILENT_COMMANDS.has(cmdName)) return
       const UNKNOWN_CMD_RESPONSES = [
