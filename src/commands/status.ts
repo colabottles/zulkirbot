@@ -29,6 +29,20 @@ export const statusCommand: BotCommand = {
       return
     }
 
+    if (args[0]?.toLowerCase() === 'materials') {
+      const { data: char } = await supabase
+        .from('characters')
+        .select('refinement_stones, motes')
+        .eq('twitch_username', username)
+        .single()
+      if (!char) return
+      client.say(channel,
+        `💎 @${username} — Refinement Stones: ${char.refinement_stones ?? 0} | ` +
+        `Motes: ${char.motes ?? 0}`
+      )
+      return
+    }
+
     const target = (args[0]?.replace('@', '') ?? username).toLowerCase()
     const { data: char } = await supabase
       .from('characters')

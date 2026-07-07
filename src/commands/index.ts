@@ -43,6 +43,8 @@ import { listauctionCommand } from './listauction'
 import { bidCommand } from './bid'
 import { endauctionCommand } from './endauction'
 import { auctionsCommand } from './auctions'
+import { upgradeCommand } from './upgrade'
+import { salvageCommand } from './salvage'
 
 // ── Tavern ───────────────────────────────────────────────────
 import { tavernCommand } from './tavern'
@@ -147,6 +149,8 @@ export const allCommands: BotCommand[] = [
   bidCommand,
   endauctionCommand,
   auctionsCommand,
+  upgradeCommand,
+  salvageCommand,
 
   // Tavern
   tavernCommand,

@@ -355,6 +355,21 @@ async function writeRewards(
       gold += CLEAR_BONUS_GOLD
     }
 
+    // Motes from standard campaign clear
+    if (fullClear && p.is_alive) {
+      const { data: freshChar } = await supabase
+        .from('characters')
+        .select('motes')
+        .eq('twitch_username', p.username)
+        .single()
+      if (freshChar) {
+        await supabase
+          .from('characters')
+          .update({ motes: (freshChar.motes ?? 0) + 1 })
+          .eq('twitch_username', p.username)
+      }
+    }
+
     await supabase.from('campaign_rewards').insert({
       campaign_id: campaignId,
       username: p.username,
@@ -785,7 +800,7 @@ export async function handleCampaignCommand(
       const maxLevel = Math.max(...levelResults)
       const levelRange = minLevel === maxLevel
         ? `Level ${minLevel}`
-        : `Levels ${minLevel}–${maxLevel}`
+        : `Levels ${minLevel}-${maxLevel}`
 
       await say(client, channel,
         `⚔️  The party is set: ${[...joiners].join(', ')}. ` +

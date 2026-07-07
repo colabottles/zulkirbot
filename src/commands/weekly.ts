@@ -84,6 +84,28 @@ export const weeklyCommand: BotCommand = {
       itemMsg = ` You also find a ${formatRarity(item.rarity)} ${item.name} in your pack!`
     }
 
+    // 20% chance: refinement stones
+    let stonesMsg = ''
+    if (d100() <= 20) {
+      const stones = 20 + Math.floor(Math.random() * 31)
+      await supabase
+        .from('characters')
+        .update({ refinement_stones: (char.refinement_stones ?? 0) + stones })
+        .eq('twitch_username', username)
+      stonesMsg = ` +${stones} refinement stones!`
+    }
+
+    // 10% chance: motes
+    let motesMsg = ''
+    if (d100() <= 10) {
+      const motes = Math.floor(Math.random() * 3) + 1
+      await supabase
+        .from('characters')
+        .update({ motes: (char.motes ?? 0) + motes })
+        .eq('twitch_username', username)
+      motesMsg = ` +${motes} mote${motes !== 1 ? 's' : ''}!`
+    }
+
     await supabase
       .from('characters')
       .update({
@@ -102,7 +124,7 @@ export const weeklyCommand: BotCommand = {
 
     client.say(
       channel,
-      `🎁 @${username} (${characterName}) claims their weekly reward — +${xp} XP!${tauntMsg}${itemMsg}${levelMsg}`
+      `🎁 @${username} (${characterName}) claims their weekly reward — +${xp} XP!${tauntMsg}${itemMsg}${levelMsg}${stonesMsg}${motesMsg}`
     )
   }
 }

@@ -2,6 +2,7 @@ import { BotCommand } from '../types'
 import { supabase } from '../lib/supabase'
 import { activeFights } from '../game/engine'
 import { d100, d6 } from '../game/dice'
+import { d6 as rollD6 } from '../game/dice'
 import { rollLoot, rollLootByRarity } from '../game/loot'
 import { getTrapForLevel, rollTrapDamage, DISARM_CLASSES, DISARM_CHANCE } from '../game/traps'
 import { trimGraveyard } from '../lib/graveyard'
@@ -258,6 +259,33 @@ export const exploreCommand: BotCommand = {
     // 5% chance: NPC encounter
     if (roll <= 89) {
       await triggerNpcEncounter(client, channel, username)
+      return
+    }
+
+    // 8% chance: refinement stones
+    if (roll <= 97) {
+      const stones = 5 + Math.floor(Math.random() * 11)
+      await supabase
+        .from('characters')
+        .update({ refinement_stones: (char.refinement_stones ?? 0) + stones })
+        .eq('twitch_username', username)
+      client.say(channel,
+        `💎 @${username} finds a cache of refinement stones. +${stones} stones. ` +
+        `(Total: ${(char.refinement_stones ?? 0) + stones})`
+      )
+      return
+    }
+
+    // 5% chance: mote
+    if (roll <= 100 && Math.random() < 0.05) {
+      await supabase
+        .from('characters')
+        .update({ motes: (char.motes ?? 0) + 1 })
+        .eq('twitch_username', username)
+      client.say(channel,
+        `✨ @${username} finds a mote of power flickering in the dark. +1 mote. ` +
+        `(Total: ${(char.motes ?? 0) + 1})`
+      )
       return
     }
 
