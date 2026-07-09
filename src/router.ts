@@ -12,6 +12,7 @@ import { handleArenaCommand, handleEnterArenaCommand } from './commands/arena'
 import { handlePollVote } from './commands/poll'
 import { isZulkirjaxPresent, summonZulkirjax, handleZulkirjaxAttack } from './lib/zulkirjax'
 import { handleBuyFromMerchant, handleTradeItem } from './lib/npcEncounter'
+import { handleBingo, handleBingoStart } from './commands/bingo';
 
 const BOT_ACCOUNTS = new Set([
   'moobot',
@@ -159,6 +160,16 @@ export function registerCommands(
 
     if (cmdName === 'enterarena') {
       await handleEnterArenaCommand(client, channel, username)
+      return
+    }
+
+    if (cmdName === 'bingostart') {
+      await handleBingoStart(client, username, process.env.TWITCH_CHANNEL!)
+      return
+    }
+
+    if (cmdName === 'bingo') {
+      await handleBingo(client, username, args)
       return
     }
 

@@ -2,6 +2,17 @@
 
 ---
 
+## v3.0.1 — July 7, 2026
+
+### Bug Fixes
+
+- Fixed `jax_doubt` debuff (Zulkir Jax's -10 max HP effect) never actually clearing on rest — `!rest` now recalculates max HP from the character's base value plus gear bonuses, restoring the lost HP as the debuff message always promised.
+- Fixed ZulkirBot responding to Moobot's custom commands (`!ddofree`, `!ddonews`, `!ads`, `!ann`, `!cc`, `!ddoname`, `!follow`, `!lurk`, `!news`, `!prime`, `!rules`, `!socials`, `!tip`) with the unknown command roast — these are now silently ignored so Moobot can handle them.
+- Fixed the inventory page showing Epic and Mythic rarity items in the default text color instead of their rarity colors.
+- Fixed missing stat label on `arms`-slot items with an explicit stat type (e.g. Vambraces of the Warlord showing no unit next to its bonus) on both the inventory page and in the `!equip` chat message — item `stat_type` now takes priority over the slot's default label.
+
+---
+
 ## v3.0.0 — July 6, 2026
 
 This is a major release introducing five large systems: expanded exploration, item upgrading and salvage, the split-stat system, full spell coverage for all classes, and the stronghold system. Several bug fixes and quality-of-life improvements are also included.
@@ -202,7 +213,7 @@ This is a major release introducing five large systems: expanded exploration, it
 
 ## v2.4.2 — June 10, 2026
 
-### Bug Fixes
+### Bug Fixes v2.4.2
 
 - **`!solo` and `!party` roast** — Both commands now silently ignored by the unknown command handler. Previously the roast fired alongside the campaign mode selection, producing a spurious response in chat.
 - **Giveaway whisper fallback** — `!draw` now always posts a chat message to the winner telling them to check their Twitch whispers, regardless of whether the whisper API returned success. Twitch's whisper API returns 204 (accepted) even when delivery fails silently — the chat fallback ensures winners are always notified.

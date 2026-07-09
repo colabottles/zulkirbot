@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DDO Stream Bingo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Metamorphous&family=Almendra:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: content-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --stone: #1a1412;
+      --parchment: #c9a96e;
+      --parchment-light: #e8dcc8;
+      --crimson: #8b1a1a;
+      --crimson-bright: #b52020;
+      --ink: #3d2b1f;
+      --ink-light: #5a3e2e;
+      --bone: #f0e6d0;
+      --shadow: rgba(0, 0, 0, 0.6);
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-size: 1rem;
+    }
+
+    body {
+      background-color: var(--stone);
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(139, 26, 26, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(201, 169, 110, 0.05) 0%, transparent 60%);
+      color: var(--parchment-light);
+      font-family: 'Almendra', Georgia, serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    main {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      color: var(--crimson-bright);
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    h1 {
+      font-family: 'Metamorphous', serif;
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 400;
+      color: var(--parchment);
+      letter-spacing: 0.08em;
+      text-shadow: 0 2px 12px rgba(139, 26, 26, 0.4);
+      line-height: 1;
+    }
+
+    h1 span {
+      color: var(--crimson-bright);
+    }
+
+    /* Controls bar */
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: 'Metamorphous', serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid var(--parchment);
+      background: transparent;
+      color: var(--parchment);
+      padding: 0.5rem 1.25rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover,
+    .btn:focus-visible {
+      background: var(--parchment);
+      color: var(--stone);
+      outline: 2px solid var(--crimson-bright);
+      outline-offset: 2px;
+    }
+
+    .btn-danger {
+      border-color: var(--crimson-bright);
+      color: var(--crimson-bright);
+    }
+
+    .btn-danger:hover,
+    .btn-danger:focus-visible {
+      background: var(--crimson-bright);
+      color: var(--bone);
+      border-color: var(--crimson-bright);
+    }
+
+    /* Status */
+    .status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--ink-light);
+      letter-spacing: 0.05em;
+      min-width: 6rem;
+      text-align: center;
+    }
+
+    .status[data-win="true"] {
+      color: var(--parchment);
+      font-weight: 600;
+    }
+
+    /* Win banner */
+    .win-banner {
+      display: none;
+      background: var(--crimson);
+      border: 1px solid var(--crimson-bright);
+      color: var(--bone);
+      font-family: 'Metamorphous', serif;
+      font-size: 1rem;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-align: center;
+      padding: 0.6rem 1rem;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+    }
+
+    .win-banner[aria-hidden="false"] {
+      display: block;
+    }
+
+    /* Bingo grid */
+    .bingo-grid-wrap {
+      border: 2px solid var(--ink-light);
+      box-shadow:
+        0 0 0 1px var(--parchment),
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        inset 0 0 60px rgba(0, 0, 0, 0.3);
+      background: var(--ink);
+    }
+
+    /* Column headers B I N G O */
+    .bingo-header {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      border-bottom: 2px solid var(--ink-light);
+    }
+
+    .bingo-header-cell {
+      font-family: 'Metamorphous', serif;
+      font-size: clamp(1.25rem, 3.5vw, 1.75rem);
+      font-weight: 400;
+      color: var(--crimson-bright);
+      text-align: center;
+      padding: 0.6rem 0.25rem;
+      letter-spacing: 0.1em;
+      border-right: 1px solid var(--ink-light);
+    }
+
+    .bingo-header-cell:last-child {
+      border-right: none;
+    }
+
+    /* Grid */
+    .bingo-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .bingo-cell {
+      position: relative;
+      aspect-ratio: 1;
+      border: 1px solid var(--ink-light);
+      background: rgba(26, 20, 18, 0.6);
+      cursor: pointer;
+      padding: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: background 0.1s;
+      overflow: hidden;
+    }
+
+    .bingo-cell:hover:not([data-free="true"]),
+    .bingo-cell:focus-visible {
+      background: rgba(61, 43, 31, 0.8);
+      outline: 2px solid var(--parchment);
+      outline-offset: -2px;
+      z-index: 1;
+    }
+
+    .bingo-cell[data-free="true"] {
+      background: rgba(61, 43, 31, 0.5);
+      cursor: default;
+    }
+
+    .cell-text {
+      font-family: 'Almendra', Georgia, serif;
+      font-size: clamp(0.6rem, 1.4vw, 0.8rem);
+      font-weight: 400;
+      color: var(--parchment-light);
+      line-height: 1.2;
+      user-select: none;
+      position: relative;
+      z-index: 1;
+    }
+
+    .bingo-cell[data-free="true"] .cell-text {
+      font-family: 'Metamorphous', serif;
+      font-size: clamp(0.55rem, 1.2vw, 0.7rem);
+      color: var(--parchment);
+      letter-spacing: 0.05em;
+    }
+
+    /* Square number badge */
+    .cell-number {
+      position: absolute;
+      top: 0.2rem;
+      left: 0.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      color: var(--ink-light);
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* Stamp mark */
+    .stamp {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(1.4);
+      transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+      z-index: 2;
+    }
+
+    .bingo-cell[data-marked="true"] .stamp {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .stamp svg {
+      width: 70%;
+      height: 70%;
+    }
+
+    /* Win cell highlight */
+    .bingo-cell[data-win-cell="true"] {
+      background: rgba(139, 26, 26, 0.25);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--ink-light);
+      letter-spacing: 0.08em;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stamp {
+        transition: none;
+      }
+
+      .btn {
+        transition: none;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">Stream Interactive</p>
+      <h1>DDO <span>Bingo</span></h1>
+    </header>
+
+    <div class="controls" role="toolbar" aria-label="Bingo controls">
+      <button class="btn btn-danger" id="btn-reset" type="button">Reset Marks</button>
+      <span class="status" id="status" role="status" aria-live="polite"></span>
+      <button class="btn" id="btn-shuffle" type="button">New Card</button>
+    </div>
+
+    <div class="win-banner" id="win-banner" aria-hidden="true" role="alert" aria-live="assertive">
+      🎲 BINGO! Well met, adventurers!
+    </div>
+
+    <section aria-label="Bingo card">
+      <div class="bingo-grid-wrap">
+        <div class="bingo-header" aria-hidden="true">
+          <div class="bingo-header-cell">B</div>
+          <div class="bingo-header-cell">I</div>
+          <div class="bingo-header-cell">N</div>
+          <div class="bingo-header-cell">G</div>
+          <div class="bingo-header-cell">O</div>
+        </div>
+        <div class="bingo-grid" id="bingo-grid" role="grid" aria-label="5 by 5 bingo grid">
+          <!-- Cells injected by JS -->
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p id="footer-hint">Connecting&hellip;</p>
+    </footer>
+  </main>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://kqfrurckgaawlcrqjxqd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxZnJ1cmNrZ2Fhd2xjcnFqeHFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MjgwODQsImV4cCI6MjA5MDIwNDA4NH0.DZ6nhegNyKh1EJvaHFBwWWot8-wMTxg4iOmq7dobHBY';
+
+    const FREE_INDEX = 12;
+    const TOTAL_CELLS = 25;
+
+    const WIN_LINES = [
+      [0, 1, 2, 3, 4],
+      [5, 6, 7, 8, 9],
+      [10, 11, 12, 13, 14],
+      [15, 16, 17, 18, 19],
+      [20, 21, 22, 23, 24],
+      [0, 5, 10, 15, 20],
+      [1, 6, 11, 16, 21],
+      [2, 7, 12, 17, 22],
+      [3, 8, 13, 18, 23],
+      [4, 9, 14, 19, 24],
+      [0, 6, 12, 18, 24],
+      [4, 8, 12, 16, 20],
+    ];
+
+    const isOverlay = new URLSearchParams(window.location.search).has('overlay');
+
+    /* Overlay mode: strip controls, transparent background */
+    if (isOverlay) {
+      document.body.style.background = 'transparent';
+      document.querySelector('.controls').hidden = true;
+      document.querySelector('footer').hidden = true;
+    }
+
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentSession = null;
+
+    function checkWin(marked) {
+      for (const line of WIN_LINES) {
+        if (line.every(i => marked[i])) return line;
+      }
+      return null;
+    }
+
+    function renderGrid(squares, marked) {
+      const grid = document.getElementById('bingo-grid');
+      grid.innerHTML = '';
+
+      const winLine = checkWin(marked);
+      const winSet = winLine ? new Set(winLine) : new Set();
+
+      squares.forEach((text, i) => {
+        const isFree = i === FREE_INDEX;
+        const isMarked = marked[i];
+        const isWinCell = winSet.has(i);
+
+        const cell = document.createElement('div');
+        cell.className = 'bingo-cell';
+        cell.setAttribute('role', 'gridcell');
+        cell.dataset.free = isFree;
+        cell.dataset.marked = isMarked;
+        cell.dataset.winCell = isWinCell;
+
+        const label = isFree
+          ? 'Free square, already marked'
+          : `${text}${isMarked ? ', marked' : ''}`;
+        cell.setAttribute('aria-label', label);
+
+        if (!isFree) {
+          cell.setAttribute('tabindex', '0');
+          cell.setAttribute('aria-pressed', isMarked ? 'true' : 'false');
+        }
+
+        /* Square number badge so viewers know what to type */
+        if (!isFree && !isOverlay) {
+          const badge = document.createElement('span');
+          badge.className = 'cell-number';
+          badge.setAttribute('aria-hidden', 'true');
+          badge.textContent = i + 1;
+          cell.appendChild(badge);
+        }
+
+        const textEl = document.createElement('span');
+        textEl.className = 'cell-text';
+        textEl.textContent = text;
+        cell.appendChild(textEl);
+
+        /* Stamp X mark */
+        const stamp = document.createElement('span');
+        stamp.className = 'stamp';
+        stamp.setAttribute('aria-hidden', 'true');
+        stamp.innerHTML = `
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <line x1="15" y1="15" x2="85" y2="85" stroke="#8b1a1a" stroke-width="12" stroke-linecap="round"/>
+            <line x1="85" y1="15" x2="15" y2="85" stroke="#8b1a1a" stroke-width="12" stroke-linecap="round"/>
+            <circle cx="50" cy="50" r="44" fill="none" stroke="#8b1a1a" stroke-width="5" stroke-dasharray="8 5" opacity="0.5"/>
+          </svg>
+        `;
+        cell.appendChild(stamp);
+
+        grid.appendChild(cell);
+      });
+
+      /* Win banner */
+      const banner = document.getElementById('win-banner');
+      banner.setAttribute('aria-hidden', winLine ? 'false' : 'true');
+
+      /* Status */
+      const count = marked.filter(Boolean).length;
+      const status = document.getElementById('status');
+      if (status) status.textContent = `${count} marked`;
+    }
+
+    function setFooterHint(text) {
+      const hint = document.getElementById('footer-hint');
+      if (hint) hint.textContent = text;
+    }
+
+    async function loadActiveSession() {
+      const { data, error } = await client
+        .from('bingo_sessions')
+        .select('*')
+        .eq('active', true)
+        .single();
+
+      if (error || !data) {
+        setFooterHint('No active session — use !bingostart in chat.');
+        return;
+      }
+
+      currentSession = data;
+      renderGrid(data.squares, data.marked);
+      setFooterHint('Redeem "Call a Bingo Square" and type !bingo <1–25> to mark a square.');
+    }
+
+    function subscribeToSession() {
+      client
+        .channel('bingo_sessions_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'bingo_sessions' },
+          (payload) => {
+            /* New session started — reload */
+            if (payload.eventType === 'INSERT') {
+              currentSession = payload.new;
+              renderGrid(payload.new.squares, payload.new.marked);
+              setFooterHint('Redeem "Call a Bingo Square" and type !bingo <1–25> to mark a square.');
+              return;
+            }
+
+            /* Square marked — update only if this is the active session */
+            if (payload.eventType === 'UPDATE' && payload.new.active) {
+              currentSession = payload.new;
+              renderGrid(payload.new.squares, payload.new.marked);
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    /* Streamer controls — hidden in overlay mode */
+    if (!isOverlay) {
+      document.getElementById('btn-reset').addEventListener('click', async () => {
+        if (!currentSession) return;
+        const marked = new Array(TOTAL_CELLS).fill(false);
+        marked[FREE_INDEX] = true;
+        await client
+          .from('bingo_sessions')
+          .update({ marked })
+          .eq('id', currentSession.id);
+      });
+
+      document.getElementById('btn-shuffle').addEventListener('click', async () => {
+        /* Signal ZulkirBot to start a new session via a chat command instead, or call your own API endpoint here. Disabled in the card itself since ZulkirBot owns session creation. */
+        alert('Type !bingostart in chat to shuffle a new card.');
+      });
+    }
+
+    loadActiveSession();
+    subscribeToSession();
+  </script>
+</body>
+
+</html>
