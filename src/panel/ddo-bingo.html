@@ -35,6 +35,7 @@
     body {
       height: 100%;
       font-size: 1.5rem;
+      overflow: hidden;
     }
 
     body {
@@ -44,22 +45,43 @@
         radial-gradient(ellipse at 80% 80%, rgba(201, 169, 110, 0.05) 0%, transparent 60%);
       color: var(--parchment-light);
       font-family: 'Almendra', Georgia, serif;
-      min-height: 100vh;
+      height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2rem;
+      padding: 1rem;
     }
 
     main {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 1.5rem;
       width: 100%;
-      max-width: 680px;
+      height: calc(100vh - 2rem);
+    }
+
+    /* Card column — square, fills available height */
+    .card-col {
+      flex: 0 0 auto;
+      height: 100%;
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Sidebar — header, controls, win banner, footer */
+    .sidebar {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      min-width: 0;
     }
 
     /* Header */
     header {
-      text-align: center;
-      margin-bottom: 1.5rem;
+      text-align: left;
     }
 
     .eyebrow {
@@ -73,7 +95,7 @@
 
     h1 {
       font-family: 'Metamorphous', serif;
-      font-size: clamp(2rem, 6vw, 3rem);
+      font-size: clamp(1.6rem, 3vw, 2.5rem);
       font-weight: 400;
       color: var(--parchment);
       letter-spacing: 0.08em;
@@ -89,22 +111,20 @@
     .controls {
       display: flex;
       gap: 0.75rem;
-      justify-content: center;
       align-items: center;
-      margin-bottom: 1.25rem;
       flex-wrap: wrap;
     }
 
     .btn {
       font-family: 'Metamorphous', serif;
-      font-size: 0.75rem;
+      font-size: 0.5rem;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       border: 1px solid var(--parchment);
       background: transparent;
       color: var(--parchment);
-      padding: 0.5rem 1.25rem;
+      padding: 0.25rem;
       cursor: pointer;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
@@ -136,7 +156,6 @@
       color: var(--ink-light);
       letter-spacing: 0.05em;
       min-width: 6rem;
-      text-align: center;
     }
 
     .status[data-win="true"] {
@@ -156,7 +175,6 @@
       letter-spacing: 0.15em;
       text-align: center;
       padding: 0.6rem 1rem;
-      margin-bottom: 1rem;
       text-transform: uppercase;
     }
 
@@ -164,14 +182,26 @@
       display: block;
     }
 
-    /* Bingo grid */
+    /* Footer */
+    footer {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--ink-light);
+      letter-spacing: 0.08em;
+    }
+
+    /* Bingo grid fills the card column */
     .bingo-grid-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       border: 2px solid var(--ink-light);
       box-shadow:
         0 0 0 1px var(--parchment),
         0 8px 32px rgba(0, 0, 0, 0.5),
         inset 0 0 60px rgba(0, 0, 0, 0.3);
       background: var(--ink);
+      overflow: hidden;
     }
 
     /* Column headers B I N G O */
@@ -179,12 +209,13 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       border-bottom: 2px solid var(--ink-light);
+      flex-shrink: 0;
     }
 
     .bingo-header-cell {
       font-family: 'Metamorphous', serif;
-      font-size: clamp(1.25rem, 3.5vw, 1.75rem);
-      font-weight: 400;
+      font-size: clamp(1rem, 1.5vw, 1.25rem);
+      font-weight: 900;
       color: var(--crimson-bright);
       text-align: center;
       padding: 0.6rem 0.25rem;
@@ -196,15 +227,16 @@
       border-right: none;
     }
 
-    /* Grid */
+    /* Grid fills remaining height */
     .bingo-grid {
+      flex: 1;
       display: grid;
       grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
     }
 
     .bingo-cell {
       position: relative;
-      aspect-ratio: 1;
       border: 1px solid var(--ink-light);
       background: rgba(26, 20, 18, 0.6);
       cursor: pointer;
@@ -290,16 +322,6 @@
       background: rgba(139, 26, 26, 0.25);
     }
 
-    /* Footer */
-    footer {
-      text-align: center;
-      margin-top: 1rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.65rem;
-      color: var(--ink-light);
-      letter-spacing: 0.08em;
-    }
-
     @media (prefers-reduced-motion: reduce) {
       .stamp {
         transition: none;
@@ -309,33 +331,12 @@
         transition: none;
       }
     }
-
-    @media (max-width: 480px) {
-      body {
-        padding: 1rem;
-      }
-    }
   </style>
 </head>
 
 <body>
   <main>
-    <header>
-      <p class="eyebrow">Zulkir Jax Presents&hellip;</p>
-      <h1>DDO <span>Bingo</span></h1>
-    </header>
-
-    <div class="controls" role="toolbar" aria-label="Bingo controls">
-      <button class="btn btn-danger" id="btn-reset" type="button">Reset Marks</button>
-      <span class="status" id="status" role="status" aria-live="polite"></span>
-      <button class="btn" id="btn-shuffle" type="button">New Card</button>
-    </div>
-
-    <div class="win-banner" id="win-banner" aria-hidden="true" role="alert" aria-live="assertive">
-      🎲 BINGO! Well met, adventurers!
-    </div>
-
-    <section aria-label="Bingo card">
+    <div class="card-col">
       <div class="bingo-grid-wrap">
         <div class="bingo-header" aria-hidden="true">
           <div class="bingo-header-cell">B</div>
@@ -348,11 +349,28 @@
           <!-- Cells injected by JS -->
         </div>
       </div>
-    </section>
+    </div>
 
-    <footer>
-      <p id="footer-hint">Connecting&hellip;</p>
-    </footer>
+    <div class="sidebar">
+      <header>
+        <p class="eyebrow">Zulkir Jax Presents&hellip;</p>
+        <h1>DDO <span>Bingo</span></h1>
+      </header>
+
+      <div class="win-banner" id="win-banner" aria-hidden="true" role="alert" aria-live="assertive">
+        🎲 BINGO! Well met, adventurers!
+      </div>
+
+      <div class="controls" role="toolbar" aria-label="Bingo controls">
+        <button class="btn btn-danger" id="btn-reset" type="button">Reset Marks</button>
+        <button class="btn" id="btn-shuffle" type="button">New Card</button>
+        <span class="status" id="status" role="status" aria-live="polite"></span>
+      </div>
+
+      <footer>
+        <p id="footer-hint">Connecting&hellip;</p>
+      </footer>
+    </div>
   </main>
 
   <script
@@ -381,11 +399,9 @@
 
     const isOverlay = new URLSearchParams(window.location.search).has('overlay');
 
-    /* Overlay mode: strip controls, transparent background */
     if (isOverlay) {
       document.body.style.background = 'transparent';
-      document.querySelector('.controls').hidden = true;
-      document.querySelector('footer').hidden = true;
+      document.querySelector('.sidebar').hidden = true;
     }
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -428,7 +444,6 @@
           cell.setAttribute('aria-pressed', isMarked ? 'true' : 'false');
         }
 
-        /* Square number badge so viewers know what to type */
         if (!isFree && !isOverlay) {
           const badge = document.createElement('span');
           badge.className = 'cell-number';
@@ -442,7 +457,6 @@
         textEl.textContent = text;
         cell.appendChild(textEl);
 
-        /* Stamp X mark */
         const stamp = document.createElement('span');
         stamp.className = 'stamp';
         stamp.setAttribute('aria-hidden', 'true');
@@ -458,11 +472,9 @@
         grid.appendChild(cell);
       });
 
-      /* Win banner */
       const banner = document.getElementById('win-banner');
       banner.setAttribute('aria-hidden', winLine ? 'false' : 'true');
 
-      /* Status */
       const count = marked.filter(Boolean).length;
       const status = document.getElementById('status');
       if (status) status.textContent = `${count} marked`;
@@ -487,7 +499,7 @@
 
       currentSession = data;
       renderGrid(data.squares, data.marked);
-      setFooterHint('Redeem "Call a Bingo Square" and type !bingo <1–25> to mark a square.');
+      setFooterHint('Redeem "Call a Bingo Square" and type !bingo <1-25> to mark a square.');
     }
 
     function subscribeToSession() {
@@ -497,15 +509,13 @@
           'postgres_changes',
           { event: '*', schema: 'public', table: 'bingo_sessions' },
           (payload) => {
-            /* New session started — reload */
             if (payload.eventType === 'INSERT') {
               currentSession = payload.new;
               renderGrid(payload.new.squares, payload.new.marked);
-              setFooterHint('Redeem "Call a Bingo Square" and type !bingo <1–25> to mark a square.');
+              setFooterHint('Redeem "Call a Bingo Square" and type !bingo <1-25> to mark a square.');
               return;
             }
 
-            /* Square marked — update only if this is the active session */
             if (payload.eventType === 'UPDATE' && payload.new.active) {
               currentSession = payload.new;
               renderGrid(payload.new.squares, payload.new.marked);
@@ -515,7 +525,6 @@
         .subscribe();
     }
 
-    /* Streamer controls — hidden in overlay mode */
     if (!isOverlay) {
       document.getElementById('btn-reset').addEventListener('click', async () => {
         if (!currentSession) return;
@@ -528,7 +537,6 @@
       });
 
       document.getElementById('btn-shuffle').addEventListener('click', async () => {
-        /* Signal ZulkirBot to start a new session via a chat command instead, or call your own API endpoint here. Disabled in the card itself since ZulkirBot owns session creation. */
         alert('Type !bingostart in chat to shuffle a new card.');
       });
     }
