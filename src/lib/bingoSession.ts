@@ -29,7 +29,7 @@ const SQUARE_POOL: string[] = [
   'Reaper death',
   'Dungeon alert maxes out',
   '"That was my fault"',
-  'Killed by a caster mob',
+  'Killed by a mob',
   'Knocked off a bridge',
   'Died to a blade trap',
   'Swarmed by skeletons',
@@ -65,7 +65,7 @@ const SQUARE_POOL: string[] = [
 
   /* Loot & economy */
   'Named item drops',
-  'Shard of Power found',
+  'Artifact pulled from chest',
   'Augment slot item found',
   'Crafting bench visited',
   '"I need this for my build"',
@@ -91,7 +91,7 @@ const SQUARE_POOL: string[] = [
   '"Good fight"',
   'Rule of Three invoked',
   'Someone in chat says GG',
-  'Discord ping heard',
+  'NeutralAgent takes damage from a trap',
   'Zulkir Jax quotes a spell name',
   'Lore explanation given',
   'NPC voice imitated',
