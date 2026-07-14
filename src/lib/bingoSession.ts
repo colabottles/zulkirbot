@@ -130,7 +130,7 @@ const SQUARE_POOL: string[] = [
   'Korthos referenced',
   'Stormreach Harbor visited',
   'Marketplace mentioned',
-  'House K, C, D, or P',
+  'House K, C, D, or P referenced',
   'Eberron lore explained',
   'Xen\'drik dungeon entered',
   'Shavarath reference',
