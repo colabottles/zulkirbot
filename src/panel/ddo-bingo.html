@@ -14,7 +14,7 @@
     *,
     *::before,
     *::after {
-      box-sizing: content-box;
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
@@ -28,79 +28,58 @@
       --ink: #3d2b1f;
       --ink-light: #5a3e2e;
       --bone: #f0e6d0;
-      --shadow: rgba(0, 0, 0, 0.6);
     }
 
     html,
     body {
+      width: 100%;
       height: 100%;
-      font-size: 1.5rem;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      font-family: 'Almendra', Georgia, serif;
+    }
+
+    /* Fixed 1920x1080 canvas — same pattern as the ticker overlay */
+    .overlay {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      background: transparent;
       overflow: hidden;
     }
 
-    body {
-      background-color: var(--stone);
-      background-image: url('https://res.cloudinary.com/colabottles/image/upload/v1783567895/mapbg.jpg');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-attachment: fixed;
-      color: var(--parchment-light);
-      font-family: 'Almendra', Georgia, serif;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
-
-    main {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 1.5rem;
-      width: 100%;
-      height: calc(100vh - 2rem);
-    }
-
-    /* Card column — square, fills available height */
-    .card-col {
-      flex: 0 0 auto;
-      height: 100%;
-      aspect-ratio: 1;
+    /* Bingo card centered in the canvas */
+    .bingo-wrap {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
       display: flex;
       flex-direction: column;
-    }
-
-    /* Sidebar — header, controls, win banner, footer */
-    .sidebar {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-      min-width: 0;
+      gap: 0.75rem;
     }
 
     /* Header */
     header {
-      text-align: left;
+      text-align: center;
     }
 
     .eyebrow {
-      font-family: 'Metamorphous', monospace;
-      font-size: 1.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
       letter-spacing: 0.25em;
-      color: var(--crimson);
+      color: var(--crimson-bright);
       text-transform: uppercase;
-      margin-bottom: 0.4rem;
-      font-weight: 700;
+      margin-bottom: 0.3rem;
     }
 
     h1 {
       font-family: 'Metamorphous', serif;
-      font-size: clamp(3rem, 6vw, 3rem);
+      font-size: 2rem;
       font-weight: 400;
-      color: var(--ink);
+      color: var(--parchment);
       letter-spacing: 0.08em;
       text-shadow: 0 2px 12px rgba(139, 26, 26, 0.4);
       line-height: 1;
@@ -110,31 +89,51 @@
       color: var(--crimson-bright);
     }
 
-    /* Controls bar */
+    /* Win banner */
+    .win-banner {
+      display: none;
+      background: var(--crimson);
+      border: 1px solid var(--crimson-bright);
+      color: var(--bone);
+      font-family: 'Metamorphous', serif;
+      font-size: 0.85rem;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-align: center;
+      padding: 0.5rem 1rem;
+      text-transform: uppercase;
+    }
+
+    .win-banner[aria-hidden="false"] {
+      display: block;
+    }
+
+    /* Controls */
     .controls {
       display: flex;
       gap: 0.75rem;
       align-items: center;
+      justify-content: center;
       flex-wrap: wrap;
     }
 
     .btn {
       font-family: 'Metamorphous', serif;
-      font-size: 0.5rem;
+      font-size: 0.6rem;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      border: 1px solid var(--crimson);
+      border: 1px solid var(--parchment);
       background: transparent;
-      color: var(--crimson);
-      padding: 0.25rem;
+      color: var(--parchment);
+      padding: 0.4rem 1rem;
       cursor: pointer;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
 
     .btn:hover,
     .btn:focus-visible {
-      background: var(--crimson);
+      background: var(--parchment);
       color: var(--stone);
       outline: 2px solid var(--crimson-bright);
       outline-offset: 2px;
@@ -152,50 +151,23 @@
       border-color: var(--crimson-bright);
     }
 
-    /* Status */
     .status {
-      font-family: 'Metamorphous', monospace;
-      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
       color: var(--ink-light);
       letter-spacing: 0.05em;
-      min-width: 6rem;
     }
 
-    .status[data-win="true"] {
-      color: var(--parchment);
-      font-weight: 600;
-    }
-
-    /* Win banner */
-    .win-banner {
-      display: none;
-      background: var(--crimson);
-      border: 1px solid var(--crimson-bright);
-      color: var(--bone);
-      font-family: 'Metamorphous', serif;
-      font-size: 1rem;
-      font-weight: 400;
-      letter-spacing: 0.15em;
-      text-align: center;
-      padding: 0.6rem 1rem;
-      text-transform: uppercase;
-    }
-
-    .win-banner[aria-hidden="false"] {
-      display: block;
-    }
-
-    /* Footer */
     footer {
-      font-family: 'Metamorphous', monospace;
-      font-size: 0.65rem;
-      color: var(--shadow);
-      letter-spacing: 0.08em;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      color: var(--ink-light);
+      letter-spacing: 0.06em;
+      text-align: center;
     }
 
-    /* Bingo grid fills the card column */
+    /* Card */
     .bingo-grid-wrap {
-      flex: 1;
       display: flex;
       flex-direction: column;
       border: 2px solid var(--ink-light);
@@ -207,21 +179,19 @@
       overflow: hidden;
     }
 
-    /* Column headers B I N G O */
     .bingo-header {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       border-bottom: 2px solid var(--ink-light);
-      flex-shrink: 0;
     }
 
     .bingo-header-cell {
       font-family: 'Metamorphous', serif;
-      font-size: clamp(1rem, 1.5vw, 1.25rem);
-      font-weight: 900;
+      font-size: 1.25rem;
+      font-weight: 400;
       color: var(--crimson-bright);
       text-align: center;
-      padding: 0.6rem 0.25rem;
+      padding: 0.4rem 0.25rem;
       letter-spacing: 0.1em;
       border-right: 1px solid var(--ink-light);
     }
@@ -230,20 +200,18 @@
       border-right: none;
     }
 
-    /* Grid fills remaining height */
     .bingo-grid {
-      flex: 1;
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      grid-template-rows: repeat(5, 1fr);
     }
 
     .bingo-cell {
       position: relative;
+      aspect-ratio: 1;
       border: 1px solid var(--ink-light);
       background: rgba(26, 20, 18, 0.6);
       cursor: pointer;
-      padding: 0.35rem;
+      padding: 0.25rem;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -267,7 +235,7 @@
 
     .cell-text {
       font-family: 'Almendra', Georgia, serif;
-      font-size: clamp(0.6rem, 1.4vw, 0.8rem);
+      font-size: 0.6rem;
       font-weight: 400;
       color: var(--parchment-light);
       line-height: 1.2;
@@ -278,26 +246,23 @@
 
     .bingo-cell[data-free="true"] .cell-text {
       font-family: 'Metamorphous', serif;
-      font-size: clamp(0.55rem, 1.2vw, 0.7rem);
+      font-size: 0.55rem;
       color: var(--parchment);
       letter-spacing: 0.05em;
     }
 
-    /* Square number badge */
     .cell-number {
       position: absolute;
-      top: 0.2rem;
-      left: 0.25rem;
-      font-family: 'Arial', 'Trebuchet MS', sans-serif;
-      font-size: 1rem;
-      font-weight: 800;
-      color: var(--bone);
+      top: 0.15rem;
+      left: 0.2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.45rem;
+      color: var(--ink-light);
       line-height: 1;
       pointer-events: none;
       user-select: none;
     }
 
-    /* Stamp mark */
     .stamp {
       position: absolute;
       inset: 0;
@@ -321,9 +286,19 @@
       height: 70%;
     }
 
-    /* Win cell highlight */
     .bingo-cell[data-win-cell="true"] {
       background: rgba(139, 26, 26, 0.25);
+    }
+
+    /* Overlay mode — hide controls, transparent bg */
+    body.is-overlay {
+      background: transparent;
+    }
+
+    body.is-overlay .controls,
+    body.is-overlay footer,
+    body.is-overlay header {
+      display: none;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -339,8 +314,17 @@
 </head>
 
 <body>
-  <main>
-    <div class="card-col">
+  <main class="overlay">
+    <section class="bingo-wrap" aria-label="DDO Bingo card">
+      <header>
+        <p class="eyebrow">Zulkir Jax Presents&hellip;</p>
+        <h1>DDO <span>Bingo</span></h1>
+      </header>
+
+      <div class="win-banner" id="win-banner" aria-hidden="true" role="alert" aria-live="assertive">
+        🎲 BINGO! Well met, adventurers!
+      </div>
+
       <div class="bingo-grid-wrap">
         <div class="bingo-header" aria-hidden="true">
           <div class="bingo-header-cell">B</div>
@@ -353,17 +337,6 @@
           <!-- Cells injected by JS -->
         </div>
       </div>
-    </div>
-
-    <div class="sidebar">
-      <header>
-        <p class="eyebrow">Zulkir Jax Presents&hellip;</p>
-        <h1>DDO <span>Bingo</span></h1>
-      </header>
-
-      <div class="win-banner" id="win-banner" aria-hidden="true" role="alert" aria-live="assertive">
-        👏🏻 BINGO! Well met, adventurers! ⚔️
-      </div>
 
       <div class="controls" role="toolbar" aria-label="Bingo controls">
         <button class="btn btn-danger" id="btn-reset" type="button">Reset Marks</button>
@@ -374,7 +347,7 @@
       <footer>
         <p id="footer-hint">Connecting&hellip;</p>
       </footer>
-    </div>
+    </section>
   </main>
 
   <script
@@ -402,14 +375,9 @@
     ];
 
     const isOverlay = new URLSearchParams(window.location.search).has('overlay');
-
-    if (isOverlay) {
-      document.body.style.background = 'transparent';
-      document.querySelector('.sidebar').hidden = true;
-    }
+    if (isOverlay) document.body.classList.add('is-overlay');
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
     let currentSession = null;
 
     function checkWin(marked) {
@@ -519,7 +487,6 @@
               setFooterHint('Redeem "Call a Bingo Square" and type !bingo <1-25> to mark a square.');
               return;
             }
-
             if (payload.eventType === 'UPDATE' && payload.new.active) {
               currentSession = payload.new;
               renderGrid(payload.new.squares, payload.new.marked);
