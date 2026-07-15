@@ -19,132 +19,96 @@ export interface BingoSession {
 
 /* All DDO bingo square pool */
 const SQUARE_POOL: string[] = [
-  /* Deaths & disaster */
+  /* Deaths */
   'Zulkir Jax dies to a trap',
-  'Falls off a ledge',
-  'Killed by own hireling',
-  'Lag death',
-  '"I should have rested"',
-  'Party wipe',
-  'Reaper death',
-  'Dungeon alert maxes out',
-  '"That was my fault"',
-  'Killed by a mob',
-  'Knocked off a bridge',
-  'Died to a blade trap',
-  'Swarmed by skeletons',
-  '"I forgot to turn on Reaper Mode"',
-  'Resurrection sickness acquired',
-  'Last party member standing',
-  'Raised mid-combat',
-  'Died to a boss AoE',
-  '"I wasn\'t paying attention"',
+  'Zulkir Jax falls off a ledge',
+  'Party wipe — everyone down',
+  'Resurrection shrine used',
+  'Zulkir Jax dies to a blade trap',
+  'Zulkir Jax dies to a boss AoE',
+  'Zulkir Jax dies to a caster mob',
+  'Hireling raises Zulkir Jax mid-combat',
+  'Zulkir Jax dies within 10 seconds of entering a room',
+  'Zulkir Jax dies to a ranged enemy',
 
-  /* Quests & gameplay */
-  'Elite skull run',
-  'Ransack a chest',
-  'Bonus XP objective missed',
-  'Secret door found',
-  'Optionals completed',
-  'Zerg run attempt',
-  'Shrine camping',
-  'Backtracked at least once',
-  'Hirelings get stuck',
-  'End reward skipped',
-  '"We skipped the optional"',
-  'Wilderness area entered',
-  'Collectable grabbed off the ground',
-  'Voice of the Master referenced',
-  'Voluntary self-destruct to reset',
-  '"Let me check the wiki"',
-  'Lever puzzle causes confusion',
-  'Wrong door opened',
-  'Running out of time on a timed quest',
-  'Dungeon alert triggered on entry',
-  'Chest opened with no key',
+  /* Quest events */
+  'Secret door opened',
+  'Zulkir Jax runs past a chest without opening it',
+  'Quest completed on Elite',
+  'Optionals skipped',
+  'Dungeon alert turns red',
+  'Hireling walks into a trap',
+  'Zulkir Jax backtracks through a completed room',
+  'A lever opens a secret wall with nothing behind it',
+  'A timed quest objective appears',
+  'Zulkir Jax gets lost',
+  'Zulkir Jax rests at a shrine',
+  'Zulkir Jax jumps over an enemy instead of attacking',
+  'A puzzle appears on screen',
+  'Zulkir Jax runs past a collectable on the ground',
+  'Zulkir Jax opens a chest immediately after a boss fight',
 
-  /* Loot & economy */
-  'Named item drops',
-  'Artifact pulled from chest',
-  'Augment slot item found',
-  'Crafting bench visited',
-  '"I need this for my build"',
-  'Sold something by accident',
-  'Inventory is full',
-  'Astral Shard spent',
-  'New gear equipped mid-quest',
-  'Green Steel item mentioned',
-  'Cannith Crafting invoked',
-  'Collectables turned in',
-  '"That rolled terrible stats"',
-  'Random loot better than named',
-  'Draconic rune found',
-  'Trophy dropped from rare',
-  'Sentient gem referenced',
-  'Cosmetic armor skin equipped',
+  /* Loot */
+  'An Epic item appears in the loot list',
+  'A Mythic item appears in the loot list',
+  'An Artifact item appears in the loot list',
+  'A Purple-bordered item appears in the loot list',
+  'An Orange-bordered item appears in the loot list',
+  'Inventory full message appears',
+  'Zulkir Jax equips new gear mid-quest',
+  'Augment slot item looted',
+  'Peridot picked up off the ground',
+  'Zulkir Jax opens the Adventure Compendium',
 
-  /* Social & stream */
-  'Someone donates',
-  'New follower',
-  'Zulkir Jax reads chat mid-fight',
-  'Death followed by silence',
-  '"Good fight"',
-  'Rule of Three invoked',
-  'Someone in chat says GG',
-  'NeutralAgent takes damage from a trap',
-  'Zulkir Jax quotes a spell name',
-  'Lore explanation given',
-  'NPC voice imitated',
-  'Raid team assembled',
-  '"Has anyone done this quest before?"',
-  'Someone in party afk',
-  'Zulkir Jax explains a mechanic twice',
-  'Sub train happens',
-  'Bits cheered',
-  '"Chat, should I?"',
-  'Someone asks what class Zulkir Jax is',
-  'Zulkir Jax laughs at his own death',
-  'First-time viewer says hello',
+  /* Visible on screen */
+  'Spell point bar hits zero',
+  'Action boost is used',
+  'A 5th level spell is cast',
+  'An enemy is sent flying off a ledge',
+  'Zulkir Jax is surrounded by 5+ enemies at once',
+  'Dungeon alert turns red',
+  'A cutscene or NPC dialogue box appears',
+  'Zulkir Jax uses a summon monster spell',
+  'A demon named boss appears on screen',
+  'Zulkir Jax uses a clickie item',
+  'Hireling runs in the wrong direction',
+  'Zulkir Jax uses a potion',
 
-  /* Class & build */
-  'Action boost used',
-  'Spell point bar empty',
-  'Lay on Hands saves the day',
-  'Adrenaline popped',
-  'Sneak attack mentioned',
-  'Metamagic clicked wrong',
-  'Rage ends at worst moment',
-  'Mass Hold lands perfectly',
-  'Warlock Eldritch Blast mentioned',
-  'Reaper enhancement taken',
-  'Destiny ability used',
-  'Past life feat referenced',
-  'TR (True Reincarnation) mentioned',
-  'Iconic hero discussed',
-  'Universal tree ability used',
-  'Draconic Incarnation invoked',
-  'Cores explained to chat',
-  '"I\'m still leveling the tree"',
+  /* Zulkir Jax says */
+  'Zulkir Jax says "I should have rested"',
+  'Zulkir Jax says "Let me check the wiki"',
+  'Zulkir Jax says "That was my fault"',
+  'Zulkir Jax says "Chat, should I?"',
+  'Zulkir Jax says "I forgot about that trap"',
+  'Zulkir Jax says "We skipped the optional"',
+  'Zulkir Jax says "I need this for my build"',
+  'Zulkir Jax says "Has anyone done this quest before?"',
+  'Zulkir Jax says "I was not paying attention"',
+  'Zulkir Jax swears out loud',
+  'Zulkir Jax explains a mechanic to chat',
+  'Zulkir Jax mentions a past life',
 
-  /* Environment */
-  'Korthos referenced',
-  'Stormreach Harbor visited',
-  'Marketplace mentioned',
-  'House K, C, D, or P referenced',
-  'Eberron lore explained',
-  'Xen\'drik dungeon entered',
-  'Shavarath reference',
-  'Undead Asylum run',
-  'Ravenloft dungeon entered',
-  'Feywild referenced',
-  'Forgotten Realms content mentioned',
-  'Cogs of Sharn visited',
-  'Eveningstar mentioned',
-  'Thunder Peaks dungeon run',
-  'Stormhorns wilderness area',
-  'Wheloon Prison referenced',
-  'Devil Battlefield mentioned',
-  'King\'s Forest entered',
+  /* Stream events */
+  'A new subscriber appears in chat',
+  'Bits are cheered in chat',
+  'A raid notification appears on screen',
+  'A new follower notification appears',
+  'Zulkir Jax reads a chat message out loud',
+  'A donation alert plays',
+  'Zulkir Jax laughs out loud',
+  'Zulkir Jax goes AFK mid-quest',
+
+  /* Location */
+  'Stormreach Harbor shown on screen',
+  'The Marketplace shown on screen',
+  'A House Kundarak, Cannith, Deneith, or Phiarlan quest entered',
+  'Ravenloft loading screen appears',
+  'Korthos Island shown on screen',
+  'Shavarath loading screen appears',
+  'Cogs of Sharn shown on screen',
+  "Xen'drik loading screen appears",
+  'Thunder Peaks loading screen appears',
+  "King's Forest shown on screen",
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -166,11 +130,7 @@ export function buildSquares(): string[] {
 }
 
 export function buildSessionId(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `stream-${y}-${m}-${d}`;
+  return `stream-${Date.now()}`;
 }
 
 /* Deactivates any current active session, then inserts a fresh one */
@@ -218,7 +178,7 @@ export async function getActiveSession(): Promise<BingoSession | null> {
   return data as BingoSession;
 }
 
-/* Marks a square by 1-based index from chat (1–25), skipping FREE */
+/* Marks a square by 1-based index from chat (1-25), skipping FREE */
 export async function markSquare(
   squareNumber: number
 ): Promise<{ session: BingoSession; alreadyMarked: boolean; isWin: boolean } | null> {

@@ -1,5 +1,6 @@
 import type { Client } from 'tmi.js';
 import { markSquare, startNewSession, getActiveSession } from '../lib/bingoSession';
+import { addBonusEntry, getGiveawayState } from '../lib/giveaway';
 
 const CHANNEL = process.env.TWITCH_CHANNEL!;
 const BINGO_REWARD_TITLE = 'Call a Bingo Square';
@@ -58,6 +59,15 @@ export async function handleBingo(
       CHANNEL,
       `🎉 BINGO! The card is complete! Well met, adventurers! PogChamp`
     );
+
+    // Add a bonus giveaway entry for the viewer who completed the card
+    if (getGiveawayState().active) {
+      addBonusEntry(username);
+      await client.say(
+        CHANNEL,
+        `🎲 @${username} earned a bonus giveaway entry for completing the bingo card!`
+      );
+    }
   }
 }
 

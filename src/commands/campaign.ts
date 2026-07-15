@@ -670,8 +670,16 @@ async function runCampaign(
 // Track pending party join windows: channel → Set of usernames
 const pendingJoins = new Map<string, Set<string>>()
 
+// Track users currently mid-setup (waiting on !solo or !party) so a repeat
+// !campaign call can't spawn a second concurrent invocation for the same user
+const pendingInitiations = new Set<string>()
+
 function joinKey(channel: string, campaignId: string): string {
   return `${channel}:${campaignId}`
+}
+
+function initKey(channel: string, username: string): string {
+  return `${channel}:${username}`
 }
 
 export async function handleCampaignCommand(
@@ -680,52 +688,64 @@ export async function handleCampaignCommand(
   channel: string,
   username: string
 ) {
+  const initiationKey = initKey(channel, username)
 
-  // Block solo if player is in an active party campaign
-  // Mark campaigns older than 30 minutes as failed so players don't get stuck
-  const staleThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-  await supabase
-    .from('campaigns')
-    .update({ status: 'failed', completed_at: new Date().toISOString() })
-    .in('status', ['joining', 'active'])
-    .lt('started_at', staleThreshold)
-
-  const { data: activeParty } = await supabase
-    .from('campaign_participants')
-    .select('campaign_id, campaigns!inner(status, mode)')
-    .eq('username', username)
-    .eq('campaigns.mode', 'party')
-    .in('campaigns.status', ['joining', 'active'])
-    .maybeSingle()
-
-  if (activeParty) {
+  // Block a second !campaign while this user is still choosing solo/party.
+  // Without this, each call registers its own waitForModeChoice listener
+  // and a single !solo or !party resolves all of them at once.
+  if (pendingInitiations.has(initiationKey)) {
     await say(client, channel,
-      `@${username} You're already part of an active party campaign! Finish that one first.`
+      `@${username} You already have a campaign setup in progress. Type !solo or !party to continue.`
     )
     return
   }
-
-  const { data: initiatorChar } = await supabase
-    .from('characters')
-    .select('hp')
-    .eq('twitch_username', username.toLowerCase())
-    .single()
-
-  if (!initiatorChar) {
-    await say(client, channel,
-      `@${username} You need a character to run a campaign. Use !join to create one.`
-    )
-    return
-  }
-
-  if (initiatorChar.hp <= 0) {
-    await say(client, channel,
-      `@${username} Your character is dead. Use !join to start over before running a campaign.`
-    )
-    return
-  }
+  pendingInitiations.add(initiationKey)
 
   try {
+    // Mark campaigns older than 30 minutes as failed so players don't get stuck
+    const staleThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    await supabase
+      .from('campaigns')
+      .update({ status: 'failed', completed_at: new Date().toISOString() })
+      .in('status', ['joining', 'active'])
+      .lt('started_at', staleThreshold)
+
+    // Block solo if player is in an active party campaign
+    const { data: activeParty } = await supabase
+      .from('campaign_participants')
+      .select('campaign_id, campaigns!inner(status, mode)')
+      .eq('username', username)
+      .eq('campaigns.mode', 'party')
+      .in('campaigns.status', ['joining', 'active'])
+      .maybeSingle()
+
+    if (activeParty) {
+      await say(client, channel,
+        `@${username} You're already part of an active party campaign! Finish that one first.`
+      )
+      return
+    }
+
+    const { data: initiatorChar } = await supabase
+      .from('characters')
+      .select('hp')
+      .eq('twitch_username', username.toLowerCase())
+      .single()
+
+    if (!initiatorChar) {
+      await say(client, channel,
+        `@${username} You need a character to run a campaign. Use !join to create one.`
+      )
+      return
+    }
+
+    if (initiatorChar.hp <= 0) {
+      await say(client, channel,
+        `@${username} Your character is dead. Use !join to start over before running a campaign.`
+      )
+      return
+    }
+
     const boss = await drawBoss(supabase)
 
     await say(client, channel,
@@ -759,8 +779,6 @@ export async function handleCampaignCommand(
       } finally {
         markCampaignInactive()
       }
-
-      await runCampaign(client, supabase, channel, campaign, participants)
 
     } else {
       const campaign = await createCampaign(supabase, channel, username, 'party', boss)
@@ -819,6 +837,8 @@ export async function handleCampaignCommand(
   } catch (err) {
     console.error('[campaign] error:', err)
     await say(client, channel, `@${username} Something went wrong starting the campaign.`)
+  } finally {
+    pendingInitiations.delete(initiationKey)
   }
 }
 

@@ -106,3 +106,7 @@ function clearTimeouts(): void {
   warningTimeout = null
   endTimeout = null
 }
+
+export function addBonusEntry(username: string): void {
+  state.entries.push(username);
+}
