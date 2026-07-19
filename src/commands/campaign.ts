@@ -50,6 +50,41 @@ interface CombatResult {
   enemyName: string
 }
 
+// Hireling support for solo campaigns. Hirelings are rented, not persistent
+// characters, so they never touch campaign_participants or writeRewards.
+type HirelingClass =
+  | 'Cleric'
+  | 'Rogue'
+  | 'Wizard'
+  | 'Barbarian'
+  | 'Fighter'
+  | 'Bard'
+  | 'Paladin'
+  | 'Sorcerer'
+
+type HirelingTier = 'bronze' | 'silver' | 'gold'
+
+interface HirelingRow {
+  username: string
+  slot: number
+  tier: HirelingTier
+  class: HirelingClass
+  level: number
+  hired_at: string
+  expires_at: string
+}
+
+interface Hireling {
+  name: string
+  class: HirelingClass
+  level: number
+  hp: number
+  max_hp: number
+  is_alive: boolean
+  damage: [number, number]
+  heal_amount?: number
+}
+
 const JOIN_WINDOW_MS = 60_000
 const SHRINE_HEAL_HP = 20
 
@@ -68,6 +103,51 @@ const ELITE_POWERS = [
   'Shadow Veil',
   'Soul Siphon',
 ]
+
+// Tier only sets rental cost now. Actual combat stats scale off the
+// hireling's rolled level, same as the enemy scaling below.
+const HIRELING_TIER_COST: Record<HirelingTier, number> = {
+  bronze: 50,
+  silver: 125,
+  gold: 250,
+}
+
+const VALID_HIRELING_TIERS: HirelingTier[] = ['bronze', 'silver', 'gold']
+
+const VALID_HIRELING_CLASSES: HirelingClass[] = [
+  'Cleric',
+  'Rogue',
+  'Wizard',
+  'Barbarian',
+  'Fighter',
+  'Bard',
+  'Paladin',
+  'Sorcerer',
+]
+
+// Healer classes patch up the lowest HP ally each round instead of attacking.
+// Non-healers get a flat damage bonus on top of the level-based baseline.
+const CLASS_MODIFIERS: Record<HirelingClass, { dmgBonus: number; healer: boolean }> = {
+  Cleric: { dmgBonus: 0, healer: true },
+  Paladin: { dmgBonus: 2, healer: true },
+  Bard: { dmgBonus: 0, healer: true },
+  Rogue: { dmgBonus: 5, healer: false },
+  Sorcerer: { dmgBonus: 5, healer: false },
+  Barbarian: { dmgBonus: 4, healer: false },
+  Fighter: { dmgBonus: 0, healer: false },
+  Wizard: { dmgBonus: 0, healer: false },
+}
+
+const HIRELING_HEAL_AMOUNT = 15
+const HIRELING_RENTAL_MS = 60 * 60 * 1000 // 1 hour
+
+function getHirelingStats(level: number): { hp: number; damage: [number, number] } {
+  const s = Math.max(1, Math.min(level, 10))
+  return {
+    hp: 30 + s * 8,
+    damage: [5 + s, 10 + s * 2] as [number, number],
+  }
+}
 
 function getScaledEnemies(avgLevel: number): Record<number, StageEnemy | StageEnemy[]> {
   const s = Math.max(1, Math.min(avgLevel, 10))
@@ -126,7 +206,7 @@ const STAGE_FLAVOR: Record<number, string> = {
   0: '⚔️ A rabble of goblins blocks the road ahead, emboldened by darkness.',
   1: '🏹 You round a bend and walk straight into a hobgoblin ambush!',
   2: '🛡️ A heavily armed orc patrol bars the passage, their captain sneering.',
-  3: '💀 As you walkdown the corridor, you bump into a band of irate kobolds.',
+  3: '💀 As you walk down the corridor, you bump into a band of irate kobolds.',
   4: '🧌 An Elite Shadowguard steps from the darkness. This one is different.',
   5: '👹 The air grows cold as the fearsome boss emerges to challenge you!',
   6: '🪄 Jax materializes before you, eyes blazing. "You dare challenge me?"',
@@ -428,12 +508,60 @@ async function writeRewards(
   }
 }
 
+// Hireling helpers. Hirelings never write to campaign_participants and never
+// receive rewards - they are combat props only, rented for one hour at a time.
+
+async function getHirelingSlots(
+  supabase: SupabaseClient,
+  username: string
+): Promise<HirelingRow[]> {
+  const { data } = await supabase
+    .from('campaign_hirelings')
+    .select('*')
+    .eq('username', username)
+  return (data ?? []) as HirelingRow[]
+}
+
+function rollHirelingLevel(playerLevel: number): number {
+  const offset = pickRandom([-1, 0, 1])
+  return Math.max(1, playerLevel + offset)
+}
+
+// Builds a fresh, full HP Hireling for a run from a stored slot row.
+// Knockouts don't persist across campaigns, only the rental timer does.
+function buildHireling(row: HirelingRow): Hireling {
+  const stats = getHirelingStats(row.level)
+  const mod = CLASS_MODIFIERS[row.class]
+  return {
+    name: `${row.class} (slot ${row.slot})`,
+    class: row.class,
+    level: row.level,
+    hp: stats.hp,
+    max_hp: stats.hp,
+    is_alive: true,
+    damage: [stats.damage[0] + mod.dmgBonus, stats.damage[1] + mod.dmgBonus] as [number, number],
+    heal_amount: mod.healer ? HIRELING_HEAL_AMOUNT : undefined,
+  }
+}
+
+async function getActiveHirelings(
+  supabase: SupabaseClient,
+  username: string
+): Promise<Hireling[]> {
+  const rows = await getHirelingSlots(supabase, username)
+  const now = Date.now()
+  return rows
+    .filter(row => new Date(row.expires_at).getTime() > now)
+    .map(buildHireling)
+}
+
 async function runCombat(
   client: Client,
   supabase: SupabaseClient,
   channel: string,
   campaign: Campaign,
   participants: Participant[],
+  hirelings: Hireling[],
   enemies: StageEnemy | StageEnemy[],
   stageIndex: number,
   avgLevel: number       // ← add this
@@ -449,6 +577,8 @@ async function runCombat(
   let round = 1
   let specialFired = false
 
+  // Combat ends when the real player(s) are all down, same as before hirelings
+  // existed. Hirelings soak hits and add damage but don't extend a wipe.
   while (enemyHPs.some(hp => hp > 0) && alive.some(p => p.is_alive)) {
     await say(client, channel, `⚔️  — Round ${round} —`)
     await delay(1000)
@@ -483,45 +613,116 @@ async function runCombat(
       }
     }
 
-    // Enemies attack back
+    // Hirelings act automatically once per round, no chat wait needed.
+    // Healer classes patch up the lowest HP living ally instead of attacking.
+    for (const hireling of hirelings.filter(h => h.is_alive)) {
+      if (!enemyHPs.some(hp => hp > 0)) break
+
+      if (hireling.heal_amount) {
+        const lowestPlayer = alive
+          .filter(p => p.is_alive && p.hp < p.max_hp)
+          .sort((a, b) => a.hp - b.hp)[0]
+        const lowestHireling = hirelings
+          .filter(h => h.is_alive && h.hp < h.max_hp)
+          .sort((a, b) => a.hp - b.hp)[0]
+
+        if (lowestPlayer && (!lowestHireling || lowestPlayer.hp <= lowestHireling.hp)) {
+          const healed = Math.min(hireling.heal_amount, lowestPlayer.max_hp - lowestPlayer.hp)
+          if (healed > 0) {
+            lowestPlayer.hp += healed
+            await updateParticipant(supabase, campaign.id, lowestPlayer.username, { hp: lowestPlayer.hp })
+            await say(client, channel,
+              `💚 ${hireling.name} tends to @${lowestPlayer.username}, healing ${healed} HP. (${lowestPlayer.hp}/${lowestPlayer.max_hp} HP)`
+            )
+            await delay(1000)
+          }
+        } else if (lowestHireling) {
+          const healed = Math.min(hireling.heal_amount, lowestHireling.max_hp - lowestHireling.hp)
+          if (healed > 0) {
+            lowestHireling.hp += healed
+            await say(client, channel,
+              `💚 ${hireling.name} tends to ${lowestHireling.name}, healing ${healed} HP. (${lowestHireling.hp}/${lowestHireling.max_hp} HP)`
+            )
+            await delay(1000)
+          }
+        }
+        continue
+      }
+
+      const targetIdx = enemyHPs.findIndex(hp => hp > 0)
+      const dmg = roll(hireling.damage[0], hireling.damage[1])
+      enemyHPs[targetIdx] = Math.max(0, enemyHPs[targetIdx] - dmg)
+
+      await say(client, channel,
+        `🗡️  ${hireling.name} strikes ${enemyList[targetIdx].name} for ${dmg} damage! (${enemyHPs[targetIdx]} HP remaining)`
+      )
+      await delay(1000)
+
+      if (enemyHPs[targetIdx] === 0) {
+        await say(client, channel, `💥 ${enemyList[targetIdx].name} has fallen!`)
+        await delay(800)
+      }
+    }
+
+    // Enemies attack back, choosing from players and hirelings alike
     for (let i = 0; i < enemyList.length; i++) {
       if (enemyHPs[i] <= 0) continue
 
       const enemy = enemyList[i]
-      const target = pickRandom(alive.filter(p => p.is_alive))
-      if (!target) break
 
+      const targetPool: Array<
+        { kind: 'player'; ref: Participant } | { kind: 'hireling'; ref: Hireling }
+      > = [
+          ...alive.filter(p => p.is_alive).map(p => ({ kind: 'player' as const, ref: p })),
+          ...hirelings.filter(h => h.is_alive).map(h => ({ kind: 'hireling' as const, ref: h })),
+        ]
+      const targetEntry = pickRandom(targetPool)
+      if (!targetEntry) break
+
+      let dmg: number
       if (!specialFired && round === 2 && enemy.special) {
-        const specialDmg = enemy.specialDamage ?? 20
-        target.hp = Math.max(0, target.hp - specialDmg)
-        await say(client, channel,
-          `⚡ ${enemy.name} uses ${enemy.special}! ` +
-          `@${target.username} (${getDisplayName(target.username, target)}) takes ${specialDmg} damage! (${target.hp} HP)`
-        )
+        dmg = enemy.specialDamage ?? 20
         specialFired = true
-        await delay(1200)
       } else {
-        const dmg = roll(enemy.damage[0], enemy.damage[1])
+        dmg = roll(enemy.damage[0], enemy.damage[1])
+      }
+
+      if (targetEntry.kind === 'player') {
+        const target = targetEntry.ref
         target.hp = Math.max(0, target.hp - dmg)
         await say(client, channel,
           `🩸 ${enemy.name} strikes @${target.username} (${getDisplayName(target.username, target)}) for ${dmg} damage! ` +
           `(${target.hp} HP remaining)`
         )
         await delay(1000)
-      }
 
-      if (target.hp <= 0) {
-        target.is_alive = false
-        target.stage_reached = stageIndex + 1
-        await updateParticipant(supabase, campaign.id, target.username, {
-          hp: 0,
-          is_alive: false,
-          stage_reached: stageIndex + 1,
-        })
+        if (target.hp <= 0) {
+          target.is_alive = false
+          target.stage_reached = stageIndex + 1
+          await updateParticipant(supabase, campaign.id, target.username, {
+            hp: 0,
+            is_alive: false,
+            stage_reached: stageIndex + 1,
+          })
+          await say(client, channel,
+            `💀 @${target.username} (${getDisplayName(target.username, target)}) has fallen in battle! They are out of the campaign.`
+          )
+          await delay(1200)
+        }
+      } else {
+        const target = targetEntry.ref
+        target.hp = Math.max(0, target.hp - dmg)
         await say(client, channel,
-          `💀 @${target.username} (${getDisplayName(target.username, target)}) has fallen in battle! They are out of the campaign.`
+          `🩸 ${enemy.name} strikes ${target.name} for ${dmg} damage! (${target.hp} HP remaining)`
         )
-        await delay(1200)
+        await delay(1000)
+
+        if (target.hp <= 0) {
+          // Knockout is local to this run only, no DB write for hirelings
+          target.is_alive = false
+          await say(client, channel, `💀 ${target.name} is knocked out and withdraws from the fight!`)
+          await delay(1200)
+        }
       }
     }
 
@@ -544,7 +745,8 @@ async function restShrine(
   supabase: SupabaseClient,
   channel: string,
   campaign: Campaign,
-  participants: Participant[]
+  participants: Participant[],
+  hirelings: Hireling[]
 ) {
   await say(client, channel, pickRandom(SHRINE_FLAVOR))
   await delay(2000)
@@ -558,6 +760,16 @@ async function restShrine(
     )
     await delay(800)
   }
+
+  for (const h of hirelings.filter(h => h.is_alive)) {
+    const healed = Math.min(SHRINE_HEAL_HP, h.max_hp - h.hp)
+    if (healed <= 0) continue
+    h.hp += healed
+    await say(client, channel,
+      `💚 ${h.name} recovers ${healed} HP at the shrine. (${h.hp}/${h.max_hp} HP)`
+    )
+    await delay(800)
+  }
 }
 
 async function runBossFight(
@@ -566,10 +778,11 @@ async function runBossFight(
   channel: string,
   campaign: Campaign,
   participants: Participant[],
+  hirelings: Hireling[],
   avgLevel: number       // ← add this
 ): Promise<CombatResult> {
   const bossEnemy = getScaledBoss(avgLevel, campaign.boss_name, campaign.boss_special)
-  return runCombat(client, supabase, channel, campaign, participants, bossEnemy, 4, avgLevel)
+  return runCombat(client, supabase, channel, campaign, participants, hirelings, bossEnemy, 4, avgLevel)
 }
 
 async function runCampaign(
@@ -577,7 +790,8 @@ async function runCampaign(
   supabase: SupabaseClient,
   channel: string,
   campaign: Campaign,
-  participants: Participant[]
+  participants: Participant[],
+  hirelings: Hireling[] = []
 ) {
   await updateCampaign(supabase, campaign.id, { status: 'active' })
 
@@ -602,7 +816,7 @@ async function runCampaign(
     if (alive.length === 0) break
     if (stageIndex > 0) {
       await delay(3000)
-      await restShrine(client, supabase, channel, campaign, participants)
+      await restShrine(client, supabase, channel, campaign, participants, hirelings)
       await delay(2000)
       if (stageNum === campaign.Galenus_stage) {
         await summonGalenus(client, supabase, channel, campaign.id, stageNum, participants)
@@ -614,13 +828,13 @@ async function runCampaign(
     await updateCampaign(supabase, campaign.id, { stage: stageNum })
     let result: CombatResult
     if (stageIndex === 4) {
-      result = await runBossFight(client, supabase, channel, campaign, participants, avgLevel)
+      result = await runBossFight(client, supabase, channel, campaign, participants, hirelings, avgLevel)
     } else {
       let enemies = scaledEnemies[stageIndex]
       if (stageIndex === 3 && !Array.isArray(enemies)) {
         enemies = { ...enemies, special: pickRandom(ELITE_POWERS) }
       }
-      result = await runCombat(client, supabase, channel, campaign, participants, enemies, stageIndex, avgLevel)
+      result = await runCombat(client, supabase, channel, campaign, participants, hirelings, enemies, stageIndex, avgLevel)
     }
     for (const p of result.survivors) {
       p.stage_reached = stageNum
@@ -766,16 +980,21 @@ export async function handleCampaignCommand(
         .single()
       const level = charLevel?.level ?? 1
 
+      const hirelings = await getActiveHirelings(supabase, username)
+      const hirelingText = hirelings.length > 0
+        ? ` Accompanied by: ${hirelings.map(h => `${h.name} (Lvl ${h.level})`).join(', ')}.`
+        : ''
+
       await say(client, channel,
         `🗡️  ${username} enters the Shadowdale Gauntlet alone. ` +
         `Five stages await. The ${boss.boss_name} waits at the end. ` +
-        `⚠️ This campaign is scaled for Level ${level}.`
+        `⚠️ This campaign is scaled for Level ${level}.${hirelingText}`
       )
       await delay(2000)
 
       markCampaignActive()
       try {
-        await runCampaign(client, supabase, channel, campaign, participants)
+        await runCampaign(client, supabase, channel, campaign, participants, hirelings)
       } finally {
         markCampaignInactive()
       }
@@ -828,6 +1047,7 @@ export async function handleCampaignCommand(
       await delay(2000)
       markCampaignActive()
       try {
+        // Party mode has no hirelings, default empty array applies
         await runCampaign(client, supabase, channel, campaign, participants)
       } finally {
         markCampaignInactive()
@@ -874,4 +1094,114 @@ export async function handleJoinCampCommand(
 
   joiners.add(username)
   await say(client, channel, `🛡️  ${username} joins the party! (${joiners.size} adventurers so far)`)
+}
+
+// !hireling <bronze|silver|gold> <class>  — rent a hireling into the next open slot
+// !hireling status                         — show both slots and time remaining
+export async function handleHirelingCommand(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string,
+  args: string[]
+) {
+  if (args[0]?.toLowerCase() === 'status') {
+    await handleHirelingStatus(client, supabase, channel, username)
+    return
+  }
+
+  const tierInput = args[0]?.toLowerCase() as HirelingTier | undefined
+  const classInputRaw = args[1]
+  const classInput = classInputRaw
+    ? ((classInputRaw[0].toUpperCase() + classInputRaw.slice(1).toLowerCase()) as HirelingClass)
+    : undefined
+
+  const usage = `Usage: !hireling <bronze|silver|gold> <class>. Classes: ${VALID_HIRELING_CLASSES.join(', ')}.`
+
+  if (!tierInput || !VALID_HIRELING_TIERS.includes(tierInput)) {
+    await say(client, channel, `@${username} ${usage}`)
+    return
+  }
+  if (!classInput || !VALID_HIRELING_CLASSES.includes(classInput)) {
+    await say(client, channel, `@${username} ${usage}`)
+    return
+  }
+
+  const rows = await getHirelingSlots(supabase, username)
+  const now = Date.now()
+  const openSlot = [1, 2].find(slotNum => {
+    const existing = rows.find(r => r.slot === slotNum)
+    return !existing || new Date(existing.expires_at).getTime() <= now
+  })
+
+  if (!openSlot) {
+    await say(client, channel,
+      `@${username} Both your hireling slots are full. Wait for one to expire before hiring another.`
+    )
+    return
+  }
+
+  const { data: char } = await supabase
+    .from('characters')
+    .select('level, gold')
+    .eq('twitch_username', username.toLowerCase())
+    .single()
+
+  if (!char) {
+    await say(client, channel, `@${username} You need a character before hiring help. Use !join to create one.`)
+    return
+  }
+
+  const cost = HIRELING_TIER_COST[tierInput]
+  if ((char.gold ?? 0) < cost) {
+    await say(client, channel, `@${username} Hiring a ${tierInput} hireling costs ${cost} gold. You don't have enough.`)
+    return
+  }
+
+  const level = rollHirelingLevel(char.level ?? 1)
+  const hiredAt = new Date()
+  const expiresAt = new Date(hiredAt.getTime() + HIRELING_RENTAL_MS)
+
+  await supabase
+    .from('characters')
+    .update({ gold: char.gold - cost })
+    .eq('twitch_username', username.toLowerCase())
+
+  await supabase
+    .from('campaign_hirelings')
+    .upsert({
+      username,
+      slot: openSlot,
+      tier: tierInput,
+      class: classInput,
+      level,
+      hired_at: hiredAt.toISOString(),
+      expires_at: expiresAt.toISOString(),
+    }, { onConflict: 'username,slot' })
+
+  await say(client, channel,
+    `🤝 @${username} hires a Level ${level} ${classInput} into slot ${openSlot} (${tierInput} contract)! ` +
+    `They'll fight by your side for the next hour.`
+  )
+}
+
+async function handleHirelingStatus(
+  client: Client,
+  supabase: SupabaseClient,
+  channel: string,
+  username: string
+) {
+  const rows = await getHirelingSlots(supabase, username)
+  const now = Date.now()
+
+  const slotText = [1, 2].map(slotNum => {
+    const row = rows.find(r => r.slot === slotNum)
+    if (!row) return `Slot ${slotNum}: empty`
+    const msLeft = new Date(row.expires_at).getTime() - now
+    if (msLeft <= 0) return `Slot ${slotNum}: expired`
+    const minutesLeft = Math.max(1, Math.round(msLeft / 60_000))
+    return `Slot ${slotNum}: Level ${row.level} ${row.class}, ${minutesLeft}m left`
+  }).join('. ')
+
+  await say(client, channel, `@${username} ${slotText}.`)
 }
