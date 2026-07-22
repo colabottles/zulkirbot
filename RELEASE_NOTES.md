@@ -2,6 +2,44 @@
 
 ---
 
+## v3.1.0 — Hireling Companions
+
+Solo !campaign runs can now bring backup. Rent a hireling to fight alongside you when the party system isn't an option.
+
+## Added
+
+`!hireling <bronze|silver|gold> <class>` — rent a hireling into your next open slot (two slots per player)
+
+Classes: Cleric, Rogue, Wizard, Barbarian, Fighter, Bard, Paladin, Sorcerer
+
+Tier sets rental cost only (50 / 125 / 250 gold) — combat power comes from the hireling's level, not tier
+
+Hireling level rolls to one below, equal to, or one above your character's level
+
+Cleric, Bard, and Paladin hirelings heal the lowest-HP ally each round instead of attacking; the rest fight
+
+Rental lasts one hour from hire time
+
+A slot must fully expire before it can be rehired — no early replacement
+
+`!hireling status` — shows both slots, class, level, and time remaining
+
+Hirelings now show up in solo campaign combat: they act automatically each round, can be targeted by enemies, and get healed at rest shrines alongside you
+
+Hirelings never earn XP, gold, titles, or artifacts — they're rented help, not characters
+
+## Fixed
+
+`!campaign` no longer spins up duplicate concurrent sessions when re-invoked while a `!solo/!party` choice is still pending
+
+Solo campaigns no longer run the full 5-stage gauntlet twice back to back
+
+Notes for next session
+
+Needs a campaign_hirelings table migration (username, slot, tier, class, level, hired_at, expires_at, primary key on username, slot)
+
+Needs wiring into the main command dispatcher so !hireling `<args>` reaches handleHirelingCommand
+
 ## v3.0.1 — July 7, 2026
 
 ### Bug Fixes
@@ -324,7 +362,7 @@ Added and edited shortcut keys and aliases.
 
 ### Boss Invasion System
 
-#### Added
+#### Added v2.2.0
 
 - **`!invasion [boss_id]`** — Broadcaster-only command that triggers a channel-wide boss invasion event. Chat has a 2-minute join window followed by a 10-minute kill window to collectively defeat the boss.
 - **`!joinevent`** — Dual-purpose command: enlists a player during the join window, or attacks the boss during the fight phase. Damage is rolled using the player's class stats and gear via the existing `getCharacterStats` formula.
